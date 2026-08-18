@@ -1,0 +1,31 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# Visual Studio and Rider
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# .NET tooling
+artifacts/
+TestResults/
+*.nupkg
+*.snupkg
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+
+# OS files
+.DS_Store
+Thumbs.db

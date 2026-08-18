@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: servicesync-postgres
+    environment:
+      POSTGRES_DB: servicesync
+      POSTGRES_USER: servicesync
+      POSTGRES_PASSWORD: servicesync
+    ports:
+      - "5432:5432"
+    volumes:
+      - servicesync-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  servicesync-postgres-data:
