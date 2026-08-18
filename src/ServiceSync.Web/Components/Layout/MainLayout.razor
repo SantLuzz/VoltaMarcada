@@ -5,54 +5,45 @@
 @inject IDbContextFactory<AppDbContext> DbContextFactory
 @inject ICurrentCompany CurrentCompany
 
-<MudThemeProvider />
+<MudThemeProvider Theme="@ServiceSyncTheme.Instance" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
 <MudLayout>
     <MudAppBar Elevation="0" Class="main-app-bar">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu"
-                       Color="Color.Inherit"
-                       aria-label="Abrir ou recolher menu"
-                       OnClick="ToggleDrawer" />
+        <MudTooltip Text="Abrir ou recolher menu">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" aria-label="Abrir ou recolher menu" OnClick="ToggleDrawer" />
+        </MudTooltip>
+        <MudSpacer />
+        <MudText Typo="Typo.body2" Class="app-bar-company-name">@companyName</MudText>
     </MudAppBar>
 
-    <MudDrawer @bind-Open="isDrawerOpen"
-               Variant="DrawerVariant.Responsive"
-               Breakpoint="Breakpoint.Md"
-               Elevation="1"
-               Class="main-drawer">
+    <MudDrawer @bind-Open="isDrawerOpen" Variant="DrawerVariant.Responsive" Breakpoint="Breakpoint.Md" Elevation="0" Class="main-drawer">
         <div class="drawer-content">
             <header class="drawer-brand">
-                <img src="logos/logo.png" alt="ServiceSync" class="drawer-logo" />
-                <div>
-                    <MudText Typo="Typo.h6" Class="drawer-product-name">ServiceSync</MudText>
-                    <MudText Typo="Typo.caption" Class="drawer-version">v1.0</MudText>
-                </div>
+                <img src="/logos/logo.png" alt="ServiceSync" class="drawer-logo" />
             </header>
 
             <MudNavMenu Class="drawer-navigation">
-                <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
-                    Dashboard
-                </MudNavLink>
+                <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Painel</MudNavLink>
             </MudNavMenu>
 
             <footer class="drawer-footer">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Empresa atual</MudText>
                 <MudText Typo="Typo.body2" Class="company-name">@companyName</MudText>
                 <form method="post" action="/account/logout" class="logout-form">
                     <AntiforgeryToken />
-                    <button class="logout-button" type="submit">
-                        <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
-                        <span>Sair</span>
-                    </button>
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Text" Color="Color.Default" StartIcon="@Icons.Material.Filled.Logout" aria-label="Sair da conta">Sair</MudButton>
                 </form>
             </footer>
         </div>
     </MudDrawer>
 
-    <MudMainContent Class="pt-16 px-6">
-        @Body
+    <MudMainContent>
+        <main class="page-content">
+            @Body
+        </main>
     </MudMainContent>
 </MudLayout>
 
@@ -72,10 +63,8 @@
         }
 
         var companyId = await CurrentCompany.GetCompanyIdAsync();
-
         await using var dbContext = await DbContextFactory.CreateDbContextAsync();
-        companyName = await dbContext.Companies
-            .AsNoTracking()
+        companyName = await dbContext.Companies.AsNoTracking()
             .Where(company => company.Id == companyId)
             .Select(company => company.TradeName)
             .SingleOrDefaultAsync();
@@ -87,5 +76,5 @@
 <div id="blazor-error-ui" data-nosnippet>
     Ocorreu um erro inesperado.
     <a href="." class="reload">Recarregar</a>
-    <span class="dismiss">🗙</span>
+    <span class="dismiss">×</span>
 </div>

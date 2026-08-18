@@ -1,5 +1,13 @@
 @inherits LayoutComponentBase
 
+<MudThemeProvider Theme="@ServiceSyncTheme.Instance" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
 <main class="auth-layout">
-    @Body
+    <MudPaper Class="auth-card" Elevation="1">
+        <img src="/logos/logo.png" alt="ServiceSync" class="auth-logo" />
+        @Body
+    </MudPaper>
 </main>

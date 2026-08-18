@@ -1,12 +1,16 @@
-<input id="@Id"
-       name="@Name"
-       type="text"
-       value="@value"
-       maxlength="18"
-       inputmode="numeric"
-       autocomplete="@Autocomplete"
-       required="@Required"
-       @oninput="HandleInput" />
+<MudTextField T="string"
+              Id="@Id"
+              Name="@Name"
+              Label="CPF ou CNPJ"
+              @bind-Value="value"
+              @bind-Value:after="FormatValue"
+              Immediate="true"
+              MaxLength="18"
+              InputMode="InputMode.numeric"
+              AutoComplete="@Autocomplete"
+              Required="@Required"
+              Variant="Variant.Outlined"
+              FullWidth="true" />
 
 @code {
     [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
@@ -16,9 +20,9 @@
 
     private string value = string.Empty;
 
-    private void HandleInput(ChangeEventArgs args)
+    private void FormatValue()
     {
-        var digits = new string((args.Value?.ToString() ?? string.Empty)
+        var digits = new string(value
             .Where(char.IsDigit)
             .Take(14)
             .ToArray());

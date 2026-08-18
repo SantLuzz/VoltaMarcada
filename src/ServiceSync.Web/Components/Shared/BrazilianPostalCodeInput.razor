@@ -1,12 +1,16 @@
-<input id="@Id"
-       name="@Name"
-       type="text"
-       value="@value"
-       maxlength="9"
-       inputmode="numeric"
-       autocomplete="postal-code"
-       required="@Required"
-       @oninput="HandleInput" />
+<MudTextField T="string"
+              Id="@Id"
+              Name="@Name"
+              Label="CEP"
+              @bind-Value="value"
+              @bind-Value:after="FormatValue"
+              Immediate="true"
+              MaxLength="9"
+              InputMode="InputMode.numeric"
+              AutoComplete="postal-code"
+              Required="@Required"
+              Variant="Variant.Outlined"
+              FullWidth="true" />
 
 @code {
     [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
@@ -15,9 +19,9 @@
 
     private string value = string.Empty;
 
-    private void HandleInput(ChangeEventArgs args)
+    private void FormatValue()
     {
-        var digits = new string((args.Value?.ToString() ?? string.Empty).Where(char.IsDigit).Take(8).ToArray());
+        var digits = new string(value.Where(char.IsDigit).Take(8).ToArray());
         value = digits.Length <= 5 ? digits : $"{digits[..5]}-{digits[5..]}";
     }
 }
