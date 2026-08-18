@@ -1449,11 +1449,25 @@ When implementing a task:
 3. Prefer the smallest coherent change that satisfies the requirement.
 4. Do not refactor unrelated areas without a concrete reason.
 5. Add or update automated tests for meaningful business behavior.
-6. Run relevant tests before declaring the task complete.
+6. Perform the relevant non-executing validation before declaring the task complete.
 7. Keep migrations and schema changes intentional.
 8. Mention important assumptions in the final implementation summary.
 
 Do not silently introduce breaking changes.
+
+## Build and Application Execution
+
+Do not run builds or start the application during normal task execution.
+
+This includes commands and tools such as:
+
+- `dotnet build`
+- `dotnet test`, because it builds projects by default
+- `dotnet run`
+- `dotnet watch`
+- launching the web application, development server, or any background host process
+
+Use static inspection and targeted code review to validate changes unless the user explicitly requests a build, test run, or application launch.
 
 ---
 

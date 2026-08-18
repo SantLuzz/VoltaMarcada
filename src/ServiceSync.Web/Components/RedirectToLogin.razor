@@ -1,0 +1,12 @@
+@inject NavigationManager NavigationManager
+
+<p>
+    Redirecionando para o <a href="/account/login">login</a>...
+</p>
+
+@code {
+    protected override void OnInitialized()
+    {
+        NavigationManager.NavigateTo("/account/login", forceLoad: true);
+    }
+}

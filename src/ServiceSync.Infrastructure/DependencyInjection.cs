@@ -25,6 +25,15 @@ public static class DependencyInjection
             .AddDefaultTokenProviders();
 
         services.AddScoped<ICompanyRepository, CompanyRepository>();
+        services.AddScoped<ICompanyOnboardingRepository, CompanyOnboardingRepository>();
         return services;
+    }
+
+    public static async Task ApplyDatabaseMigrationsAsync(this IServiceProvider serviceProvider)
+    {
+        using var scope = serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        await dbContext.Database.MigrateAsync();
     }
 }

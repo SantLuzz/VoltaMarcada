@@ -11,6 +11,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 {
     public DbSet<Company> Companies => Set<Company>();
 
+    public DbSet<CompanyUser> CompanyUsers => Set<CompanyUser>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

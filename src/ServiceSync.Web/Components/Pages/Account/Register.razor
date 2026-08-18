@@ -1,0 +1,45 @@
+@page "/account/register"
+@attribute [AllowAnonymous]
+@layout AuthLayout
+
+<PageTitle>Criar conta | ServiceSync</PageTitle>
+
+<section class="auth-card" aria-labelledby="register-title">
+    <a class="auth-brand" href="/account/login">ServiceSync</a>
+
+    <h1 id="register-title">Crie sua conta</h1>
+    <p class="auth-subtitle">Comece a organizar seus atendimentos e transforme manutenção em novas oportunidades.</p>
+
+    @if (!string.IsNullOrWhiteSpace(Error))
+    {
+        <div class="auth-feedback" role="alert">@Error</div>
+    }
+
+    <form method="post" action="/account/register">
+        <AntiforgeryToken />
+
+        <div class="auth-field">
+            <label for="email">E-mail</label>
+            <input id="email" name="email" type="email" autocomplete="email" required />
+        </div>
+
+        <div class="auth-field">
+            <label for="password">Senha</label>
+            <input id="password" name="password" type="password" autocomplete="new-password" minlength="6" required />
+        </div>
+
+        <div class="auth-field">
+            <label for="confirm-password">Confirmar senha</label>
+            <input id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" minlength="6" required />
+        </div>
+
+        <button class="auth-submit" type="submit">Criar conta</button>
+    </form>
+
+    <p class="auth-footer">Já tem uma conta? <a href="/account/login">Entrar</a></p>
+</section>
+
+@code {
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
+}

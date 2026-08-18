@@ -18,6 +18,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <UserSecretsId>ServiceSync.Web-8f510a91-bd13-4821-bbf2-23cc53b69db4</UserSecretsId>
   </PropertyGroup>
 
 </Project>

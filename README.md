@@ -31,6 +31,17 @@ docker compose up -d
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=...;Database=...;Username=...;Password=..." --project src/ServiceSync.Web
 ```
 
+## Administrador da plataforma
+
+O administrador global não é criado pelo cadastro público e não pertence a uma empresa. Configure-o fora do repositório para que a aplicação o provisione e atribua a role `PlatformAdministrator` na inicialização:
+
+```powershell
+dotnet user-secrets set "PlatformAdministrator:Email" "admin@exemplo.com" --project src/ServiceSync.Web
+dotnet user-secrets set "PlatformAdministrator:Password" "UseUmaSenhaForteAqui" --project src/ServiceSync.Web
+```
+
+Em produção, forneça os mesmos valores por variáveis de ambiente ou pelo gerenciador de segredos da hospedagem. Nunca os adicione ao `appsettings.json` versionado.
+
 ## Migrations
 
 Instale a ferramenta, se necessário:
