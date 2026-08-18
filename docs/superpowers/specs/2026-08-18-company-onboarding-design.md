@@ -75,6 +75,8 @@ All properties except `LogoKey` are required. The entity protects its state and 
 6. A user who signs in at `/account/login` is redirected to `/dashboard` when a membership exists; otherwise they are redirected to `/onboarding/company`.
 7. Unauthenticated users are redirected to login. Authenticated users without a membership are prevented server-side from reaching internal company pages and sent to onboarding.
 
+Every protected page must preserve its requested local path in `returnUrl` when redirecting a user to login or onboarding. Redirect targets must be validated as local paths before use; external URLs, protocol-relative URLs, and invalid paths fall back to `/dashboard`.
+
 The dashboard is intentionally a minimal authenticated placeholder for the next phases.
 
 ## Validation and persistence rules

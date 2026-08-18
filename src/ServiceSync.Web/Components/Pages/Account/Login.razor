@@ -1,0 +1,46 @@
+@page "/account/login"
+@attribute [AllowAnonymous]
+@layout AuthLayout
+
+<PageTitle>Entrar | ServiceSync</PageTitle>
+
+<section class="auth-card" aria-labelledby="login-title">
+    <a class="auth-brand" href="/account/login">ServiceSync</a>
+
+    <h1 id="login-title">Que bom ter você de volta</h1>
+    <p class="auth-subtitle">Entre para acompanhar sua operação e as próximas oportunidades de manutenção.</p>
+
+    @if (!string.IsNullOrWhiteSpace(Error))
+    {
+        <div class="auth-feedback" role="alert">@Error</div>
+    }
+
+    <form method="post" action="/account/login">
+        <AntiforgeryToken />
+        <input name="returnUrl" type="hidden" value="@ReturnUrl" />
+
+        <div class="auth-field">
+            <label for="email">E-mail</label>
+            <input id="email" name="email" type="email" autocomplete="email" required />
+        </div>
+
+        <div class="auth-field">
+            <label for="password">Senha</label>
+            <PasswordInput Id="password" Name="password" Autocomplete="current-password" Required="true" />
+        </div>
+
+        <button class="auth-submit" type="submit">Entrar</button>
+    </form>
+
+    <p class="auth-footer">Ainda não tem uma conta? <a href="@RegisterUrl">Criar conta</a></p>
+</section>
+
+@code {
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    private string RegisterUrl => "/account/register" + QueryString.Create("returnUrl", ReturnUrl);
+}

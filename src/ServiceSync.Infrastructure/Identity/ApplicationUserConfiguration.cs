@@ -7,9 +7,6 @@ public sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Appl
 {
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
-        builder.HasOne(user => user.Company)
-            .WithMany()
-            .HasForeignKey(user => user.CompanyId)
-            .OnDelete(DeleteBehavior.Restrict);
+        builder.ToTable("AspNetUsers");
     }
 }

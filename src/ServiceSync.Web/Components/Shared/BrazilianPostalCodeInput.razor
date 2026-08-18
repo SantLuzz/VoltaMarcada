@@ -1,0 +1,23 @@
+<input id="@Id"
+       name="@Name"
+       type="text"
+       value="@value"
+       maxlength="9"
+       inputmode="numeric"
+       autocomplete="postal-code"
+       required="@Required"
+       @oninput="HandleInput" />
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    [Parameter] public bool Required { get; set; }
+
+    private string value = string.Empty;
+
+    private void HandleInput(ChangeEventArgs args)
+    {
+        var digits = new string((args.Value?.ToString() ?? string.Empty).Where(char.IsDigit).Take(8).ToArray());
+        value = digits.Length <= 5 ? digits : $"{digits[..5]}-{digits[5..]}";
+    }
+}

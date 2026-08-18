@@ -27,7 +27,7 @@ Use the following stack unless an explicit task says otherwise:
 - Entity Framework Core
 - PostgreSQL
 - ASP.NET Core Identity
-- xUnit for automated tests
+- xUnit when automated tests are introduced after MVP validation
 - FluentValidation when validation complexity justifies it
 
 Do not introduce additional frameworks, architectural styles, messaging systems, ORMs, frontend frameworks, or infrastructure dependencies without a clear requirement.
@@ -1086,46 +1086,9 @@ Do not log sensitive customer data unnecessarily.
 
 ## Testing Strategy
 
-Write tests for important business rules.
+Automated tests are not required during the initial MVP validation.
 
-Prioritize tests around:
-
-- tenant isolation
-- appointment conflict detection
-- slot calculation
-- appointment rescheduling
-- reschedule history
-- work order status transitions
-- work order completion
-- maintenance reminder creation
-- maintenance reminder state transitions
-- booking request acceptance
-- quote approval
-- public token validation
-
-Use unit tests for pure business logic.
-
-Use integration tests for:
-
-- EF Core mappings
-- database behavior
-- tenant-filtered queries
-- authentication/authorization boundaries when important
-- concurrency-sensitive scheduling behavior
-
-Tests must be deterministic.
-
-Do not depend on the machine clock.
-
-Use test builders or factories when object setup becomes repetitive.
-
-Test names must be in English and describe behavior.
-
-Example:
-
-```csharp
-public async Task AcceptBookingRequest_ShouldCreateAppointment_WhenSlotIsAvailable()
-```
+When the product reaches a stabilization phase or a specific task requests tests, use xUnit and keep tests deterministic. Do not depend on the machine clock; inject a time provider instead.
 
 ---
 
@@ -1448,12 +1411,26 @@ When implementing a task:
 2. Inspect existing patterns and follow them.
 3. Prefer the smallest coherent change that satisfies the requirement.
 4. Do not refactor unrelated areas without a concrete reason.
-5. Add or update automated tests for meaningful business behavior.
-6. Run relevant tests before declaring the task complete.
+5. Add or update automated tests only when the task explicitly requires them.
+6. Perform the relevant non-executing validation before declaring the task complete.
 7. Keep migrations and schema changes intentional.
 8. Mention important assumptions in the final implementation summary.
 
 Do not silently introduce breaking changes.
+
+## Build and Application Execution
+
+Do not run builds or start the application during normal task execution.
+
+This includes commands and tools such as:
+
+- `dotnet build`
+- `dotnet test`, because it builds projects by default
+- `dotnet run`
+- `dotnet watch`
+- launching the web application, development server, or any background host process
+
+Use static inspection and targeted code review to validate changes unless the user explicitly requests a build, test run, or application launch.
 
 ---
 
@@ -1484,3 +1461,585 @@ A technician should not need to remember that a customer's equipment is due for 
 ServiceSync should surface that opportunity, help the company contact the customer, provide a booking path, and connect the resulting appointment back to the customer's equipment and service history.
 
 Preserve this principle when making architectural, UX, and domain decisions.
+
+# ServiceSync Frontend UI / UX Design System
+
+The ServiceSync frontend must look and behave like a modern, professional, clean, and consistent SaaS application.
+
+The UI must prioritize:
+
+- clarity
+- usability
+- visual hierarchy
+- consistency
+- responsiveness
+- accessibility
+- low cognitive load
+- fast task completion
+
+ServiceSync is primarily used by service technicians and small service businesses.
+
+The interface must feel simple, organized, trustworthy, and professional even when the underlying workflow is complex.
+
+Frontend work is not complete simply because the functionality works.
+
+The visual quality, consistency, responsiveness, component reuse, loading states, validation states, and overall UX are part of the implementation requirements.
+
+---
+
+# UI Refactoring Rule
+
+Whenever modifying an existing frontend page, first inspect its current visual structure.
+
+If the page does not comply with the ServiceSync UI rules defined in this document, refactor the relevant layout, spacing, components, form controls, and visual hierarchy to conform to the design system before completing the task.
+
+Existing bad UI is not a reason to propagate the same pattern.
+
+Do not preserve inconsistent styling just because it already exists.
+
+Every new page and every modified page must follow the same:
+
+- visual language
+- spacing system
+- component usage
+- color palette
+- typography
+- responsive behavior
+- interaction patterns
+
+When working on an existing page, improve obviously inconsistent UI when it is reasonably related to the requested change.
+
+Do not create page-specific visual patterns unless there is a strong UX reason.
+
+---
+
+# MudBlazor is Mandatory
+
+MudBlazor is the default and mandatory UI component library for the ServiceSync frontend.
+
+Whenever MudBlazor provides a component for a UI element, use the MudBlazor component.
+
+Never manually recreate a UI or form control that already exists in MudBlazor.
+
+All user-editable fields must use an appropriate MudBlazor input component.
+
+Raw HTML form fields are forbidden by default.
+
+Before implementing any form field or interactive UI element, check whether an equivalent MudBlazor component already exists.
+
+Custom input components are only allowed when MudBlazor cannot satisfy the requirement.
+
+Even custom reusable ServiceSync input components should internally use MudBlazor components whenever possible.
+
+## Component Mapping
+
+Prefer:
+
+- Text input -> `MudTextField`
+- Email input -> `MudTextField`
+- Password input -> `MudTextField`
+- Multiline text -> `MudTextField` with multiline configuration
+- Numeric input -> `MudNumericField`
+- Select -> `MudSelect`
+- Autocomplete -> `MudAutocomplete`
+- Checkbox -> `MudCheckBox`
+- Radio -> `MudRadioGroup`
+- Date input -> `MudDatePicker`
+- Time input -> `MudTimePicker`
+- Date range -> MudBlazor date range components
+- Switch -> `MudSwitch`
+- Button -> `MudButton`
+- Icon button -> `MudIconButton`
+- Table -> `MudTable` or `MudDataGrid`
+- Dialog -> `MudDialog`
+- Snackbar -> MudBlazor Snackbar
+- Tabs -> `MudTabs`
+- Menu -> `MudMenu`
+- Chip -> `MudChip`
+- Tooltip -> `MudTooltip`
+- Pagination -> `MudPagination`
+- Loading -> MudBlazor progress components
+- Icons -> MudBlazor icons
+- Navigation -> MudBlazor navigation components when appropriate
+
+Do not use raw HTML controls such as:
+
+`<input>`
+
+`<select>`
+
+`<textarea>`
+
+`<button>`
+
+unless there is a documented technical reason and MudBlazor cannot satisfy the requirement.
+
+Do not introduce another UI component library for functionality already available in MudBlazor.
+
+---
+
+# ServiceSync Official Logo
+
+The official ServiceSync logo asset is located at:
+
+`src/ServiceSync.Web/wwwroot/logos/logo.png`
+
+This is the canonical ServiceSync logo and must be reused throughout the application.
+
+Because the file is located under `wwwroot`, Blazor components should reference it using:
+
+`/logos/logo.png`
+
+Do not duplicate the logo into another folder.
+
+Do not create alternative versions of the logo unless explicitly requested.
+
+Do not recreate the ServiceSync logo using:
+
+- plain text
+- CSS
+- MudBlazor icons
+- generic icons
+- generated SVGs
+- alternative images
+
+when the official asset can be used.
+
+Always preserve the original aspect ratio.
+
+Never stretch or distort the logo.
+
+---
+
+# Visual Identity
+
+The ServiceSync visual identity is based on blue tones derived from the official logo.
+
+## Primary Colors
+
+Primary:
+
+`#0969F0`
+
+Primary Hover:
+
+`#0758CC`
+
+Accent:
+
+`#08BDF2`
+
+Navy:
+
+`#071D49`
+
+## Neutral Colors
+
+Application Background:
+
+`#F6F8FC`
+
+Surface / Cards:
+
+`#FFFFFF`
+
+Border:
+
+`#E2E8F0`
+
+Primary Text:
+
+`#172033`
+
+Secondary Text:
+
+`#64748B`
+
+## Semantic Colors
+
+Success:
+
+`#16A34A`
+
+Warning:
+
+`#F59E0B`
+
+Danger:
+
+`#DC2626`
+
+These colors must be centralized in the application theme.
+
+Prefer configuring them through the ServiceSync `MudTheme`.
+
+Do not hardcode these colors repeatedly across individual pages.
+
+Do not introduce random colors without a strong semantic or design reason.
+
+---
+
+# MudBlazor Theme
+
+ServiceSync should maintain a centralized MudBlazor theme.
+
+The theme should be the primary source of visual configuration for:
+
+- primary color
+- secondary/accent color
+- background
+- surfaces
+- typography
+- border appearance
+- semantic colors
+- default component appearance where supported
+
+Prefer theme-level customization over page-level CSS.
+
+Do not solve global design problems with duplicated page-specific CSS.
+
+---
+
+# Typography
+
+Use `Inter` as the primary application font whenever available.
+
+Typography must remain consistent throughout the application.
+
+## Page Title
+
+- Size: approximately 28px
+- Weight: 700
+- Primary text color
+
+## Section Title
+
+- Size: approximately 20px
+- Weight: 600
+
+## Card Title
+
+- Size: approximately 16px
+- Weight: 600
+
+## Body
+
+- Size: 14px or 16px
+- Weight: 400
+
+## Secondary Text
+
+- Size: approximately 14px
+- Secondary text color
+
+Avoid unnecessary typography variations.
+
+Do not create arbitrary font sizes for individual pages.
+
+Use MudBlazor typography components or shared typography rules whenever appropriate.
+
+---
+
+# Spacing System
+
+ServiceSync must use a consistent spacing system.
+
+Prefer an 8px-based spacing system.
+
+Allowed spacing values should generally come from:
+
+- 4px
+- 8px
+- 12px
+- 16px
+- 24px
+- 32px
+- 48px
+
+Avoid arbitrary spacing values unless strictly necessary.
+
+The most common spacing values should be:
+
+- 8px for small internal gaps
+- 16px between related elements
+- 24px between groups
+- 32px between major page sections
+
+Whitespace is intentional.
+
+Do not compress screens simply to fit more information.
+
+Pages should feel comfortable and visually balanced.
+
+---
+
+# Application Layout
+
+Authenticated desktop application pages should use a consistent application shell.
+
+The standard structure should normally be:
+
+- Sidebar
+- Topbar
+- Page Header
+- Main Content
+
+Main content should use:
+
+- comfortable horizontal padding
+- comfortable vertical padding
+- consistent maximum width where appropriate
+
+Recommended desktop page padding:
+
+`24px` to `32px`
+
+Recommended maximum content width:
+
+approximately `1440px`
+
+Never place page content directly against browser edges.
+
+Avoid large unused areas when content could be presented more effectively.
+
+---
+
+# Page Header
+
+Every management page should have a consistent page header.
+
+The page header should normally contain:
+
+- Page title
+- Short description
+- Primary action aligned to the right when applicable
+
+Example:
+
+```text
+Clientes                              + Novo cliente
+
+
+The ServiceSync frontend must look like a modern professional SaaS application.
+
+### Visual identity
+
+Primary: #0969F0
+Primary Hover: #0758CC
+Accent: #08BDF2
+Navy: #071D49
+
+Background: #F6F8FC
+Surface: #FFFFFF
+Border: #E2E8F0
+
+Text Primary: #172033
+Text Secondary: #64748B
+
+Success: #16A34A
+Warning: #F59E0B
+Danger: #DC2626
+
+### Typography
+
+Use Inter as the primary font.
+
+Page title:
+- 28px
+- 700 weight
+
+Section title:
+- 20px
+- 600 weight
+
+Card title:
+- 16px
+- 600 weight
+
+Body:
+- 14px or 16px
+- 400 weight
+
+Secondary text:
+- 14px
+- muted color
+
+### Spacing
+
+Use an 8px-based spacing system whenever possible.
+
+Allowed spacing values:
+
+4px
+8px
+12px
+16px
+24px
+32px
+48px
+
+Never use arbitrary spacing unless strictly necessary.
+
+### Layout
+
+Desktop pages must use a consistent application shell:
+
+Sidebar
+Topbar
+Page header
+Main content
+
+Main content must have:
+
+max-width: 1440px
+padding: 24px to 32px
+
+Never place content directly against screen edges.
+
+### Page Header
+
+Every management page should have:
+
+Title
+Short description
+Primary action aligned to the right
+
+Example:
+
+Clientes                         [+ Novo cliente]
+Gerencie seus clientes e equipamentos.
+
+### Cards
+
+Cards must use:
+
+white background
+1px subtle border
+12px border radius
+16px or 24px internal padding
+very subtle shadow when appropriate
+
+Avoid excessive shadows.
+
+### Forms
+
+Forms must never look like raw HTML forms.
+
+Use:
+
+clear labels
+consistent field heights
+help/error text
+logical grouping
+adequate vertical spacing
+
+Prefer 2-column layouts on desktop when appropriate.
+
+Use 1-column layout on mobile.
+
+Primary actions should be visually obvious.
+
+### Tables
+
+Tables must have:
+
+comfortable row height
+clear headers
+subtle separators
+hover state
+empty state
+loading state
+responsive behavior
+
+Actions should preferably use an action menu instead of several buttons.
+
+### Buttons
+
+Primary action:
+filled primary color
+
+Secondary action:
+outlined or neutral
+
+Destructive action:
+danger styling
+
+Avoid displaying more than one primary button in the same section.
+
+### Status
+
+Never communicate status using color alone.
+
+Use badges with text.
+
+Examples:
+
+Agendada
+Em andamento
+Concluída
+Cancelada
+Aguardando aprovação
+
+### Empty States
+
+Never leave an empty table or blank card.
+
+Provide:
+
+short explanation
+optional icon
+clear CTA
+
+Example:
+
+Nenhum cliente cadastrado
+
+Cadastre seu primeiro cliente para começar a criar
+ordens de serviço.
+
+[Adicionar cliente]
+
+### Responsive Design
+
+All screens must support:
+
+Desktop
+Tablet
+Mobile
+
+Do not create desktop-only layouts.
+
+Tables should adapt appropriately on small screens.
+
+### UX principles
+
+Prioritize:
+
+clarity
+visual hierarchy
+low cognitive load
+fast task completion
+consistent navigation
+accessible contrast
+predictable interactions
+
+ServiceSync is used by service technicians and small businesses.
+
+The UI must feel simple even when the underlying feature is complex.
+
+### Important
+
+Before implementing a new page:
+
+1. Identify the primary user goal.
+2. Define the information hierarchy.
+3. Reuse existing components.
+4. Follow the ServiceSync design system.
+5. Consider loading, empty, error and success states.
+6. Consider desktop and mobile layouts.
+7. Only then implement the page.
+
+Do not create isolated visual styles for individual pages.
+
+Do not introduce new colors, spacing conventions,
+button styles or card styles without a strong reason.

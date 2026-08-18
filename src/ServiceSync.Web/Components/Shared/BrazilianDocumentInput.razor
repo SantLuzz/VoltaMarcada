@@ -1,0 +1,45 @@
+<input id="@Id"
+       name="@Name"
+       type="text"
+       value="@value"
+       maxlength="18"
+       inputmode="numeric"
+       autocomplete="@Autocomplete"
+       required="@Required"
+       @oninput="HandleInput" />
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    [Parameter] public string Autocomplete { get; set; } = "off";
+    [Parameter] public bool Required { get; set; }
+
+    private string value = string.Empty;
+
+    private void HandleInput(ChangeEventArgs args)
+    {
+        var digits = new string((args.Value?.ToString() ?? string.Empty)
+            .Where(char.IsDigit)
+            .Take(14)
+            .ToArray());
+
+        value = digits.Length <= 11 ? FormatCpf(digits) : FormatCnpj(digits);
+    }
+
+    private static string FormatCpf(string value) => value.Length switch
+    {
+        <= 3 => value,
+        <= 6 => $"{value[..3]}.{value[3..]}",
+        <= 9 => $"{value[..3]}.{value[3..6]}.{value[6..]}",
+        _ => $"{value[..3]}.{value[3..6]}.{value[6..9]}-{value[9..]}"
+    };
+
+    private static string FormatCnpj(string value) => value.Length switch
+    {
+        <= 2 => value,
+        <= 5 => $"{value[..2]}.{value[2..]}",
+        <= 8 => $"{value[..2]}.{value[2..5]}.{value[5..]}",
+        <= 12 => $"{value[..2]}.{value[2..5]}.{value[5..8]}/{value[8..]}",
+        _ => $"{value[..2]}.{value[2..5]}.{value[5..8]}/{value[8..12]}-{value[12..]}"
+    };
+}

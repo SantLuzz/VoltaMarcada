@@ -11,6 +11,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 {
     public DbSet<Company> Companies => Set<Company>();
 
+    public DbSet<CompanyUser> CompanyUsers => Set<CompanyUser>();
+
+    public DbSet<State> States => Set<State>();
+
+    public DbSet<City> Cities => Set<City>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

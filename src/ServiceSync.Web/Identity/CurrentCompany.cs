@@ -1,0 +1,34 @@
+using Microsoft.EntityFrameworkCore;
+using ServiceSync.Application.Abstractions.Identity;
+using ServiceSync.Application.Abstractions.Tenancy;
+using ServiceSync.Infrastructure.Persistence;
+
+namespace ServiceSync.Web.Identity;
+
+public sealed class CurrentCompany(
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    ICurrentUser currentUser) : ICurrentCompany
+{
+    public async Task<Guid> GetCompanyIdAsync(CancellationToken cancellationToken = default)
+    {
+        if (!currentUser.IsAuthenticated || currentUser.UserId == Guid.Empty)
+        {
+            throw new InvalidOperationException("A current company can only be resolved for an authenticated user.");
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var companyId = await dbContext.CompanyUsers
+            .AsNoTracking()
+            .Where(companyUser => companyUser.UserId == currentUser.UserId)
+            .Select(companyUser => companyUser.CompanyId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (companyId == Guid.Empty)
+        {
+            throw new CurrentCompanyNotFoundException();
+        }
+
+        return companyId;
+    }
+}
