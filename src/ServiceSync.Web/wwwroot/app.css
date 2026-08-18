@@ -27,6 +27,20 @@ body {
     width: 100%;
 }
 
+.onboarding-card {
+    max-width: 48rem;
+}
+
+.onboarding-fields {
+    display: grid;
+    gap: 0 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.onboarding-field-wide {
+    grid-column: 1 / -1;
+}
+
 .auth-brand {
     color: #087e70;
     display: inline-block;
@@ -76,6 +90,16 @@ body {
     outline: none;
 }
 
+.auth-optional {
+    color: #5e6c84;
+    font-weight: 400;
+}
+
+.auth-hint {
+    color: #5e6c84;
+    line-height: 1.35;
+}
+
 .auth-submit {
     background: #087e70;
     border: 0;
@@ -122,6 +146,14 @@ body {
     .auth-card {
         margin-top: 2rem;
         padding: 1.75rem;
+    }
+
+    .onboarding-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .onboarding-field-wide {
+        grid-column: auto;
     }
 }
 

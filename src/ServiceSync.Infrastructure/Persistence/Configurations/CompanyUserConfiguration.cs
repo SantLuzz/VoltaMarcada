@@ -27,8 +27,8 @@ public sealed class CompanyUserConfiguration : IEntityTypeConfiguration<CompanyU
             .OnDelete(DeleteBehavior.Restrict)
             .IsRequired();
 
-        builder.HasIndex(companyUser => new { companyUser.UserId, companyUser.CompanyId })
-            .HasDatabaseName("UX_CompanyUsers_UserId_CompanyId")
+        builder.HasIndex(companyUser => companyUser.UserId)
+            .HasDatabaseName("UX_CompanyUsers_UserId")
             .IsUnique();
     }
 }

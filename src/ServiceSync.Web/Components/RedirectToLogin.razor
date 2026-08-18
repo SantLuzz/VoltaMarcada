@@ -1,12 +1,24 @@
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using ServiceSync.Web.Routing
 
 <p>
     Redirecionando para o <a href="/account/login">login</a>...
 </p>
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        NavigationManager.NavigateTo("/account/login", forceLoad: true);
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var returnUrl = LocalReturnUrl.GetCurrentPath(
+            new Uri(NavigationManager.Uri),
+            new Uri(NavigationManager.BaseUri));
+        var destination = authenticationState.User.Identity?.IsAuthenticated == true
+            ? "/onboarding/company"
+            : "/account/login";
+
+        NavigationManager.NavigateTo(
+            destination + QueryString.Create("returnUrl", returnUrl),
+            forceLoad: true);
     }
 }

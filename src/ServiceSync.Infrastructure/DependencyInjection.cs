@@ -6,6 +6,8 @@ using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Infrastructure.Identity;
 using ServiceSync.Infrastructure.Persistence;
 using ServiceSync.Infrastructure.Persistence.Repositories;
+using ServiceSync.Infrastructure.Storage;
+using ServiceSync.Application.Abstractions.Storage;
 
 namespace ServiceSync.Infrastructure;
 
@@ -16,7 +18,7 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
 
-        services.AddDbContext<AppDbContext>(options =>
+        services.AddDbContextFactory<AppDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql =>
                 npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
 
@@ -26,6 +28,7 @@ public static class DependencyInjection
 
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<ICompanyOnboardingRepository, CompanyOnboardingRepository>();
+        services.AddScoped<ICompanyLogoStorage, LocalCompanyLogoStorage>();
         return services;
     }
 

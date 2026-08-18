@@ -17,13 +17,13 @@ public sealed class Company
 
     public string Document { get; private set; } = string.Empty;
 
-    public string Phone { get; private set; } = string.Empty;
-
     public string WhatsApp { get; private set; } = string.Empty;
 
-    public string City { get; private set; } = string.Empty;
+    public string PostalCode { get; private set; } = string.Empty;
 
-    public string State { get; private set; } = string.Empty;
+    public Guid StateId { get; private set; }
+
+    public Guid CityId { get; private set; }
 
     public string? LogoKey { get; private set; }
 
@@ -37,10 +37,10 @@ public sealed class Company
         string legalName,
         string tradeName,
         string document,
-        string phone,
         string whatsApp,
-        string city,
-        string state,
+        string postalCode,
+        Guid stateId,
+        Guid cityId,
         string? logoKey,
         string slug,
         DateTimeOffset now)
@@ -50,16 +50,31 @@ public sealed class Company
             throw new DomainException("A valid Brazilian document is required.");
         }
 
+        if (!BrazilianPostalCode.TryNormalize(postalCode, out var normalizedPostalCode))
+        {
+            throw new DomainException("A valid Brazilian postal code is required.");
+        }
+
+        if (stateId == Guid.Empty)
+        {
+            throw new DomainException("State ID is required.");
+        }
+
+        if (cityId == Guid.Empty)
+        {
+            throw new DomainException("City ID is required.");
+        }
+
         return new Company
         {
             Id = Guid.NewGuid(),
             LegalName = RequireText(legalName, "Legal name"),
             TradeName = RequireText(tradeName, "Trade name"),
             Document = normalizedDocument,
-            Phone = RequireText(phone, "Phone"),
             WhatsApp = RequireText(whatsApp, "WhatsApp"),
-            City = RequireText(city, "City"),
-            State = RequireText(state, "State"),
+            PostalCode = normalizedPostalCode,
+            StateId = stateId,
+            CityId = cityId,
             LogoKey = NormalizeOptionalText(logoKey),
             Slug = RequireText(slug, "Slug"),
             CreatedAtUtc = now.ToUniversalTime(),

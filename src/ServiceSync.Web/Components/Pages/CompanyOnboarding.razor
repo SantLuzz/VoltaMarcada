@@ -1,0 +1,171 @@
+@page "/onboarding/company"
+@attribute [Authorize]
+@layout AuthLayout
+@using Microsoft.EntityFrameworkCore
+@using ServiceSync.Infrastructure.Identity
+@using ServiceSync.Infrastructure.Persistence
+@using ServiceSync.Web.Routing
+@inject IDbContextFactory<AppDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Cadastrar empresa | ServiceSync</PageTitle>
+
+@if (!isRedirecting)
+{
+    <section class="auth-card onboarding-card" aria-labelledby="company-onboarding-title">
+        <a class="auth-brand" href="/">ServiceSync</a>
+
+        <h1 id="company-onboarding-title">Cadastre sua empresa</h1>
+        <p class="auth-subtitle">Estas informações serão usadas para identificar sua empresa e organizar a operação.</p>
+
+        @if (!string.IsNullOrWhiteSpace(Error))
+        {
+            <div class="auth-feedback" role="alert">@Error</div>
+        }
+
+        <form method="post" action="/onboarding/company" enctype="multipart/form-data">
+            <AntiforgeryToken />
+            <input name="returnUrl" type="hidden" value="@ReturnUrl" />
+
+            <div class="onboarding-fields">
+                <div class="auth-field onboarding-field-wide">
+                    <label for="legal-name">Razão social</label>
+                    <input id="legal-name" name="legalName" type="text" autocomplete="organization" required />
+                </div>
+
+                <div class="auth-field onboarding-field-wide">
+                    <label for="trade-name">Nome fantasia</label>
+                    <input id="trade-name" name="tradeName" type="text" required />
+                </div>
+
+                <div class="auth-field">
+                    <label for="document">CPF ou CNPJ</label>
+                    <BrazilianDocumentInput Id="document" Name="document" Required="true" />
+                </div>
+
+                <div class="auth-field">
+                    <label for="whats-app">WhatsApp</label>
+                    <BrazilianPhoneInput Id="whats-app" Name="whatsApp" Required="true" />
+                </div>
+
+                <div class="auth-field">
+                    <label for="postal-code">CEP</label>
+                    <BrazilianPostalCodeInput Id="postal-code" Name="postalCode" Required="true" />
+                </div>
+
+                <div class="auth-field">
+                    <label for="state">Estado</label>
+                    <select id="state" name="stateId" @bind="selectedStateId" @bind:after="LoadCitiesAsync" required>
+                        <option value="@Guid.Empty">Selecione o estado</option>
+                        @foreach (var state in states)
+                        {
+                            <option value="@state.Id">@state.Abbreviation - @state.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="auth-field">
+                    <label for="city">Cidade</label>
+                    <select id="city" name="cityId" @bind="selectedCityId" disabled="@(selectedStateId == Guid.Empty)" required>
+                        <option value="@Guid.Empty">Selecione a cidade</option>
+                        @foreach (var city in cities)
+                        {
+                            <option value="@city.Id">@city.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="auth-field onboarding-field-wide">
+                    <label for="logo">Logo <span class="auth-optional">(opcional)</span></label>
+                    <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" />
+                    <small class="auth-hint">PNG, JPEG ou WebP de até 5 MB.</small>
+                </div>
+            </div>
+
+            <button class="auth-submit" type="submit">Cadastrar empresa</button>
+        </form>
+    </section>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    private bool isRedirecting;
+    private Guid selectedStateId;
+    private Guid selectedCityId;
+    private IReadOnlyList<StateOption> states = [];
+    private IReadOnlyList<CityOption> cities = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateTask;
+        var user = authenticationState.User;
+
+        if (user.IsInRole(PlatformRoles.PlatformAdministrator))
+        {
+            RedirectToReturnUrl();
+            return;
+        }
+
+        var userIdValue = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdValue, out var userId))
+        {
+            return;
+        }
+
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        var hasMembership = await dbContext.CompanyUsers
+            .AsNoTracking()
+            .AnyAsync(companyUser => companyUser.UserId == userId);
+
+        if (hasMembership)
+        {
+            RedirectToReturnUrl();
+            return;
+        }
+
+        states = await dbContext.States
+            .AsNoTracking()
+            .OrderBy(state => state.Abbreviation)
+            .Select(state => new StateOption(state.Id, state.Name, state.Abbreviation))
+            .ToListAsync();
+    }
+
+    private async Task LoadCitiesAsync()
+    {
+        selectedCityId = Guid.Empty;
+        cities = selectedStateId == Guid.Empty
+            ? []
+            : await GetCitiesAsync();
+    }
+
+    private async Task<IReadOnlyList<CityOption>> GetCitiesAsync()
+    {
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        return await dbContext.Cities
+            .AsNoTracking()
+            .Where(city => city.StateId == selectedStateId)
+            .OrderBy(city => city.Name)
+            .Select(city => new CityOption(city.Id, city.Name))
+            .ToListAsync();
+    }
+
+    private void RedirectToReturnUrl()
+    {
+        isRedirecting = true;
+        NavigationManager.NavigateTo(
+            LocalReturnUrl.Normalize(ReturnUrl, "/"),
+            forceLoad: true);
+    }
+
+    private sealed record StateOption(Guid Id, string Name, string Abbreviation);
+
+    private sealed record CityOption(Guid Id, string Name);
+}

@@ -152,15 +152,35 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("ServiceSync.Domain.Entities.City", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<Guid>("StateId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StateId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Cities_StateId_Name");
+
+                    b.ToTable("Cities", (string)null);
+                });
+
             modelBuilder.Entity("ServiceSync.Domain.Entities.Company", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<Guid>("CityId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -179,20 +199,18 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<string>("Phone")
+                    b.Property<string>("PostalCode")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("State")
-                        .IsRequired()
-                        .HasMaxLength(2)
-                        .HasColumnType("character varying(2)");
+                    b.Property<Guid>("StateId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("TradeName")
                         .IsRequired()
@@ -209,6 +227,8 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CityId");
+
                     b.HasIndex("Document")
                         .IsUnique()
                         .HasDatabaseName("UX_Companies_Document");
@@ -216,6 +236,8 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                     b.HasIndex("Slug")
                         .IsUnique()
                         .HasDatabaseName("UX_Companies_Slug");
+
+                    b.HasIndex("StateId");
 
                     b.ToTable("Companies", (string)null);
                 });
@@ -241,11 +263,35 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CompanyId");
 
-                    b.HasIndex("UserId", "CompanyId")
+                    b.HasIndex("UserId")
                         .IsUnique()
-                        .HasDatabaseName("UX_CompanyUsers_UserId_CompanyId");
+                        .HasDatabaseName("UX_CompanyUsers_UserId");
 
                     b.ToTable("CompanyUsers", (string)null);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.State", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Abbreviation")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Abbreviation")
+                        .IsUnique()
+                        .HasDatabaseName("UX_States_Abbreviation");
+
+                    b.ToTable("States", (string)null);
                 });
 
             modelBuilder.Entity("ServiceSync.Infrastructure.Identity.ApplicationUser", b =>
@@ -361,6 +407,30 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.City", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.State", null)
+                        .WithMany()
+                        .HasForeignKey("StateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.Company", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.City", null)
+                        .WithMany()
+                        .HasForeignKey("CityId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ServiceSync.Domain.Entities.State", null)
+                        .WithMany()
+                        .HasForeignKey("StateId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

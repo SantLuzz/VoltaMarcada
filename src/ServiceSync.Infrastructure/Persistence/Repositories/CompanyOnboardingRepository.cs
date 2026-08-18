@@ -7,6 +7,7 @@ namespace ServiceSync.Infrastructure.Persistence.Repositories;
 
 public sealed class CompanyOnboardingRepository(AppDbContext dbContext) : ICompanyOnboardingRepository
 {
+    private const string DuplicateMembershipConstraintName = "UX_CompanyUsers_UserId";
     private const string DuplicateDocumentConstraintName = "UX_Companies_Document";
     private const string DuplicateSlugConstraintName = "UX_Companies_Slug";
 
@@ -18,6 +19,9 @@ public sealed class CompanyOnboardingRepository(AppDbContext dbContext) : ICompa
 
     public Task<bool> SlugExistsAsync(string slug, CancellationToken cancellationToken = default) =>
         dbContext.Companies.AnyAsync(company => company.Slug == slug, cancellationToken);
+
+    public Task<bool> IsCityInStateAsync(Guid cityId, Guid stateId, CancellationToken cancellationToken = default) =>
+        dbContext.Cities.AnyAsync(city => city.Id == cityId && city.StateId == stateId, cancellationToken);
 
     public async Task<CompanyOnboardingPersistenceOutcome> CreateCompanyAndOwnerAsync(
         Company company,
@@ -42,6 +46,11 @@ public sealed class CompanyOnboardingRepository(AppDbContext dbContext) : ICompa
             if (postgresException.ConstraintName == DuplicateDocumentConstraintName)
             {
                 return CompanyOnboardingPersistenceOutcome.DuplicateDocument;
+            }
+
+            if (postgresException.ConstraintName == DuplicateMembershipConstraintName)
+            {
+                return CompanyOnboardingPersistenceOutcome.DuplicateMembership;
             }
 
             if (postgresException.ConstraintName == DuplicateSlugConstraintName)

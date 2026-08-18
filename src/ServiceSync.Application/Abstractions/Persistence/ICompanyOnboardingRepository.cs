@@ -10,6 +10,8 @@ public interface ICompanyOnboardingRepository
 
     Task<bool> SlugExistsAsync(string slug, CancellationToken cancellationToken = default);
 
+    Task<bool> IsCityInStateAsync(Guid cityId, Guid stateId, CancellationToken cancellationToken = default);
+
     Task<CompanyOnboardingPersistenceOutcome> CreateCompanyAndOwnerAsync(
         Company company,
         CompanyUser ownerMembership,
@@ -19,6 +21,7 @@ public interface ICompanyOnboardingRepository
 public enum CompanyOnboardingPersistenceOutcome
 {
     Success,
+    DuplicateMembership,
     DuplicateDocument,
     DuplicateSlug
 }

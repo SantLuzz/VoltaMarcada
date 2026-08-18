@@ -27,25 +27,24 @@ public static class PlatformAdministratorInitializer
         }
 
         var user = await userManager.FindByEmailAsync(email);
-        if (user is null)
+        if (user is not null)
         {
-            user = new ApplicationUser
-            {
-                Id = Guid.NewGuid(),
-                UserName = email,
-                Email = email,
-                EmailConfirmed = true
-            };
-
-            var userResult = await userManager.CreateAsync(user, password);
-            EnsureSuccess(userResult, "create the platform administrator user");
+            return;
         }
 
-        if (!await userManager.IsInRoleAsync(user, PlatformRoles.PlatformAdministrator))
+        user = new ApplicationUser
         {
-            var assignmentResult = await userManager.AddToRoleAsync(user, PlatformRoles.PlatformAdministrator);
-            EnsureSuccess(assignmentResult, "assign the platform administrator role");
-        }
+            Id = Guid.NewGuid(),
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true
+        };
+
+        var userResult = await userManager.CreateAsync(user, password);
+        EnsureSuccess(userResult, "create the platform administrator user");
+
+        var assignmentResult = await userManager.AddToRoleAsync(user, PlatformRoles.PlatformAdministrator);
+        EnsureSuccess(assignmentResult, "assign the platform administrator role");
     }
 
     private static void EnsureSuccess(IdentityResult result, string operation)

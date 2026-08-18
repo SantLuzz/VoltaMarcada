@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ServiceSync.Infrastructure.Identity;
 using ServiceSync.Infrastructure.Persistence;
+using ServiceSync.Web.Routing;
 
 namespace ServiceSync.Web.Endpoints;
 
@@ -13,7 +14,8 @@ public static class AccountEndpoints
     {
         endpoints.MapPost("/account/register", RegisterAsync);
         endpoints.MapPost("/account/login", LoginAsync);
-        endpoints.MapPost("/account/logout", LogoutAsync);
+        endpoints.MapPost("/account/logout", LogoutAsync)
+            .RequireAuthorization();
 
         return endpoints;
     }
@@ -25,7 +27,7 @@ public static class AccountEndpoints
     {
         if (!IsValidEmail(request.Email) || string.IsNullOrWhiteSpace(request.Password) || request.Password != request.ConfirmPassword)
         {
-            return RedirectWithError("/account/register", "Informe um e-mail válido e senhas iguais.");
+            return RedirectWithError("/account/register", "Informe um e-mail válido e senhas iguais.", request.ReturnUrl);
         }
 
         var user = new ApplicationUser
@@ -37,11 +39,11 @@ public static class AccountEndpoints
         var result = await userManager.CreateAsync(user, request.Password);
         if (!result.Succeeded)
         {
-            return RedirectWithError("/account/register", "Não foi possível criar a conta. Verifique os dados informados.");
+            return RedirectWithError("/account/register", "Não foi possível criar a conta. Verifique os dados informados.", request.ReturnUrl);
         }
 
         await signInManager.SignInAsync(user, isPersistent: false);
-        return Results.Redirect("/onboarding/company");
+        return RedirectToOnboarding(request.ReturnUrl);
     }
 
     private static async Task<IResult> LoginAsync(
@@ -52,7 +54,7 @@ public static class AccountEndpoints
     {
         if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
         {
-            return RedirectWithError("/account/login", "E-mail ou senha inválidos.");
+            return RedirectWithError("/account/login", "E-mail ou senha inválidos.", request.ReturnUrl);
         }
 
         var email = request.Email.Trim();
@@ -64,21 +66,27 @@ public static class AccountEndpoints
 
         if (!signInResult.Succeeded)
         {
-            return RedirectWithError("/account/login", "E-mail ou senha inválidos.");
+            return RedirectWithError("/account/login", "E-mail ou senha inválidos.", request.ReturnUrl);
         }
 
         var user = await signInManager.UserManager.FindByNameAsync(email);
         if (user is null)
         {
             await signInManager.SignOutAsync();
-            return RedirectWithError("/account/login", "E-mail ou senha inválidos.");
+            return RedirectWithError("/account/login", "E-mail ou senha inválidos.", request.ReturnUrl);
         }
 
         var hasMembership = await dbContext.CompanyUsers
             .AsNoTracking()
             .AnyAsync(companyUser => companyUser.UserId == user.Id, cancellationToken);
 
-        return Results.Redirect(hasMembership ? "/dashboard" : "/onboarding/company");
+        var isPlatformAdministrator = await signInManager.UserManager.IsInRoleAsync(
+            user,
+            PlatformRoles.PlatformAdministrator);
+
+        return hasMembership || isPlatformAdministrator
+            ? Results.Redirect(LocalReturnUrl.Normalize(request.ReturnUrl, "/"))
+            : RedirectToOnboarding(request.ReturnUrl);
     }
 
     private static async Task<IResult> LogoutAsync(SignInManager<ApplicationUser> signInManager)
@@ -90,10 +98,15 @@ public static class AccountEndpoints
     private static bool IsValidEmail(string? email) =>
         !string.IsNullOrWhiteSpace(email) && new EmailAddressAttribute().IsValid(email);
 
-    private static IResult RedirectWithError(string path, string error) =>
-        Results.Redirect(path + QueryString.Create("error", error));
+    private static IResult RedirectWithError(string path, string error, string? returnUrl) =>
+        Results.Redirect(path + QueryString.Create("error", error)
+            .Add("returnUrl", LocalReturnUrl.Normalize(returnUrl, "/")));
 
-    public sealed record RegisterAccountRequest(string Email, string Password, string ConfirmPassword);
+    private static IResult RedirectToOnboarding(string? returnUrl) =>
+        Results.Redirect("/onboarding/company" + QueryString.Create(
+            "returnUrl", LocalReturnUrl.Normalize(returnUrl, "/")));
 
-    public sealed record LoginAccountRequest(string Email, string Password);
+    public sealed record RegisterAccountRequest(string Email, string Password, string ConfirmPassword, string? ReturnUrl);
+
+    public sealed record LoginAccountRequest(string Email, string Password, string? ReturnUrl);
 }

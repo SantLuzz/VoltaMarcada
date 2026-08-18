@@ -30,5 +30,7 @@ public enum CompleteCompanyOnboardingResultCode
     InvalidInput,
     DocumentAlreadyExists,
     SlugAlreadyExists,
+    InvalidLocation,
+    InvalidLogo,
     Success
 }

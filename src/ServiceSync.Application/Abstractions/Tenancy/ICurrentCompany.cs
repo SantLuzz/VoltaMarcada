@@ -2,5 +2,5 @@ namespace ServiceSync.Application.Abstractions.Tenancy;
 
 public interface ICurrentCompany
 {
-    Guid CompanyId { get; }
+    Task<Guid> GetCompanyIdAsync(CancellationToken cancellationToken = default);
 }

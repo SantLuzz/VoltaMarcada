@@ -1,0 +1,29 @@
+<input id="@Id"
+       name="@Name"
+       type="tel"
+       value="@value"
+       maxlength="15"
+       inputmode="numeric"
+       autocomplete="tel"
+       required="@Required"
+       @oninput="HandleInput" />
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    [Parameter] public bool Required { get; set; }
+
+    private string value = string.Empty;
+
+    private void HandleInput(ChangeEventArgs args)
+    {
+        var digits = new string((args.Value?.ToString() ?? string.Empty).Where(char.IsDigit).Take(11).ToArray());
+        value = digits.Length switch
+        {
+            <= 2 => digits,
+            <= 6 => $"({digits[..2]}) {digits[2..]}",
+            <= 10 => $"({digits[..2]}) {digits[2..6]}-{digits[6..]}",
+            _ => $"({digits[..2]}) {digits[2..7]}-{digits[7..]}"
+        };
+    }
+}

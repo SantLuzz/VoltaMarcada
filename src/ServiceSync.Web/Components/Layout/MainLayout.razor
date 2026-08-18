@@ -1,4 +1,9 @@
 @inherits LayoutComponentBase
+@using Microsoft.EntityFrameworkCore
+@using ServiceSync.Application.Abstractions.Tenancy
+@using ServiceSync.Infrastructure.Persistence
+@inject IDbContextFactory<AppDbContext> DbContextFactory
+@inject ICurrentCompany CurrentCompany
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -6,14 +11,78 @@
 <MudSnackbarProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="1">
-        <MudText Typo="Typo.h6">ServiceSync</MudText>
+    <MudAppBar Elevation="0" Class="main-app-bar">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       aria-label="Abrir ou recolher menu"
+                       OnClick="ToggleDrawer" />
     </MudAppBar>
+
+    <MudDrawer @bind-Open="isDrawerOpen"
+               Variant="DrawerVariant.Responsive"
+               Breakpoint="Breakpoint.Md"
+               Elevation="1"
+               Class="main-drawer">
+        <div class="drawer-content">
+            <header class="drawer-brand">
+                <img src="logos/logo.png" alt="ServiceSync" class="drawer-logo" />
+                <div>
+                    <MudText Typo="Typo.h6" Class="drawer-product-name">ServiceSync</MudText>
+                    <MudText Typo="Typo.caption" Class="drawer-version">v1.0</MudText>
+                </div>
+            </header>
+
+            <MudNavMenu Class="drawer-navigation">
+                <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
+                    Dashboard
+                </MudNavLink>
+            </MudNavMenu>
+
+            <footer class="drawer-footer">
+                <MudText Typo="Typo.body2" Class="company-name">@companyName</MudText>
+                <form method="post" action="/account/logout" class="logout-form">
+                    <AntiforgeryToken />
+                    <button class="logout-button" type="submit">
+                        <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
+                        <span>Sair</span>
+                    </button>
+                </form>
+            </footer>
+        </div>
+    </MudDrawer>
 
     <MudMainContent Class="pt-16 px-6">
         @Body
     </MudMainContent>
 </MudLayout>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    private bool isDrawerOpen = true;
+    private string companyName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateTask;
+        if (authenticationState.User.Identity?.IsAuthenticated != true)
+        {
+            return;
+        }
+
+        var companyId = await CurrentCompany.GetCompanyIdAsync();
+
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        companyName = await dbContext.Companies
+            .AsNoTracking()
+            .Where(company => company.Id == companyId)
+            .Select(company => company.TradeName)
+            .SingleOrDefaultAsync();
+    }
+
+    private void ToggleDrawer() => isDrawerOpen = !isDrawerOpen;
+}
 
 <div id="blazor-error-ui" data-nosnippet>
     Ocorreu um erro inesperado.

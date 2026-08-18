@@ -1,5 +1,5 @@
-@page "/dashboard"
-@attribute [Authorize]
+@page "/"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
 
 <PageTitle>Painel | ServiceSync</PageTitle>
 

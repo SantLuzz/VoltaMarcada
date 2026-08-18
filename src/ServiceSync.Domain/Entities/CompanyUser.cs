@@ -1,9 +1,10 @@
+using ServiceSync.Domain.Abstractions.Tenancy;
 using ServiceSync.Domain.Enums;
 using ServiceSync.Domain.Exceptions;
 
 namespace ServiceSync.Domain.Entities;
 
-public sealed class CompanyUser
+public sealed class CompanyUser : ICompanyScopedEntity
 {
     private CompanyUser()
     {

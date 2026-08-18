@@ -5,23 +5,30 @@ using ServiceSync.Infrastructure.Persistence;
 
 namespace ServiceSync.Web.Identity;
 
-public sealed class CurrentCompany(AppDbContext dbContext, ICurrentUser currentUser) : ICurrentCompany
+public sealed class CurrentCompany(
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    ICurrentUser currentUser) : ICurrentCompany
 {
-    private readonly Lazy<Guid> companyId = new(() => ResolveCompanyId(dbContext, currentUser));
-
-    public Guid CompanyId => companyId.Value;
-
-    private static Guid ResolveCompanyId(AppDbContext dbContext, ICurrentUser currentUser)
+    public async Task<Guid> GetCompanyIdAsync(CancellationToken cancellationToken = default)
     {
         if (!currentUser.IsAuthenticated || currentUser.UserId == Guid.Empty)
         {
             throw new InvalidOperationException("A current company can only be resolved for an authenticated user.");
         }
 
-        return dbContext.CompanyUsers
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var companyId = await dbContext.CompanyUsers
             .AsNoTracking()
             .Where(companyUser => companyUser.UserId == currentUser.UserId)
             .Select(companyUser => companyUser.CompanyId)
-            .Single();
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (companyId == Guid.Empty)
+        {
+            throw new CurrentCompanyNotFoundException();
+        }
+
+        return companyId;
     }
 }

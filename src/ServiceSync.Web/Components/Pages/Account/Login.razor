@@ -17,6 +17,7 @@
 
     <form method="post" action="/account/login">
         <AntiforgeryToken />
+        <input name="returnUrl" type="hidden" value="@ReturnUrl" />
 
         <div class="auth-field">
             <label for="email">E-mail</label>
@@ -25,16 +26,21 @@
 
         <div class="auth-field">
             <label for="password">Senha</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" required />
+            <PasswordInput Id="password" Name="password" Autocomplete="current-password" Required="true" />
         </div>
 
         <button class="auth-submit" type="submit">Entrar</button>
     </form>
 
-    <p class="auth-footer">Ainda não tem uma conta? <a href="/account/register">Criar conta</a></p>
+    <p class="auth-footer">Ainda não tem uma conta? <a href="@RegisterUrl">Criar conta</a></p>
 </section>
 
 @code {
     [SupplyParameterFromQuery(Name = "error")]
     public string? Error { get; set; }
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    private string RegisterUrl => "/account/register" + QueryString.Create("returnUrl", ReturnUrl);
 }
