@@ -7,12 +7,18 @@ public sealed class UpdateCustomerCommandValidator : AbstractValidator<UpdateCus
 {
     public UpdateCustomerCommandValidator()
     {
-        RuleFor(command => command.Name).NotEmpty();
+        RuleFor(command => command.Name)
+            .NotEmpty()
+            .MaximumLength(200);
         RuleFor(command => command.Document)
             .NotEmpty()
             .Must(BeAValidBrazilianDocument)
             .WithMessage("A valid Brazilian document is required.");
-        RuleFor(command => command.WhatsApp).NotEmpty();
+        RuleFor(command => command.WhatsApp)
+            .NotEmpty()
+            .MaximumLength(20);
+        RuleFor(command => command.Email).MaximumLength(320);
+        RuleFor(command => command.Notes).MaximumLength(2_000);
         RuleFor(command => command.Addresses)
             .NotEmpty()
             .Must(HaveExactlyOnePrimaryAddress)

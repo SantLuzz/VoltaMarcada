@@ -35,7 +35,7 @@ public static class CustomerEndpoints
         return result.Code switch
         {
             CustomerOperationResultCode.Success => Results.Created(
-                $"/customers/{result.CustomerId}",
+                $"/customers/{result.CustomerId}/edit",
                 new { customerId = result.CustomerId }),
             CustomerOperationResultCode.InvalidInput => InvalidInput(),
             CustomerOperationResultCode.InvalidLocation => Results.BadRequest(
