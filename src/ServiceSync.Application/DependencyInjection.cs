@@ -1,4 +1,5 @@
 using FluentValidation;
+using ServiceSync.Application.Customers;
 using Microsoft.Extensions.DependencyInjection;
 using ServiceSync.Application.CompanyOnboarding;
 
@@ -11,6 +12,11 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddValidatorsFromAssemblyContaining<ApplicationAssemblyMarker>();
         services.AddScoped<CompleteCompanyOnboardingUseCase>();
+        services.AddScoped<CreateCustomerUseCase>();
+        services.AddScoped<GetCustomersUseCase>();
+        services.AddScoped<GetCustomerForEditUseCase>();
+        services.AddScoped<UpdateCustomerUseCase>();
+        services.AddScoped<DeleteCustomerUseCase>();
         return services;
     }
 }
