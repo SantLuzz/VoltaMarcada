@@ -40,7 +40,7 @@ public static class CustomerEndpoints
             CustomerOperationResultCode.InvalidInput => InvalidInput(),
             CustomerOperationResultCode.InvalidLocation => Results.BadRequest(
                 new { error = "Selecione um estado e uma cidade válidos." }),
-            _ => throw new InvalidOperationException($"Unsupported customer creation result code: {result.Code}.")
+            _ => UnexpectedResult()
         };
     }
 
@@ -81,7 +81,7 @@ public static class CustomerEndpoints
             CustomerOperationResultCode.InvalidLocation => Results.BadRequest(
                 new { error = "Selecione um estado e uma cidade válidos." }),
             CustomerOperationResultCode.NotFound => Results.NotFound(),
-            _ => throw new InvalidOperationException($"Unsupported customer update result code: {result.Code}.")
+            _ => UnexpectedResult()
         };
     }
 
@@ -96,7 +96,7 @@ public static class CustomerEndpoints
         {
             CustomerOperationResultCode.Success => Results.NoContent(),
             CustomerOperationResultCode.NotFound => Results.NotFound(),
-            _ => throw new InvalidOperationException($"Unsupported customer deletion result code: {result.Code}.")
+            _ => UnexpectedResult()
         };
     }
 
@@ -135,6 +135,9 @@ public static class CustomerEndpoints
 
     private static IResult InvalidInput() =>
         Results.BadRequest(new { error = "Revise os dados do cliente e tente novamente." });
+
+    private static IResult UnexpectedResult() =>
+        Results.Problem(statusCode: StatusCodes.Status500InternalServerError);
 
     public sealed record CustomerRequest(
         string Name,
