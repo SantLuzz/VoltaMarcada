@@ -17,6 +17,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<City> Cities => Set<City>();
 
+    public DbSet<Customer> Customers => Set<Customer>();
+
+    public DbSet<CustomerAddress> CustomerAddresses => Set<CustomerAddress>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
