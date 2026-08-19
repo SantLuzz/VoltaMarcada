@@ -50,6 +50,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapAccountEndpoints();
 app.MapCompanyOnboardingEndpoints();
+app.MapCustomerEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
