@@ -68,7 +68,7 @@ public sealed class Customer : ICompanyScopedEntity
             UpdatedAtUtc = utcNow
         };
 
-        customer._addresses.AddRange(normalizedAddresses);
+        customer.SetAddresses(normalizedAddresses);
         return customer;
     }
 
@@ -97,8 +97,18 @@ public sealed class Customer : ICompanyScopedEntity
     {
         var normalizedAddresses = ValidateAddresses(addresses);
 
+        SetAddresses(normalizedAddresses);
+    }
+
+    private void SetAddresses(IEnumerable<CustomerAddress> addresses)
+    {
+        foreach (var address in addresses)
+        {
+            address.AssignToCustomer(Id);
+        }
+
         _addresses.Clear();
-        _addresses.AddRange(normalizedAddresses);
+        _addresses.AddRange(addresses);
     }
 
     private static List<CustomerAddress> ValidateAddresses(IEnumerable<CustomerAddress> addresses)

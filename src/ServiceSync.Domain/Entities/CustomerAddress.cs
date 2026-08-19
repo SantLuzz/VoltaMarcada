@@ -78,6 +78,21 @@ public sealed class CustomerAddress
         };
     }
 
+    internal void AssignToCustomer(Guid customerId)
+    {
+        if (customerId == Guid.Empty)
+        {
+            throw new DomainException("Customer ID is required.");
+        }
+
+        if (CustomerId != Guid.Empty && CustomerId != customerId)
+        {
+            throw new DomainException("Customer address already belongs to another customer.");
+        }
+
+        CustomerId = customerId;
+    }
+
     private static string RequireText(string? value, string fieldName)
     {
         if (string.IsNullOrWhiteSpace(value))
