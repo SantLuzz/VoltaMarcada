@@ -29,9 +29,15 @@ a { color: var(--servicesync-primary); }
 .auth-card { border: 1px solid var(--servicesync-border); max-width: 460px; padding: 32px; width: 100%; }
 .auth-card-wide { max-width: 760px; }
 .auth-card:has(.onboarding-content) { max-width: 760px; }
-.auth-logo { display: block; height: auto; margin: 0 auto 32px; max-height: 72px; max-width: 290px; width: auto; }
+.auth-logo { display: block; height: auto; margin: 0 auto 32px; max-width: 300px; width: min(300px, 100%); }
 .auth-page-header { margin-bottom: 24px; }
 .auth-form, .onboarding-form, .onboarding-section { display: grid; gap: 16px; }
+
+[data-loading-spinner] { display: none; }
+
+button[aria-busy="true"] [data-loading-label] { display: none; }
+
+button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 .auth-footer { color: var(--servicesync-text-secondary); margin: 24px 0 0; text-align: center; }
 .native-file-input { border: 1px solid var(--servicesync-border); border-radius: 8px; box-sizing: border-box; font: inherit; padding: 12px; width: 100%; }
 .page-content { box-sizing: border-box; margin: 0 auto; max-width: 1440px; min-height: 100%; padding: 32px; width: 100%; }

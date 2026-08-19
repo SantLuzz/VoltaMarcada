@@ -25,6 +25,7 @@ TestResults/
 appsettings.Local.json
 appsettings.*.Local.json
 secrets.json
+user-secrets.txt
 
 # OS files
 .DS_Store

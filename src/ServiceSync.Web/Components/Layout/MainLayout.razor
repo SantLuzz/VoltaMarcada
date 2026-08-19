@@ -19,10 +19,10 @@
         <MudText Typo="Typo.body2" Class="app-bar-company-name">@companyName</MudText>
     </MudAppBar>
 
-    <MudDrawer @bind-Open="isDrawerOpen" Variant="DrawerVariant.Responsive" Breakpoint="Breakpoint.Md" Elevation="0" Class="main-drawer">
+    <MudDrawer @bind-Open="isDrawerOpen" Variant="DrawerVariant.Responsive" Breakpoint="Breakpoint.Md" Elevation="0" Width="348px" Class="main-drawer">
         <div class="drawer-content">
             <header class="drawer-brand">
-                <img src="/logos/logo.png" alt="ServiceSync" class="drawer-logo" />
+                <img src="/logos/icone.png" alt="ServiceSync" class="drawer-logo" />
             </header>
 
             <MudNavMenu Class="drawer-navigation">
@@ -34,7 +34,10 @@
                 <MudText Typo="Typo.body2" Class="company-name">@companyName</MudText>
                 <form method="post" action="/account/logout" class="logout-form">
                     <AntiforgeryToken />
-                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Text" Color="Color.Default" StartIcon="@Icons.Material.Filled.Logout" aria-label="Sair da conta">Sair</MudButton>
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Text" Color="Color.Default" StartIcon="@Icons.Material.Filled.Logout" aria-label="Sair da conta">
+                        <span data-loading-label>Sair</span>
+                        <MudProgressCircular data-loading-spinner Indeterminate="true" Size="Size.Small" aria-hidden="true" />
+                    </MudButton>
                 </form>
             </footer>
         </div>

@@ -16,6 +16,7 @@ public sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
         builder.Property(company => company.Document).HasMaxLength(14).IsRequired();
         builder.Property(company => company.WhatsApp).HasMaxLength(20).IsRequired();
         builder.Property(company => company.PostalCode).HasMaxLength(8).IsRequired();
+        builder.Property(company => company.Address).HasMaxLength(300).IsRequired();
         builder.Property(company => company.LogoKey).HasMaxLength(500).IsRequired(false);
         builder.Property(company => company.Slug).HasMaxLength(200).IsRequired();
         builder.Property(company => company.CreatedAtUtc).IsRequired();

@@ -182,6 +182,11 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("CityId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 

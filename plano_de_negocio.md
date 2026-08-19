@@ -312,7 +312,7 @@ Dados:
 - Nome
 - CPF/CNPJ opcional
 - Telefone
-- WhatsApp
+- WhatsApp?
 - E-mail
 - Observações
 
@@ -1165,12 +1165,15 @@ Usuário consegue criar uma conta, cadastrar sua empresa e acessar o dashboard.
 
 Desenvolver:
 
-- clientes;
-- endereços;
+- clientes; - 
+- endereços; -
 - equipamentos;
 - profissionais;
 - serviços;
 - disponibilidade.
+- Cloudnary (IFileStorage - infra) - ok
+- Variaveis de ambiente (secrets) - ok
+- dockerfile para deploy no render - ok
 
 ### Objetivo
 

@@ -19,10 +19,13 @@
         <AntiforgeryToken />
         <input name="returnUrl" type="hidden" value="@ReturnUrl" />
 
-        <MudTextField T="string" Id="email" Name="email" Label="E-mail" InputType="InputType.Email" AutoComplete="email" Required="true" Variant="Variant.Outlined" FullWidth="true" />
+        <MudTextField T="string" Id="email" Name="email" Label="E-mail" InputType="InputType.Email" AutoComplete="email" Required="true" RequiredError="Campo obrigatório." Variant="Variant.Outlined" FullWidth="true" />
         <PasswordInput Id="password" Name="password" Label="Senha" Autocomplete="new-password" MinLength="6" Required="true" />
         <PasswordInput Id="confirm-password" Name="confirmPassword" Label="Confirmar senha" Autocomplete="new-password" MinLength="6" Required="true" />
-        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large">Criar conta</MudButton>
+        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large">
+            <span data-loading-label>Criar conta</span>
+            <MudProgressCircular data-loading-spinner Indeterminate="true" Size="Size.Small" aria-hidden="true" />
+        </MudButton>
     </form>
 
     <p class="auth-footer">Já tem uma conta? <MudLink Href="@LoginUrl">Entrar</MudLink></p>

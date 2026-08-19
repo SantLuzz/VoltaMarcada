@@ -1,7 +1,9 @@
+using CloudinaryDotNet;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Infrastructure.Identity;
 using ServiceSync.Infrastructure.Persistence;
@@ -28,8 +30,22 @@ public static class DependencyInjection
 
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<ICompanyOnboardingRepository, CompanyOnboardingRepository>();
-        services.AddScoped<ICompanyLogoStorage, LocalCompanyLogoStorage>();
         services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddOptions<CloudinaryOptions>()
+            .Bind(configuration.GetSection(CloudinaryOptions.SectionName))
+            .Validate(
+                options =>
+                    !string.IsNullOrWhiteSpace(options.CloudName) &&
+                    !string.IsNullOrWhiteSpace(options.ApiKey) &&
+                    !string.IsNullOrWhiteSpace(options.ApiSecret),
+                "Cloudinary configuration is required.");
+        services.AddSingleton(serviceProvider =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<CloudinaryOptions>>().Value;
+            return new Cloudinary(new Account(options.CloudName, options.ApiKey, options.ApiSecret));
+        });
+        services.AddHttpClient();
+        services.AddScoped<IFileStorage, CloudinaryFileStorage>();
         return services;
     }
 

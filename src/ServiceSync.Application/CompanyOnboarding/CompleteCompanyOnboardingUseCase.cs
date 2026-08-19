@@ -11,7 +11,7 @@ namespace ServiceSync.Application.CompanyOnboarding;
 public sealed class CompleteCompanyOnboardingUseCase(
     ICurrentUser currentUser,
     ICompanyOnboardingRepository repository,
-    ICompanyLogoStorage logoStorage,
+    IFileStorage fileStorage,
     IValidator<CompleteCompanyOnboardingCommand> validator,
     TimeProvider timeProvider)
 {
@@ -58,13 +58,15 @@ public sealed class CompleteCompanyOnboardingUseCase(
         string? logoKey = null;
         if (command.Logo is not null)
         {
-            var logoResult = await logoStorage.SaveAsync(command.Logo, cancellationToken);
-            if (logoResult.Code != CompanyLogoStorageResultCode.Success || logoResult.LogoKey is null)
+            if (!IsValidLogo(command.Logo))
             {
                 return new CompleteCompanyOnboardingResult(CompleteCompanyOnboardingResultCode.InvalidLogo, null);
             }
 
-            logoKey = logoResult.LogoKey;
+            var upload = await fileStorage.UploadAsync(
+                new FileStorageUploadRequest(command.Logo, "company-logos"),
+                cancellationToken);
+            logoKey = upload.Key;
         }
 
         var now = timeProvider.GetUtcNow();
@@ -74,6 +76,7 @@ public sealed class CompleteCompanyOnboardingUseCase(
             normalizedDocument,
             command.WhatsApp,
             command.PostalCode,
+            command.Address,
             command.StateId,
             command.CityId,
             logoKey,
@@ -84,7 +87,7 @@ public sealed class CompleteCompanyOnboardingUseCase(
         var outcome = await repository.CreateCompanyAndOwnerAsync(company, ownerMembership, cancellationToken);
         if (outcome != CompanyOnboardingPersistenceOutcome.Success && logoKey is not null)
         {
-            await logoStorage.DeleteAsync(logoKey, cancellationToken);
+            await fileStorage.DeleteAsync(logoKey, cancellationToken);
         }
         return outcome switch
         {
@@ -95,4 +98,8 @@ public sealed class CompleteCompanyOnboardingUseCase(
             _ => throw new InvalidOperationException($"Unsupported company onboarding persistence outcome: {outcome}.")
         };
     }
+
+    private static bool IsValidLogo(FileUpload logo) =>
+        logo.Length is > 0 and <= 5 * 1024 * 1024 &&
+        logo.ContentType is "image/png" or "image/jpeg" or "image/webp";
 }

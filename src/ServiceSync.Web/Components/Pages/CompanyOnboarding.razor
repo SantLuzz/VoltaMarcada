@@ -31,10 +31,10 @@
                 <MudText id="company-information-title" Typo="Typo.h6">Informações da empresa</MudText>
                 <MudGrid Spacing="2">
                     <MudItem xs="12">
-                        <MudTextField T="string" Id="legal-name" Name="legalName" Label="Razão social" AutoComplete="organization" Required="true" Variant="Variant.Outlined" FullWidth="true" />
+                        <MudTextField T="string" Id="legal-name" Name="legalName" Label="Razão social" AutoComplete="organization" Required="true" RequiredError="Campo obrigatório." Variant="Variant.Outlined" FullWidth="true" />
                     </MudItem>
                     <MudItem xs="12">
-                        <MudTextField T="string" Id="trade-name" Name="tradeName" Label="Nome fantasia" Required="true" Variant="Variant.Outlined" FullWidth="true" />
+                        <MudTextField T="string" Id="trade-name" Name="tradeName" Label="Nome fantasia" Required="true" RequiredError="Campo obrigatório." Variant="Variant.Outlined" FullWidth="true" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <BrazilianDocumentInput Id="document" Name="document" Required="true" />
@@ -48,12 +48,15 @@
             <section class="onboarding-section" aria-labelledby="address-title">
                 <MudText id="address-title" Typo="Typo.h6">Localização</MudText>
                 <MudGrid Spacing="2">
+                    <MudItem xs="12">
+                        <MudTextField T="string" Id="address" Name="address" Label="Endereço" AutoComplete="street-address" Required="true" RequiredError="Campo obrigatório." Variant="Variant.Outlined" FullWidth="true" />
+                    </MudItem>
                     <MudItem xs="12" sm="6">
                         <BrazilianPostalCodeInput Id="postal-code" Name="postalCode" Required="true" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <input name="stateId" type="hidden" value="@selectedStateId" />
-                        <MudSelect T="Guid" Id="state" Label="Estado" @bind-Value="selectedStateId" @bind-Value:after="LoadCitiesAsync" Required="true" Variant="Variant.Outlined" FullWidth="true">
+                        <MudSelect T="Guid" Id="state" Label="Estado" @bind-Value="selectedStateId" @bind-Value:after="LoadCitiesAsync" Required="true" RequiredError="Campo obrigatório." Variant="Variant.Outlined" FullWidth="true">
                             <MudSelectItem Value="@Guid.Empty">Selecione o estado</MudSelectItem>
                             @foreach (var state in states)
                             {
@@ -63,7 +66,7 @@
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <input name="cityId" type="hidden" value="@selectedCityId" />
-                        <MudSelect T="Guid" Id="city" Label="Cidade" @bind-Value="selectedCityId" Disabled="@(selectedStateId == Guid.Empty)" Required="true" Variant="Variant.Outlined" FullWidth="true">
+                        <MudSelect T="Guid" Id="city" Label="Cidade" @bind-Value="selectedCityId" Disabled="@(selectedStateId == Guid.Empty)" Required="true" RequiredError="Campo obrigatório." Variant="Variant.Outlined" FullWidth="true">
                             <MudSelectItem Value="@Guid.Empty">Selecione a cidade</MudSelectItem>
                             @foreach (var city in cities)
                             {
@@ -83,7 +86,10 @@
                 <MudText id="logo-hint" Typo="Typo.caption" Color="Color.Secondary">PNG, JPEG ou WebP de até 5 MB.</MudText>
             </section>
 
-            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large">Cadastrar empresa</MudButton>
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large">
+                <span data-loading-label>Cadastrar empresa</span>
+                <MudProgressCircular data-loading-spinner Indeterminate="true" Size="Size.Small" aria-hidden="true" />
+            </MudButton>
         </form>
     </section>
 }
