@@ -85,3 +85,32 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
     .equipment-type-form-actions { flex-direction: column-reverse; }
     .equipment-type-form-actions > * { width: 100%; }
 }
+.company-page {
+    display: grid;
+    gap: 1rem;
+}
+
+.company-section {
+    padding: 1.25rem;
+}
+
+.company-section-header {
+    margin-bottom: 1rem;
+}
+
+.company-form-action {
+    margin-top: 1rem;
+}
+
+.company-link-alert {
+    margin-top: 1rem;
+}
+
+.company-link-row {
+    margin-top: .75rem;
+}
+
+.company-detail {
+    display: grid;
+    gap: .125rem;
+}

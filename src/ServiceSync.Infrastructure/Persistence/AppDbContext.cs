@@ -13,6 +13,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<CompanyUser> CompanyUsers => Set<CompanyUser>();
 
+    public DbSet<EmployeeInvitation> EmployeeInvitations => Set<EmployeeInvitation>();
+
     public DbSet<State> States => Set<State>();
 
     public DbSet<City> Cities => Set<City>();

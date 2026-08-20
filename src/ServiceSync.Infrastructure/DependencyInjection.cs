@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using ServiceSync.Application.Abstractions.Persistence;
+using ServiceSync.Application.Abstractions.Identity;
 using ServiceSync.Infrastructure.Identity;
 using ServiceSync.Infrastructure.Persistence;
 using ServiceSync.Infrastructure.Persistence.Repositories;
@@ -31,6 +32,8 @@ public static class DependencyInjection
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<ICompanyOnboardingRepository, CompanyOnboardingRepository>();
         services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<IEmployeeInvitationRepository, EmployeeInvitationRepository>();
+        services.AddScoped<IEmployeeInvitationAccountService, EmployeeInvitationAccountService>();
         services.AddOptions<CloudinaryOptions>()
             .Bind(configuration.GetSection(CloudinaryOptions.SectionName))
             .Validate(

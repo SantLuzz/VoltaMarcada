@@ -22,12 +22,18 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ICurrentCompany, CurrentCompany>();
 builder.Services.AddScoped<IAuthorizationHandler, CompanyMemberAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, CompanyOwnerAuthorizationHandler>();
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, CompanyMemberAuthorizationResultHandler>();
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AuthorizationPolicies.CompanyMember, policy =>
     {
         policy.RequireAuthenticatedUser();
         policy.AddRequirements(new CompanyMemberRequirement());
+    })
+    .AddPolicy(AuthorizationPolicies.CompanyOwner, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(new CompanyOwnerRequirement());
     });
 
 var app = builder.Build();
@@ -51,6 +57,7 @@ app.MapStaticAssets();
 app.MapAccountEndpoints();
 app.MapCompanyOnboardingEndpoints();
 app.MapCustomerEndpoints();
+app.MapEmployeeInvitationEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

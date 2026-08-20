@@ -1,0 +1,304 @@
+@page "/empresa"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
+@using ServiceSync.Application.EmployeeInvitations
+@using ServiceSync.Web.Authorization
+@using Microsoft.JSInterop
+@inject GetOwnerCompanyOverviewUseCase GetOwnerCompanyOverviewUseCase
+@inject CreateEmployeeInvitationUseCase CreateEmployeeInvitationUseCase
+@inject RenewEmployeeInvitationUseCase RenewEmployeeInvitationUseCase
+@inject RevokeEmployeeInvitationUseCase RevokeEmployeeInvitationUseCase
+@inject IJSRuntime JsRuntime
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+@inject ILogger<Company> Logger
+
+<PageTitle>Empresa | ServiceSync</PageTitle>
+
+<PageHeader Title="Empresa" Description="Consulte os dados da empresa e gerencie os acessos da equipe." />
+
+@if (isLoading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (loadError is not null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@loadError</MudAlert>
+}
+else if (overview is not null)
+{
+    <div class="company-page">
+        @if (operationError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@operationError</MudAlert>
+        }
+
+        <MudPaper Class="company-section" Elevation="0" Outlined="true">
+            <header class="company-section-header">
+                <MudText Typo="Typo.h6">Informações da empresa</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Dados cadastrados na criação da conta.</MudText>
+            </header>
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6"><CompanyDetail Label="Razão social" Value="@overview.LegalName" /></MudItem>
+                <MudItem xs="12" sm="6"><CompanyDetail Label="Nome fantasia" Value="@overview.TradeName" /></MudItem>
+                <MudItem xs="12" sm="6"><CompanyDetail Label="CPF/CNPJ" Value="@overview.Document" /></MudItem>
+                <MudItem xs="12" sm="6"><CompanyDetail Label="WhatsApp" Value="@overview.WhatsApp" /></MudItem>
+                <MudItem xs="12"><CompanyDetail Label="Endereço" Value="@overview.Address" /></MudItem>
+                <MudItem xs="12" sm="4"><CompanyDetail Label="CEP" Value="@overview.PostalCode" /></MudItem>
+                <MudItem xs="12" sm="4"><CompanyDetail Label="Cidade" Value="@overview.CityName" /></MudItem>
+                <MudItem xs="12" sm="4"><CompanyDetail Label="Estado" Value="@overview.StateName" /></MudItem>
+                <MudItem xs="12" sm="4"><CompanyDetail Label="Logo" Value="@(string.IsNullOrWhiteSpace(overview.LogoKey) ? "Não cadastrada" : "Cadastrada")" /></MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <MudPaper Class="company-section" Elevation="0" Outlined="true">
+            <header class="company-section-header">
+                <MudText Typo="Typo.h6">Cadastrar funcionário</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">O funcionário receberá um link para criar a própria senha.</MudText>
+            </header>
+            <MudForm @ref="employeeForm">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12"><MudTextField @bind-Value="employee.FullName" Label="Nome completo" Required="true" RequiredError="Informe o nome completo." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="employee.Email" Label="E-mail" InputType="InputType.Email" Required="true" RequiredError="Informe o e-mail." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="employee.Document" Label="CPF" Required="true" RequiredError="Informe o CPF." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" /></MudItem>
+                    <MudItem xs="12" sm="6"><BrazilianPhoneInput @bind-Value="employee.Phone" Id="employee-phone" Name="employeePhone" Required="true" Disabled="@isSaving" /></MudItem>
+                    <MudItem xs="12"><MudTextField @bind-Value="employee.Address" Label="Endereço" Required="true" RequiredError="Informe o endereço." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" /></MudItem>
+                </MudGrid>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="CreateInvitationAsync" Disabled="@isSaving" Class="company-form-action">
+                    @(isSaving ? "Gerando link..." : "Gerar link de cadastro")
+                </MudButton>
+            </MudForm>
+
+            @if (generatedInvitationLink is not null)
+            {
+                <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="company-link-alert">
+                    <MudText Typo="Typo.body2">Compartilhe este link com o funcionário. Ele é exibido somente agora.</MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="company-link-row">
+                        <MudTextField T="string" Value="@generatedInvitationLink" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Primary" aria-label="Copiar link de cadastro" OnClick="CopyGeneratedLinkAsync" />
+                    </MudStack>
+                </MudAlert>
+            }
+        </MudPaper>
+
+        <MudPaper Class="company-section" Elevation="0" Outlined="true">
+            <header class="company-section-header">
+                <MudText Typo="Typo.h6">Funcionários ativos</MudText>
+            </header>
+            @if (overview.Employees.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Nenhum funcionário concluiu o cadastro ainda.</MudText>
+            }
+            else
+            {
+                <MudTable Items="@overview.Employees" Hover="true" Breakpoint="Breakpoint.Md">
+                    <HeaderContent><MudTh>Nome</MudTh><MudTh>E-mail</MudTh><MudTh>CPF</MudTh><MudTh>Telefone</MudTh><MudTh>Endereço</MudTh><MudTh>Cadastro</MudTh></HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Nome">@context.FullName</MudTd><MudTd DataLabel="E-mail">@context.Email</MudTd><MudTd DataLabel="CPF">@context.Document</MudTd><MudTd DataLabel="Telefone">@context.Phone</MudTd><MudTd DataLabel="Endereço">@context.Address</MudTd><MudTd DataLabel="Cadastro">@context.AcceptedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+
+        <MudPaper Class="company-section" Elevation="0" Outlined="true">
+            <header class="company-section-header"><MudText Typo="Typo.h6">Convites</MudText></header>
+            @if (overview.Invitations.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Nenhum convite foi criado.</MudText>
+            }
+            else
+            {
+                <MudTable Items="@overview.Invitations" Hover="true" Breakpoint="Breakpoint.Md">
+                    <HeaderContent><MudTh>Funcionário</MudTh><MudTh>E-mail</MudTh><MudTh>Expira em</MudTh><MudTh>Status</MudTh><MudTh aria-label="Ações"></MudTh></HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Funcionário">@context.FullName</MudTd><MudTd DataLabel="E-mail">@context.Email</MudTd><MudTd DataLabel="Expira em">@context.ExpiresAtUtc.LocalDateTime.ToString("dd/MM/yyyy HH:mm")</MudTd>
+                        <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context)">@GetStatusLabel(context)</MudChip></MudTd>
+                        <MudTd DataLabel="Ações">
+                            @if (!context.IsAccepted)
+                            {
+                                <MudTooltip Text="Gerar novo link"><MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary" aria-label="Gerar novo link" OnClick="@(() => RenewInvitationAsync(context.Id))" Disabled="@isSaving" /></MudTooltip>
+                                @if (context.IsPending)
+                                {
+                                    <MudTooltip Text="Revogar convite"><MudIconButton Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" aria-label="Revogar convite" OnClick="@(() => RevokeInvitationAsync(context.Id))" Disabled="@isSaving" /></MudTooltip>
+                                }
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    </div>
+}
+
+@code {
+    private MudForm employeeForm = default!;
+    private CompanyOverviewDto? overview;
+    private EmployeeFormModel employee = new();
+    private bool isLoading = true;
+    private bool isSaving;
+    private string? loadError;
+    private string? operationError;
+    private string? generatedInvitationLink;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            overview = await GetOwnerCompanyOverviewUseCase.ExecuteAsync();
+            if (overview is null)
+            {
+                loadError = "Não foi possível carregar as informações da empresa.";
+            }
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to load owner company overview");
+            loadError = "Não foi possível carregar as informações da empresa.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task CreateInvitationAsync()
+    {
+        operationError = null;
+        generatedInvitationLink = null;
+        await employeeForm.Validate();
+        if (!employeeForm.IsValid)
+        {
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var result = await CreateEmployeeInvitationUseCase.ExecuteAsync(new CreateEmployeeInvitationCommand(
+                employee.FullName, employee.Email, employee.Document, employee.Phone, employee.Address));
+            if (result.Code != EmployeeInvitationResultCode.Success || result.Token is null)
+            {
+                operationError = GetOperationError(result.Code);
+                return;
+            }
+
+            generatedInvitationLink = new Uri(new Uri(NavigationManager.BaseUri), $"convites/funcionarios/{result.Token}").ToString();
+            employee = new EmployeeFormModel();
+            await employeeForm.ResetValidationAsync();
+            await ReloadOverviewAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to create employee invitation");
+            operationError = "Não foi possível gerar o link. Tente novamente.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task RenewInvitationAsync(Guid invitationId)
+    {
+        await ExecuteInvitationActionAsync(
+            () => RenewEmployeeInvitationUseCase.ExecuteAsync(invitationId),
+            "Não foi possível gerar um novo link.");
+    }
+
+    private async Task RevokeInvitationAsync(Guid invitationId)
+    {
+        var confirmed = await DialogService.ShowMessageBox("Revogar convite", "O link deixará de funcionar imediatamente.", "Revogar", null, "Cancelar");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        await ExecuteInvitationActionAsync(
+            () => RevokeEmployeeInvitationUseCase.ExecuteAsync(invitationId),
+            "Não foi possível revogar o convite.");
+    }
+
+    private async Task ExecuteInvitationActionAsync(
+        Func<Task<EmployeeInvitationResult>> action,
+        string fallbackError)
+    {
+        operationError = null;
+        generatedInvitationLink = null;
+        isSaving = true;
+        try
+        {
+            var result = await action();
+            if (result.Code != EmployeeInvitationResultCode.Success)
+            {
+                operationError = GetOperationError(result.Code);
+                return;
+            }
+
+            if (result.Token is not null)
+            {
+                generatedInvitationLink = new Uri(new Uri(NavigationManager.BaseUri), $"convites/funcionarios/{result.Token}").ToString();
+            }
+
+            await ReloadOverviewAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Employee invitation action failed");
+            operationError = fallbackError;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task ReloadOverviewAsync()
+    {
+        overview = await GetOwnerCompanyOverviewUseCase.ExecuteAsync();
+    }
+
+    private async Task CopyGeneratedLinkAsync()
+    {
+        if (generatedInvitationLink is not null)
+        {
+            await JsRuntime.InvokeVoidAsync("serviceSync.copyText", generatedInvitationLink);
+        }
+    }
+
+    private static string GetOperationError(EmployeeInvitationResultCode code) => code switch
+    {
+        EmployeeInvitationResultCode.InvalidInput => "Revise os dados do funcionário e tente novamente.",
+        EmployeeInvitationResultCode.EmailAlreadyRegistered => "Já existe uma conta cadastrada com este e-mail.",
+        EmployeeInvitationResultCode.DuplicateEmail => "Já existe um convite pendente para este e-mail.",
+        EmployeeInvitationResultCode.DuplicateDocument => "Já existe um funcionário ou convite com este CPF.",
+        EmployeeInvitationResultCode.InvitationNotFound => "Convite não encontrado.",
+        EmployeeInvitationResultCode.InvitationUnavailable => "Este convite não está mais disponível.",
+        _ => "Você não tem permissão para realizar esta ação."
+    };
+
+    private static string GetStatusLabel(EmployeeInvitationDto invitation) => invitation switch
+    {
+        { IsAccepted: true } => "Aceito",
+        { IsRevoked: true } => "Revogado",
+        { IsExpired: true } => "Expirado",
+        _ => "Pendente"
+    };
+
+    private static Color GetStatusColor(EmployeeInvitationDto invitation) => invitation switch
+    {
+        { IsAccepted: true } => Color.Success,
+        { IsRevoked: true } => Color.Error,
+        { IsExpired: true } => Color.Warning,
+        _ => Color.Info
+    };
+
+    private sealed class EmployeeFormModel
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Document { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+    }
+}

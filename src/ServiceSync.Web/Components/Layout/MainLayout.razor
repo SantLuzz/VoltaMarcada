@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @using Microsoft.EntityFrameworkCore
 @using ServiceSync.Application.Abstractions.Tenancy
+@using ServiceSync.Domain.Enums
 @using ServiceSync.Infrastructure.Persistence
 @inject IDbContextFactory<AppDbContext> DbContextFactory
 @inject ICurrentCompany CurrentCompany
@@ -28,6 +29,10 @@
             <MudNavMenu Class="drawer-navigation">
                 <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Painel</MudNavLink>
                 <MudNavLink Href="/clientes" Icon="@Icons.Material.Filled.People">Clientes</MudNavLink>
+                @if (isOwner)
+                {
+                    <MudNavLink Href="/empresa" Icon="@Icons.Material.Filled.Business">Empresa</MudNavLink>
+                }
             </MudNavMenu>
 
             <footer class="drawer-footer">
@@ -56,6 +61,7 @@
     private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
 
     private bool isDrawerOpen = true;
+    private bool isOwner;
     private string companyName = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -72,6 +78,15 @@
             .Where(company => company.Id == companyId)
             .Select(company => company.TradeName)
             .SingleOrDefaultAsync();
+        var userIdValue = authenticationState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (Guid.TryParse(userIdValue, out var userId))
+        {
+            isOwner = await dbContext.CompanyUsers.AsNoTracking()
+                .AnyAsync(companyUser =>
+                    companyUser.UserId == userId &&
+                    companyUser.CompanyId == companyId &&
+                    companyUser.Role == CompanyUserRole.Owner);
+        }
     }
 
     private void ToggleDrawer() => isDrawerOpen = !isDrawerOpen;

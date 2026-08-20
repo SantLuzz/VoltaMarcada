@@ -1,0 +1,56 @@
+@page "/convites/funcionarios/{Token}"
+@attribute [AllowAnonymous]
+@layout AuthLayout
+@using ServiceSync.Application.EmployeeInvitations
+@inject GetEmployeeInvitationForAcceptanceUseCase GetEmployeeInvitationForAcceptanceUseCase
+
+<PageTitle>Cadastro de funcionário | ServiceSync</PageTitle>
+
+<section aria-labelledby="employee-invitation-title">
+    @if (invitation is null)
+    {
+        <header class="auth-page-header">
+            <MudText id="employee-invitation-title" Typo="Typo.h4">Convite indisponível</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Este link é inválido, expirou ou já foi utilizado.</MudText>
+        </header>
+    }
+    else
+    {
+        <header class="auth-page-header">
+            <MudText id="employee-invitation-title" Typo="Typo.h4">Conclua seu cadastro</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Olá, @invitation.FullName. Crie uma senha para acessar sua conta vinculada a @invitation.MaskedEmail.</MudText>
+        </header>
+
+        @if (!string.IsNullOrWhiteSpace(Error))
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@Error</MudAlert>
+        }
+
+        <form method="post" action="@FormAction" class="auth-form">
+            <AntiforgeryToken />
+            <PasswordInput Id="password" Name="password" Label="Senha" Autocomplete="new-password" MinLength="6" Required="true" />
+            <PasswordInput Id="confirm-password" Name="confirmPassword" Label="Confirmar senha" Autocomplete="new-password" MinLength="6" Required="true" />
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large">
+                <span data-loading-label>Concluir cadastro</span>
+                <MudProgressCircular data-loading-spinner Indeterminate="true" Size="Size.Small" aria-hidden="true" />
+            </MudButton>
+        </form>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string Token { get; set; } = string.Empty;
+
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
+
+    private PublicEmployeeInvitationDto? invitation;
+
+    private string FormAction => "/convites/funcionarios/" + Uri.EscapeDataString(Token);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        invitation = await GetEmployeeInvitationForAcceptanceUseCase.ExecuteAsync(Token);
+    }
+}
