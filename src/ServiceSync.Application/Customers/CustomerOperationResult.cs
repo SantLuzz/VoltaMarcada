@@ -11,6 +11,9 @@ public sealed record CustomerOperationResult(CustomerOperationResultCode Code, G
     public static CustomerOperationResult InvalidLocation() =>
         new(CustomerOperationResultCode.InvalidLocation, null);
 
+    public static CustomerOperationResult DuplicateDocument() =>
+        new(CustomerOperationResultCode.DuplicateDocument, null);
+
     public static CustomerOperationResult NotFound() =>
         new(CustomerOperationResultCode.NotFound, null);
 }
@@ -20,5 +23,6 @@ public enum CustomerOperationResultCode
     Success,
     InvalidInput,
     InvalidLocation,
+    DuplicateDocument,
     NotFound
 }

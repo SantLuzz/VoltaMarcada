@@ -38,6 +38,8 @@ public static class CustomerEndpoints
                 $"/customers/{result.CustomerId}/edit",
                 new { customerId = result.CustomerId }),
             CustomerOperationResultCode.InvalidInput => InvalidInput(),
+            CustomerOperationResultCode.DuplicateDocument => Results.Conflict(
+                new { error = "J\u00e1 existe um cliente com este CPF ou CNPJ." }),
             CustomerOperationResultCode.InvalidLocation => Results.BadRequest(
                 new { error = "Selecione um estado e uma cidade válidos." }),
             _ => UnexpectedResult()
@@ -45,10 +47,13 @@ public static class CustomerEndpoints
     }
 
     private static async Task<IResult> GetAllAsync(
+        string? search,
         GetCustomersUseCase useCase,
         CancellationToken cancellationToken)
     {
-        var customers = await useCase.ExecuteAsync(cancellationToken);
+        var customers = await useCase.ExecuteAsync(
+            new GetCustomersQuery(search),
+            cancellationToken);
         return Results.Ok(customers);
     }
 
@@ -78,6 +83,8 @@ public static class CustomerEndpoints
         {
             CustomerOperationResultCode.Success => Results.Ok(),
             CustomerOperationResultCode.InvalidInput => InvalidInput(),
+            CustomerOperationResultCode.DuplicateDocument => Results.Conflict(
+                new { error = "J\u00e1 existe um cliente com este CPF ou CNPJ." }),
             CustomerOperationResultCode.InvalidLocation => Results.BadRequest(
                 new { error = "Selecione um estado e uma cidade válidos." }),
             CustomerOperationResultCode.NotFound => Results.NotFound(),

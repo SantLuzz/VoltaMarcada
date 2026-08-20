@@ -18,6 +18,9 @@ public sealed class UpdateCustomerCommandValidator : AbstractValidator<UpdateCus
             .NotEmpty()
             .MaximumLength(20);
         RuleFor(command => command.Email).MaximumLength(320);
+        RuleFor(command => command.Email)
+            .EmailAddress()
+            .When(command => !string.IsNullOrWhiteSpace(command.Email));
         RuleFor(command => command.Notes).MaximumLength(2_000);
         RuleFor(command => command.Addresses)
             .NotEmpty()

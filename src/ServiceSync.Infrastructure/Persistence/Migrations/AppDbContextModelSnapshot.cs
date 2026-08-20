@@ -317,6 +317,10 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                     b.HasIndex("CompanyId", "Name")
                         .HasDatabaseName("IX_Customers_CompanyId_Name");
 
+                    b.HasIndex("CompanyId", "Document")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Customers_CompanyId_Document");
+
                     b.ToTable("Customers", (string)null);
                 });
 
@@ -563,8 +567,6 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Addresses")
-                        .UsePropertyAccessMode(PropertyAccessMode.Field);
                 });
 
             modelBuilder.Entity("ServiceSync.Domain.Entities.CustomerAddress", b =>
@@ -586,6 +588,12 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .HasForeignKey("StateId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.Customer", b =>
+                {
+                    b.Navigation("Addresses")
+                        .UsePropertyAccessMode(PropertyAccessMode.Field);
                 });
 #pragma warning restore 612, 618
         }

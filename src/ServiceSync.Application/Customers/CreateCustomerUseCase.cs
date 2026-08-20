@@ -22,12 +22,17 @@ public sealed class CreateCustomerUseCase(
             return CustomerOperationResult.InvalidInput();
         }
 
+        var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
+        if (await repository.DocumentExistsAsync(companyId, normalizedDocument, cancellationToken: cancellationToken))
+        {
+            return CustomerOperationResult.DuplicateDocument();
+        }
+
         if (!await repository.AreLocationsValidAsync(command.Addresses, cancellationToken))
         {
             return CustomerOperationResult.InvalidLocation();
         }
 
-        var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         var addresses = CreateAddresses(command.Addresses);
         var customer = Customer.Create(
             companyId,
@@ -40,8 +45,10 @@ public sealed class CreateCustomerUseCase(
             timeProvider.GetUtcNow());
 
         await repository.AddAsync(customer, cancellationToken);
-        await repository.SaveChangesAsync(cancellationToken);
-        return CustomerOperationResult.Success(customer.Id);
+        var persistenceOutcome = await repository.SaveChangesAsync(cancellationToken);
+        return persistenceOutcome == CustomerPersistenceOutcome.DuplicateDocument
+            ? CustomerOperationResult.DuplicateDocument()
+            : CustomerOperationResult.Success(customer.Id);
     }
 
     internal static IReadOnlyList<CustomerAddress> CreateAddresses(IReadOnlyCollection<CustomerAddressInput> inputs) =>

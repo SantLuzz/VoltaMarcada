@@ -11,8 +11,15 @@ public interface ICustomerRepository
 
     Task AddAsync(Customer customer, CancellationToken cancellationToken = default);
 
+    Task<bool> DocumentExistsAsync(
+        Guid companyId,
+        string normalizedDocument,
+        Guid? excludedCustomerId = null,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Customer>> GetAllForCompanyAsync(
         Guid companyId,
+        GetCustomersQuery query,
         CancellationToken cancellationToken = default);
 
     Task<Customer?> GetForCompanyAsync(
@@ -24,5 +31,11 @@ public interface ICustomerRepository
 
     void Remove(Customer customer);
 
-    Task SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<CustomerPersistenceOutcome> SaveChangesAsync(CancellationToken cancellationToken = default);
+}
+
+public enum CustomerPersistenceOutcome
+{
+    Success,
+    DuplicateDocument
 }

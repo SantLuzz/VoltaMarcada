@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Customers;
 using ServiceSync.Domain.Entities;
@@ -7,6 +8,8 @@ namespace ServiceSync.Infrastructure.Persistence.Repositories;
 
 public sealed class CustomerRepository(AppDbContext dbContext) : ICustomerRepository
 {
+    private const string DuplicateDocumentConstraintName = "UX_Customers_CompanyId_Document";
+
     public async Task<bool> AreLocationsValidAsync(
         IReadOnlyCollection<CustomerAddressInput> addresses,
         CancellationToken cancellationToken = default)
@@ -29,10 +32,23 @@ public sealed class CustomerRepository(AppDbContext dbContext) : ICustomerReposi
     public async Task AddAsync(Customer customer, CancellationToken cancellationToken = default) =>
         await dbContext.Customers.AddAsync(customer, cancellationToken);
 
+    public Task<bool> DocumentExistsAsync(
+        Guid companyId,
+        string normalizedDocument,
+        Guid? excludedCustomerId = null,
+        CancellationToken cancellationToken = default) =>
+        dbContext.Customers.AnyAsync(customer =>
+            customer.CompanyId == companyId &&
+            customer.Document == normalizedDocument &&
+            (!excludedCustomerId.HasValue || customer.Id != excludedCustomerId.Value),
+            cancellationToken);
+
     public async Task<IReadOnlyList<Customer>> GetAllForCompanyAsync(
         Guid companyId,
+        GetCustomersQuery query,
         CancellationToken cancellationToken = default) =>
-        await IncludeAddressesAndLocations()
+        await ApplyFilters(IncludeAddressesAndLocations(), query)
+            .AsNoTracking()
             .Where(customer => customer.CompanyId == companyId)
             .OrderBy(customer => customer.Name)
             .ToListAsync(cancellationToken);
@@ -52,8 +68,19 @@ public sealed class CustomerRepository(AppDbContext dbContext) : ICustomerReposi
     public void Remove(Customer customer) =>
         dbContext.Customers.Remove(customer);
 
-    public async Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        await dbContext.SaveChangesAsync(cancellationToken);
+    public async Task<CustomerPersistenceOutcome> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return CustomerPersistenceOutcome.Success;
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException postgresException &&
+                                                postgresException.ConstraintName == DuplicateDocumentConstraintName)
+        {
+            return CustomerPersistenceOutcome.DuplicateDocument;
+        }
+    }
 
     private IQueryable<Customer> IncludeAddressesAndLocations() =>
         dbContext.Customers
@@ -61,4 +88,27 @@ public sealed class CustomerRepository(AppDbContext dbContext) : ICustomerReposi
             .ThenInclude(address => address.State)
             .Include(customer => customer.Addresses)
             .ThenInclude(address => address.City);
+
+    private static IQueryable<Customer> ApplyFilters(
+        IQueryable<Customer> customers,
+        GetCustomersQuery query)
+    {
+        if (query.SearchFilter is not { } searchFilter)
+        {
+            return customers;
+        }
+
+        var documentSearchFilter = query.DocumentSearchFilter;
+        return documentSearchFilter.Length == 0
+            ? customers.Where(customer => EF.Functions.ILike(
+                customer.Name,
+                ToContainsPattern(searchFilter),
+                "\\"))
+            : customers.Where(customer =>
+                EF.Functions.ILike(customer.Name, ToContainsPattern(searchFilter), "\\") ||
+                customer.Document.Contains(documentSearchFilter));
+    }
+
+    private static string ToContainsPattern(string value) =>
+        $"%{value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_")}%";
 }

@@ -2,8 +2,8 @@
               Id="@Id"
               Name="@Name"
               Label="WhatsApp"
-              @bind-Value="value"
-              @bind-Value:after="FormatValue"
+              Value="@Value"
+              ValueChanged="OnValueChangedAsync"
               Immediate="true"
               MaxLength="15"
               InputMode="InputMode.tel"
@@ -11,24 +11,28 @@
               Required="@Required"
               RequiredError="Campo obrigatório."
               Variant="Variant.Outlined"
-              FullWidth="true" />
+              FullWidth="true"
+              Disabled="@Disabled" />
 
 @code {
     [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
     [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
     [Parameter] public bool Required { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
 
-    private string value = string.Empty;
-
-    private void FormatValue()
+    private async Task OnValueChangedAsync(string value)
     {
         var digits = new string(value.Where(char.IsDigit).Take(11).ToArray());
-        value = digits.Length switch
+        Value = digits.Length switch
         {
             <= 2 => digits,
             <= 6 => $"({digits[..2]}) {digits[2..]}",
             <= 10 => $"({digits[..2]}) {digits[2..6]}-{digits[6..]}",
             _ => $"({digits[..2]}) {digits[2..7]}-{digits[7..]}"
         };
+
+        await ValueChanged.InvokeAsync(Value);
     }
 }

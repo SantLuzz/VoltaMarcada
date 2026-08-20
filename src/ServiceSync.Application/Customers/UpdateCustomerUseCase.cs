@@ -22,16 +22,25 @@ public sealed class UpdateCustomerUseCase(
             return CustomerOperationResult.InvalidInput();
         }
 
-        if (!await repository.AreLocationsValidAsync(command.Addresses, cancellationToken))
-        {
-            return CustomerOperationResult.InvalidLocation();
-        }
-
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         var customer = await repository.GetForCompanyAsync(customerId, companyId, cancellationToken);
         if (customer is null)
         {
             return CustomerOperationResult.NotFound();
+        }
+
+        if (await repository.DocumentExistsAsync(
+                companyId,
+                normalizedDocument,
+                customer.Id,
+                cancellationToken))
+        {
+            return CustomerOperationResult.DuplicateDocument();
+        }
+
+        if (!await repository.AreLocationsValidAsync(command.Addresses, cancellationToken))
+        {
+            return CustomerOperationResult.InvalidLocation();
         }
 
         var addresses = CreateCustomerUseCase.CreateAddresses(command.Addresses);
@@ -44,8 +53,9 @@ public sealed class UpdateCustomerUseCase(
             command.Notes,
             timeProvider.GetUtcNow());
         customer.ReplaceAddresses(addresses);
-        await repository.SaveChangesAsync(cancellationToken);
-
-        return CustomerOperationResult.Success(customer.Id);
+        var persistenceOutcome = await repository.SaveChangesAsync(cancellationToken);
+        return persistenceOutcome == CustomerPersistenceOutcome.DuplicateDocument
+            ? CustomerOperationResult.DuplicateDocument()
+            : CustomerOperationResult.Success(customer.Id);
     }
 }

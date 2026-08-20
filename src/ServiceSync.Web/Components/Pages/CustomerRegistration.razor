@@ -1,0 +1,612 @@
+@page "/clientes/registro"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@using Microsoft.EntityFrameworkCore
+@using ServiceSync.Application.Customers
+@using ServiceSync.Domain.Enums
+@using ServiceSync.Infrastructure.Persistence
+@inject IDbContextFactory<AppDbContext> DbContextFactory
+@inject CreateCustomerUseCase CreateCustomerUseCase
+@inject UpdateCustomerUseCase UpdateCustomerUseCase
+@inject GetCustomerForEditUseCase GetCustomerForEditUseCase
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ILogger<CustomerRegistration> Logger
+
+<PageTitle>@(isEditing ? "Editar cliente" : "Novo cliente") | ServiceSync</PageTitle>
+
+<PageHeader Title="@(isEditing ? "Editar cliente" : "Novo cliente")"
+            Description="@(isEditing ? "Atualize os dados e endereços do cliente." : "Preencha os dados para cadastrar um novo cliente.")">
+    <Actions>
+        <div class="customer-form-actions">
+            <MudButton Href="/clientes" Variant="Variant.Outlined" Color="Color.Default" Disabled="@isSaving">
+                Cancelar
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Save"
+                       OnClick="SaveAsync"
+                       Disabled="@(isLoading || isSaving || loadError is not null)">
+                @(isSaving ? "Salvando..." : "Salvar cliente")
+            </MudButton>
+        </div>
+    </Actions>
+</PageHeader>
+
+@if (isLoading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (loadError is not null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@loadError</MudAlert>
+}
+else
+{
+    <div class="customer-registration">
+        @if (submitError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@submitError</MudAlert>
+        }
+
+        <MudPaper Class="customer-form-section" Elevation="0" Outlined="true">
+            <header class="customer-form-section-header">
+                <MudText Typo="Typo.h6">Dados do cliente</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Informe os dados de contato do cliente.</MudText>
+            </header>
+
+            <MudForm @ref="customerForm">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="customer.Name"
+                                      Label="Nome"
+                                      Required="true"
+                                      RequiredError="Informe o nome do cliente."
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      Disabled="@isSaving" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <BrazilianDocumentInput @bind-Value="customer.Document"
+                                      Id="customer-document"
+                                      Name="customerDocument"
+                                      Required="true"
+                                      Disabled="@isSaving" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <BrazilianPhoneInput @bind-Value="customer.WhatsApp"
+                                      Id="customer-whatsapp"
+                                      Name="customerWhatsApp"
+                                      Required="true"
+                                      Disabled="@isSaving" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField @bind-Value="customer.Email"
+                                      Label="E-mail"
+                                      InputType="InputType.Email"
+                                      Validation="ValidateOptionalEmail"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      Disabled="@isSaving" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="customer.Notes"
+                                      Label="Observações"
+                                      Variant="Variant.Outlined"
+                                      Lines="4"
+                                      FullWidth="true"
+                                      Disabled="@isSaving" />
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+        </MudPaper>
+
+        <MudPaper Class="customer-form-section" Elevation="0" Outlined="true">
+            <header class="customer-form-section-header">
+                <MudText Typo="Typo.h6">@(editingAddress is null ? "Adicionar endereço" : "Editar endereço")</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Adicione ou atualize os endereços de atendimento do cliente.</MudText>
+            </header>
+
+            <MudForm @ref="addressForm">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="CustomerAddressType"
+                                   @bind-Value="address.AddressType"
+                                   Label="Tipo de endereço"
+                                   Variant="Variant.Outlined"
+                                   FullWidth="true"
+                                   Disabled="@isSaving">
+                            @foreach (var addressType in addressTypes)
+                            {
+                                <MudSelectItem Value="@addressType">@GetAddressTypeLabel(addressType)</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <BrazilianPostalCodeInput @bind-Value="address.PostalCode"
+                                      Id="customer-postal-code"
+                                      Name="customerPostalCode"
+                                      Required="true"
+                                      Disabled="@isSaving" />
+                    </MudItem>
+                    <MudItem xs="12" sm="8">
+                        <MudTextField @bind-Value="address.Street"
+                                      Label="Rua, avenida ou logradouro"
+                                      Required="true"
+                                      RequiredError="Informe o logradouro."
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      Disabled="@isSaving" />
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <MudTextField @bind-Value="address.Number"
+                                      Label="Número"
+                                      Required="true"
+                                      RequiredError="Informe o número."
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      Disabled="@isSaving" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="address.Complement"
+                                      Label="Complemento"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      Disabled="@isSaving" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="Guid"
+                                   @bind-Value="address.StateId"
+                                   @bind-Value:after="LoadCitiesAsync"
+                                   Label="Estado"
+                                   Required="true"
+                                   RequiredError="Selecione o estado."
+                                   Variant="Variant.Outlined"
+                                   FullWidth="true"
+                                   Disabled="@isSaving">
+                            <MudSelectItem Value="@Guid.Empty">Selecione o estado</MudSelectItem>
+                            @foreach (var state in states)
+                            {
+                                <MudSelectItem Value="@state.Id">@state.Abbreviation - @state.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="Guid"
+                                   @bind-Value="address.CityId"
+                                   Label="Cidade"
+                                   Required="true"
+                                   RequiredError="Selecione a cidade."
+                                   Variant="Variant.Outlined"
+                                   FullWidth="true"
+                                   Disabled="@(isSaving || address.StateId == Guid.Empty)">
+                            <MudSelectItem Value="@Guid.Empty">Selecione a cidade</MudSelectItem>
+                            @foreach (var city in cities)
+                            {
+                                <MudSelectItem Value="@city.Id">@city.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudCheckBox @bind-Value="address.IsPrimary"
+                                     Color="Color.Primary"
+                                     Disabled="@(isSaving || addresses.Count == 0)">
+                            Endereço principal
+                        </MudCheckBox>
+                    </MudItem>
+                </MudGrid>
+
+                <div class="customer-address-form-actions">
+                    @if (editingAddress is not null)
+                    {
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Default"
+                                   OnClick="CancelAddressEditing"
+                                   Disabled="@isSaving">
+                            Cancelar edição
+                        </MudButton>
+                    }
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="AddAddressAsync"
+                               Disabled="@isSaving">
+                        @(editingAddress is null ? "Adicionar endereço" : "Atualizar endereço")
+                    </MudButton>
+                </div>
+            </MudForm>
+        </MudPaper>
+
+        <MudPaper Class="customer-form-section" Elevation="0" Outlined="true">
+            <header class="customer-form-section-header">
+                <MudText Typo="Typo.h6">Endereços adicionados</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">O cliente deve ter um endereço principal.</MudText>
+            </header>
+
+            @if (addresses.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    Adicione ao menos um endereço antes de salvar o cliente.
+                </MudAlert>
+            }
+            else
+            {
+                <MudTable Items="@addresses" Hover="true" Breakpoint="Breakpoint.Md">
+                    <HeaderContent>
+                        <MudTh>Tipo</MudTh>
+                        <MudTh>CEP</MudTh>
+                        <MudTh>Endereço</MudTh>
+                        <MudTh>Localização</MudTh>
+                        <MudTh>Principal</MudTh>
+                        <MudTh aria-label="Ações"></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Tipo">@GetAddressTypeLabel(context.AddressType)</MudTd>
+                        <MudTd DataLabel="CEP">@context.PostalCode</MudTd>
+                        <MudTd DataLabel="Endereço">@GetAddressDescription(context)</MudTd>
+                        <MudTd DataLabel="Localização">@context.CityName/@context.StateAbbreviation</MudTd>
+                        <MudTd DataLabel="Principal">
+                            @if (context.IsPrimary)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary">Principal</MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Ações" Class="customer-actions">
+                            <MudTooltip Text="Editar endereço">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                               Color="Color.Primary"
+                                               aria-label="Editar endereço"
+                                               OnClick="@(() => StartAddressEditingAsync(context))"
+                                               Disabled="@isSaving" />
+                            </MudTooltip>
+                            <MudTooltip Text="Remover endereço">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Color="Color.Error"
+                                               aria-label="Remover endereço"
+                                               OnClick="@(() => RemoveAddress(context))"
+                                               Disabled="@isSaving" />
+                            </MudTooltip>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "id")]
+    public Guid? CustomerId { get; set; }
+
+    private readonly IReadOnlyList<CustomerAddressType> addressTypes = Enum.GetValues<CustomerAddressType>();
+    private MudForm customerForm = default!;
+    private MudForm addressForm = default!;
+    private CustomerFormModel customer = new();
+    private CustomerAddressDraft address = CustomerAddressDraft.CreateEmpty(isPrimary: true);
+    private CustomerAddressDraft? editingAddress;
+    private List<CustomerAddressDraft> addresses = [];
+    private IReadOnlyList<StateOption> states = [];
+    private IReadOnlyList<CityOption> cities = [];
+    private bool isLoading = true;
+    private bool isSaving;
+    private string? loadError;
+    private string? submitError;
+
+    private bool isEditing => CustomerId.HasValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await LoadStatesAsync();
+
+            if (CustomerId is { } customerId)
+            {
+                await LoadCustomerAsync(customerId);
+            }
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to initialize customer registration page");
+            loadError = "Não foi possível carregar os dados necessários. Tente novamente.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadStatesAsync()
+    {
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        states = await dbContext.States.AsNoTracking()
+            .OrderBy(state => state.Abbreviation)
+            .Select(state => new StateOption(state.Id, state.Name, state.Abbreviation))
+            .ToListAsync();
+    }
+
+    private async Task LoadCustomerAsync(Guid customerId)
+    {
+        var existingCustomer = await GetCustomerForEditUseCase.ExecuteAsync(customerId);
+        if (existingCustomer is null)
+        {
+            loadError = "Cliente não encontrado.";
+            return;
+        }
+
+        customer = new CustomerFormModel
+        {
+            Name = existingCustomer.Name,
+            Document = existingCustomer.Document,
+            WhatsApp = existingCustomer.WhatsApp,
+            Email = existingCustomer.Email,
+            Notes = existingCustomer.Notes
+        };
+        addresses = existingCustomer.Addresses
+            .Select(CustomerAddressDraft.FromDto)
+            .ToList();
+        address = CustomerAddressDraft.CreateEmpty(isPrimary: addresses.Count == 0);
+    }
+
+    private async Task LoadCitiesAsync()
+    {
+        address.CityId = Guid.Empty;
+        cities = await GetCitiesAsync(address.StateId);
+    }
+
+    private async Task AddAddressAsync()
+    {
+        await addressForm.Validate();
+        if (!addressForm.IsValid)
+        {
+            return;
+        }
+
+        var state = states.SingleOrDefault(item => item.Id == address.StateId);
+        var city = cities.SingleOrDefault(item => item.Id == address.CityId);
+        if (state is null || city is null)
+        {
+            submitError = "Selecione um estado e uma cidade válidos para o endereço.";
+            return;
+        }
+
+        submitError = null;
+        var editingAddressIndex = editingAddress is null
+            ? -1
+            : addresses.FindIndex(item => item.DraftId == editingAddress.DraftId);
+        var hasAnotherPrimaryAddress = addresses.Any(item =>
+            item.DraftId != editingAddress?.DraftId && item.IsPrimary);
+        var isPrimary = address.IsPrimary || addresses.Count == 0 || !hasAnotherPrimaryAddress;
+        if (isPrimary)
+        {
+            addresses = addresses.Select(item => item with { IsPrimary = false }).ToList();
+        }
+
+        var updatedAddress = address with
+        {
+            IsPrimary = isPrimary,
+            StateName = state.Name,
+            StateAbbreviation = state.Abbreviation,
+            CityName = city.Name
+        };
+
+        if (editingAddress is null)
+        {
+            addresses.Add(updatedAddress);
+        }
+        else
+        {
+            if (editingAddressIndex >= 0)
+            {
+                addresses[editingAddressIndex] = updatedAddress;
+            }
+        }
+
+        address = CustomerAddressDraft.CreateEmpty(isPrimary: addresses.Count == 0);
+        editingAddress = null;
+        cities = [];
+        await addressForm.ResetValidationAsync();
+    }
+
+    private async Task StartAddressEditingAsync(CustomerAddressDraft addressToEdit)
+    {
+        editingAddress = addressToEdit;
+        address = addressToEdit with { };
+        cities = await GetCitiesAsync(address.StateId);
+        await addressForm.ResetValidationAsync();
+    }
+
+    private void CancelAddressEditing()
+    {
+        editingAddress = null;
+        address = CustomerAddressDraft.CreateEmpty(isPrimary: addresses.Count == 0);
+        cities = [];
+    }
+
+    private void RemoveAddress(CustomerAddressDraft addressToRemove)
+    {
+        if (editingAddress?.DraftId == addressToRemove.DraftId)
+        {
+            CancelAddressEditing();
+        }
+
+        var removedPrimaryAddress = addressToRemove.IsPrimary;
+        addresses.Remove(addressToRemove);
+
+        if (removedPrimaryAddress && addresses.Count > 0)
+        {
+            addresses[0] = addresses[0] with { IsPrimary = true };
+        }
+
+        if (addresses.Count == 0)
+        {
+            address = address with { IsPrimary = true };
+        }
+    }
+
+    private async Task<IReadOnlyList<CityOption>> GetCitiesAsync(Guid stateId)
+    {
+        if (stateId == Guid.Empty)
+        {
+            return [];
+        }
+
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        return await dbContext.Cities.AsNoTracking()
+            .Where(city => city.StateId == stateId)
+            .OrderBy(city => city.Name)
+            .Select(city => new CityOption(city.Id, city.Name))
+            .ToListAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        submitError = null;
+        await customerForm.Validate();
+        if (!customerForm.IsValid)
+        {
+            return;
+        }
+
+        if (addresses.Count == 0)
+        {
+            submitError = "Adicione ao menos um endereço antes de salvar o cliente.";
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            var addressInputs = addresses.Select(item => new CustomerAddressInput(
+                item.AddressType,
+                item.IsPrimary,
+                item.Street,
+                item.Number,
+                item.PostalCode,
+                item.Complement,
+                item.StateId,
+                item.CityId)).ToArray();
+
+            var result = CustomerId is { } customerId
+                ? await UpdateCustomerUseCase.ExecuteAsync(customerId, new UpdateCustomerCommand(
+                    customer.Name,
+                    customer.Document,
+                    customer.WhatsApp,
+                    customer.Email,
+                    customer.Notes,
+                    addressInputs))
+                : await CreateCustomerUseCase.ExecuteAsync(new CreateCustomerCommand(
+                    customer.Name,
+                    customer.Document,
+                    customer.WhatsApp,
+                    customer.Email,
+                    customer.Notes,
+                    addressInputs));
+
+            if (result.Code == CustomerOperationResultCode.Success)
+            {
+                Snackbar.Add(
+                    isEditing ? "Cliente atualizado com sucesso." : "Cliente cadastrado com sucesso.",
+                    Severity.Success);
+                NavigationManager.NavigateTo("/clientes");
+                return;
+            }
+
+            submitError = result.Code switch
+            {
+                CustomerOperationResultCode.InvalidInput => "Revise os dados do cliente e tente novamente.",
+                CustomerOperationResultCode.DuplicateDocument => "J\u00e1 existe um cliente com este CPF ou CNPJ.",
+                CustomerOperationResultCode.InvalidLocation => "Selecione um estado e uma cidade válidos.",
+                CustomerOperationResultCode.NotFound => "Cliente não encontrado.",
+                _ => "Não foi possível salvar o cliente. Tente novamente."
+            };
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to save customer {CustomerId}", CustomerId);
+            submitError = "Não foi possível salvar o cliente. Tente novamente.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static string GetAddressTypeLabel(CustomerAddressType addressType) => addressType switch
+    {
+        CustomerAddressType.Residence => "Residência",
+        CustomerAddressType.Business => "Comercial",
+        CustomerAddressType.BeachHouse => "Casa de praia",
+        CustomerAddressType.Other => "Outro",
+        _ => "Outro"
+    };
+
+    private static IEnumerable<string> ValidateOptionalEmail(string? email)
+    {
+        if (!string.IsNullOrWhiteSpace(email) &&
+            !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email))
+        {
+            return ["Informe um e-mail válido."];
+        }
+
+        return [];
+    }
+
+    private static string GetAddressDescription(CustomerAddressDraft address) =>
+        string.IsNullOrWhiteSpace(address.Complement)
+            ? $"{address.Street}, {address.Number}"
+            : $"{address.Street}, {address.Number} - {address.Complement}";
+
+    private sealed class CustomerFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Document { get; set; } = string.Empty;
+        public string WhatsApp { get; set; } = string.Empty;
+        public string? Email { get; set; }
+        public string? Notes { get; set; }
+    }
+
+    private sealed record CustomerAddressDraft
+    {
+        public Guid DraftId { get; init; }
+        public CustomerAddressType AddressType { get; set; }
+        public bool IsPrimary { get; set; }
+        public string Street { get; set; } = string.Empty;
+        public string Number { get; set; } = string.Empty;
+        public string PostalCode { get; set; } = string.Empty;
+        public string? Complement { get; set; }
+        public Guid StateId { get; set; }
+        public string StateName { get; set; } = string.Empty;
+        public string StateAbbreviation { get; set; } = string.Empty;
+        public Guid CityId { get; set; }
+        public string CityName { get; set; } = string.Empty;
+
+        public static CustomerAddressDraft CreateEmpty(bool isPrimary) =>
+            new()
+            {
+                DraftId = Guid.NewGuid(),
+                AddressType = CustomerAddressType.Residence,
+                IsPrimary = isPrimary
+            };
+
+        public static CustomerAddressDraft FromDto(CustomerAddressDto address) =>
+            new()
+            {
+                DraftId = address.Id,
+                AddressType = address.AddressType,
+                IsPrimary = address.IsPrimary,
+                Street = address.Street,
+                Number = address.Number,
+                PostalCode = address.PostalCode,
+                Complement = address.Complement,
+                StateId = address.StateId,
+                StateName = address.StateName,
+                StateAbbreviation = address.StateAbbreviation,
+                CityId = address.CityId,
+                CityName = address.CityName
+            };
+    }
+
+    private sealed record StateOption(Guid Id, string Name, string Abbreviation);
+    private sealed record CityOption(Guid Id, string Name);
+}

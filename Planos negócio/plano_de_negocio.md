@@ -1165,11 +1165,11 @@ Usuário consegue criar uma conta, cadastrar sua empresa e acessar o dashboard.
 
 Desenvolver:
 
-- clientes; - 
-- endereços; -
+- clientes; - ok
+- endereços; - ok
+- serviços;
 - equipamentos;
 - profissionais;
-- serviços;
 - disponibilidade.
 - Cloudnary (IFileStorage - infra) - ok
 - Variaveis de ambiente (secrets) - ok

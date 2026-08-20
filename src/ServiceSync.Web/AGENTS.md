@@ -366,6 +366,27 @@ Prefer creating or reusing a shared `PageHeader` component.
 
 ---
 
+# Management List and Registration Flow
+
+Management modules must use a two-screen flow:
+
+1. A list screen is the module entry point and presents search, filters, records, and the primary create action.
+2. A separate registration screen handles creating and editing a single record.
+
+Use routes and navigation that reflect this pattern. For example:
+
+```text
+/clientes                 -> customer list
+/clientes/registro        -> create customer
+/clientes/registro?id=... -> edit customer
+```
+
+The registration screen must provide a clear Cancel action that returns to the list. After a successful create or update, return to the list and show a success message.
+
+Do not combine a full management list and a full registration form on the same page unless a concrete workflow requires it.
+
+---
+
 # Cards
 
 Cards must use a consistent visual style.
@@ -1492,4 +1513,3 @@ A frontend page or change is complete only when all applicable items below are s
 Functionality alone is not sufficient for frontend completion.
 
 Visual quality, consistency, responsiveness, accessibility, feedback states, and component reuse are required parts of the work.
-

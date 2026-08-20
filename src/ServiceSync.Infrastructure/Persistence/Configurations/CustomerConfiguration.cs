@@ -23,6 +23,10 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.HasIndex(customer => new { customer.CompanyId, customer.Name })
             .HasDatabaseName("IX_Customers_CompanyId_Name");
 
+        builder.HasIndex(customer => new { customer.CompanyId, customer.Document })
+            .IsUnique()
+            .HasDatabaseName("UX_Customers_CompanyId_Document");
+
         builder.HasOne<Company>()
             .WithMany()
             .HasForeignKey(customer => customer.CompanyId)
