@@ -103,17 +103,13 @@ else
                 @if (RequiresBasePrice)
                 {
                     <MudItem xs="12" sm="6">
-                        <MudNumericField T="decimal?"
-                                         @bind-Value="service.BasePrice"
-                                         Label="Valor"
-                                         Min="0"
-                                         Required="true"
-                                         RequiredError="Informe o valor do serviço."
-                                         Variant="Variant.Outlined"
-                                         Adornment="Adornment.Start"
-                                         AdornmentText="R$"
-                                         FullWidth="true"
-                                         Disabled="@isSaving" />
+                        <BrazilianCurrencyInput Id="base-price"
+                                                Name="base-price"
+                                                @bind-Value="service.BasePrice"
+                                                Label="Valor"
+                                                Required="true"
+                                                RequiredError="Informe o valor do serviço."
+                                                Disabled="@isSaving" />
                     </MudItem>
                 }
             </MudGrid>
