@@ -9,6 +9,14 @@ public interface IEmployeeInvitationAccountService
         string password,
         DateTimeOffset now,
         CancellationToken cancellationToken = default);
+
+    Task<EmployeeProfileUpdateOutcome> UpdateProfileAsync(
+        Guid userId,
+        string fullName,
+        string document,
+        string phone,
+        string address,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record EmployeeInvitationAccountResult(
@@ -31,4 +39,11 @@ public enum EmployeeInvitationAccountOutcome
     InvitationUnavailable,
     EmailAlreadyRegistered,
     InvalidPassword
+}
+
+public enum EmployeeProfileUpdateOutcome
+{
+    Success,
+    UserNotFound,
+    DuplicateDocument
 }

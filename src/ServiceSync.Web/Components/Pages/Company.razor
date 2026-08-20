@@ -9,6 +9,7 @@
 @inject CreateEmployeeInvitationUseCase CreateEmployeeInvitationUseCase
 @inject RenewEmployeeInvitationUseCase RenewEmployeeInvitationUseCase
 @inject RevokeEmployeeInvitationUseCase RevokeEmployeeInvitationUseCase
+@inject UpdateCompanyMemberProfileUseCase UpdateCompanyMemberProfileUseCase
 @inject IJSRuntime JsRuntime
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
@@ -99,9 +100,9 @@ else if (overview is not null)
             else
             {
                 <MudTable Items="@overview.Employees" Hover="true" Breakpoint="Breakpoint.Md">
-                    <HeaderContent><MudTh>Nome</MudTh><MudTh>E-mail</MudTh><MudTh>CPF</MudTh><MudTh>Telefone</MudTh><MudTh>Endereço</MudTh><MudTh>Cadastro</MudTh></HeaderContent>
+                    <HeaderContent><MudTh>Nome</MudTh><MudTh>E-mail</MudTh><MudTh>CPF</MudTh><MudTh>Telefone</MudTh><MudTh>Endereço</MudTh><MudTh>Cadastro</MudTh><MudTh aria-label="Ações"></MudTh></HeaderContent>
                     <RowTemplate>
-                        <MudTd DataLabel="Nome"><MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1"><span>@context.FullName</span><MudChip T="string" Size="Size.Small" Color="@GetRoleColor(context.Role)">@GetRoleLabel(context.Role)</MudChip></MudStack></MudTd><MudTd DataLabel="E-mail">@context.Email</MudTd><MudTd DataLabel="CPF">@context.Document</MudTd><MudTd DataLabel="Telefone">@context.Phone</MudTd><MudTd DataLabel="Endereço">@context.Address</MudTd><MudTd DataLabel="Cadastro">@context.CreatedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")</MudTd>
+                        <MudTd DataLabel="Nome"><MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1"><span>@context.FullName</span><MudChip T="string" Size="Size.Small" Color="@GetRoleColor(context.Role)">@GetRoleLabel(context.Role)</MudChip></MudStack></MudTd><MudTd DataLabel="E-mail">@context.Email</MudTd><MudTd DataLabel="CPF">@context.Document</MudTd><MudTd DataLabel="Telefone">@context.Phone</MudTd><MudTd DataLabel="Endereço">@context.Address</MudTd><MudTd DataLabel="Cadastro">@context.CreatedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")</MudTd><MudTd DataLabel="Ações"><MudTooltip Text="Editar perfil"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" aria-label="Editar perfil" OnClick="@(() => OpenProfileDialog(context))" /></MudTooltip></MudTd>
                     </RowTemplate>
                 </MudTable>
             }
@@ -135,10 +136,39 @@ else if (overview is not null)
             }
         </MudPaper>
     </div>
+
+    <MudDialog @bind-Visible="isProfileDialogOpen" Options="profileDialogOptions">
+        <TitleContent><MudText Typo="Typo.h6">Editar perfil</MudText></TitleContent>
+        <DialogContent>
+            @if (profileError is not null)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@profileError</MudAlert>
+            }
+            <MudForm @ref="profileForm">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12"><MudTextField @bind-Value="profile.FullName" Label="Nome completo" Required="true" RequiredError="Informe o nome completo." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSavingProfile" /></MudItem>
+                    <MudItem xs="12"><MudTextField T="string" Value="@editingEmployee?.Email" Label="E-mail" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" /></MudItem>
+                    <MudItem xs="12" sm="6"><BrazilianCpfInput @bind-Value="profile.Document" Id="profile-document" Name="profileDocument" Required="true" Disabled="@isSavingProfile" /></MudItem>
+                    <MudItem xs="12" sm="6"><BrazilianPhoneInput @bind-Value="profile.Phone" Id="profile-phone" Name="profilePhone" Required="true" Disabled="@isSavingProfile" /></MudItem>
+                    <MudItem xs="12"><MudTextField @bind-Value="profile.Address" Label="Endereço" Required="true" RequiredError="Informe o endereço." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSavingProfile" /></MudItem>
+                </MudGrid>
+            </MudForm>
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CloseProfileDialog" Disabled="@isSavingProfile">Cancelar</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveProfileAsync" Disabled="@isSavingProfile">@(isSavingProfile ? "Salvando..." : "Salvar")</MudButton>
+        </DialogActions>
+    </MudDialog>
 }
 
 @code {
     private MudForm employeeForm = default!;
+    private readonly DialogOptions profileDialogOptions = new()
+    {
+        CloseButton = true,
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true
+    };
     private CompanyOverviewDto? overview;
     private EmployeeFormModel employee = new();
     private bool isLoading = true;
@@ -147,6 +177,12 @@ else if (overview is not null)
     private string? operationError;
     private string? generatedInvitationLink;
     private string? companyLogoDataUrl;
+    private MudForm profileForm = default!;
+    private EmployeeDto? editingEmployee;
+    private EmployeeProfileFormModel profile = new();
+    private bool isProfileDialogOpen;
+    private bool isSavingProfile;
+    private string? profileError;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -195,6 +231,7 @@ else if (overview is not null)
     private async Task CreateInvitationAsync()
     {
         operationError = null;
+        profileError = null;
         generatedInvitationLink = null;
         await employeeForm.Validate();
         if (!employeeForm.IsValid)
@@ -288,6 +325,75 @@ else if (overview is not null)
         overview = await GetOwnerCompanyOverviewUseCase.ExecuteAsync();
     }
 
+    private void OpenProfileDialog(EmployeeDto employeeToEdit)
+    {
+        operationError = null;
+        profileError = null;
+        editingEmployee = employeeToEdit;
+        profile = new EmployeeProfileFormModel
+        {
+            FullName = employeeToEdit.FullName,
+            Document = employeeToEdit.Document,
+            Phone = employeeToEdit.Phone,
+            Address = employeeToEdit.Address
+        };
+        isProfileDialogOpen = true;
+    }
+
+    private void CloseProfileDialog()
+    {
+        if (!isSavingProfile)
+        {
+            isProfileDialogOpen = false;
+            editingEmployee = null;
+        }
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        if (editingEmployee is null)
+        {
+            return;
+        }
+
+        await profileForm.Validate();
+        if (!profileForm.IsValid)
+        {
+            return;
+        }
+
+        isSavingProfile = true;
+        operationError = null;
+        profileError = null;
+        try
+        {
+            var result = await UpdateCompanyMemberProfileUseCase.ExecuteAsync(new UpdateCompanyMemberProfileCommand(
+                editingEmployee.MembershipId,
+                profile.FullName,
+                profile.Document,
+                profile.Phone,
+                profile.Address));
+            if (result.Code != EmployeeInvitationResultCode.Success)
+            {
+                profileError = GetOperationError(result.Code);
+                return;
+            }
+
+            isProfileDialogOpen = false;
+            editingEmployee = null;
+            await ReloadOverviewAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to update company member profile");
+            profileError = "Não foi possível atualizar o perfil. Tente novamente.";
+        }
+        finally
+        {
+            isSavingProfile = false;
+        }
+    }
+
     private async Task CopyGeneratedLinkAsync()
     {
         if (generatedInvitationLink is not null)
@@ -341,6 +447,14 @@ else if (overview is not null)
     {
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string Document { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+    }
+
+    private sealed class EmployeeProfileFormModel
+    {
+        public string FullName { get; set; } = string.Empty;
         public string Document { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;

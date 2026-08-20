@@ -143,6 +143,15 @@ public sealed class EmployeeInvitationRepository(AppDbContext dbContext) : IEmpl
             invitation => invitation.Id == invitationId && invitation.CompanyId == companyId,
             cancellationToken);
 
+    public Task<Guid?> GetUserIdByMembershipIdAsync(
+        Guid membershipId,
+        Guid companyId,
+        CancellationToken cancellationToken = default) =>
+        dbContext.CompanyUsers.AsNoTracking()
+            .Where(companyUser => companyUser.Id == membershipId && companyUser.CompanyId == companyId)
+            .Select(companyUser => (Guid?)companyUser.UserId)
+            .SingleOrDefaultAsync(cancellationToken);
+
     public Task<EmployeeInvitation?> GetPendingByTokenHashAsync(
         string tokenHash,
         DateTimeOffset now,

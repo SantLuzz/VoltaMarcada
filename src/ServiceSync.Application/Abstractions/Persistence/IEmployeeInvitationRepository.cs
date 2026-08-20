@@ -32,6 +32,11 @@ public interface IEmployeeInvitationRepository
         Guid companyId,
         CancellationToken cancellationToken = default);
 
+    Task<Guid?> GetUserIdByMembershipIdAsync(
+        Guid membershipId,
+        Guid companyId,
+        CancellationToken cancellationToken = default);
+
     Task<EmployeeInvitation?> GetPendingByTokenHashAsync(
         string tokenHash,
         DateTimeOffset now,

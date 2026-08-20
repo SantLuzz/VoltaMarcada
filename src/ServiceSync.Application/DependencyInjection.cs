@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<RevokeEmployeeInvitationUseCase>();
         services.AddScoped<GetEmployeeInvitationForAcceptanceUseCase>();
         services.AddScoped<AcceptEmployeeInvitationUseCase>();
+        services.AddScoped<UpdateCompanyMemberProfileUseCase>();
         return services;
     }
 }
