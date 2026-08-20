@@ -11,12 +11,13 @@ public sealed class ServiceChecklistItemConfiguration : IEntityTypeConfiguration
         builder.ToTable("ServiceChecklistItems");
         builder.HasKey(item => item.Id);
         builder.Property(item => item.Id).ValueGeneratedNever();
+        builder.Property(item => item.CompanyId).IsRequired();
         builder.Property(item => item.ServiceId).IsRequired();
         builder.Property(item => item.Description).HasMaxLength(500).IsRequired();
         builder.Property(item => item.IsRequired).IsRequired();
         builder.Property(item => item.DisplayOrder).IsRequired();
 
-        builder.HasIndex(item => new { item.ServiceId, item.DisplayOrder })
-            .HasDatabaseName("IX_ServiceChecklistItems_ServiceId_DisplayOrder");
+        builder.HasIndex(item => new { item.CompanyId, item.ServiceId, item.DisplayOrder })
+            .HasDatabaseName("IX_ServiceChecklistItems_CompanyId_ServiceId_DisplayOrder");
     }
 }

@@ -21,11 +21,16 @@ public static class ServiceEndpoints
     }
 
     private static async Task<IResult> CreateAsync(
-        ServiceRequest request,
+        ServiceRequest? request,
         CreateServiceUseCase useCase,
         CancellationToken cancellationToken)
     {
-        var result = await useCase.ExecuteAsync(ToCreateCommand(request), cancellationToken);
+        if (!HasValidChecklistItems(request))
+        {
+            return InvalidInput();
+        }
+
+        var result = await useCase.ExecuteAsync(ToCreateCommand(request!), cancellationToken);
         return ToResult(result, serviceId => Results.Created($"/services/{serviceId}/edit", new { serviceId }));
     }
 
@@ -46,11 +51,16 @@ public static class ServiceEndpoints
 
     private static async Task<IResult> UpdateAsync(
         Guid serviceId,
-        ServiceRequest request,
+        ServiceRequest? request,
         UpdateServiceUseCase useCase,
         CancellationToken cancellationToken)
     {
-        var result = await useCase.ExecuteAsync(serviceId, ToUpdateCommand(request), cancellationToken);
+        if (!HasValidChecklistItems(request))
+        {
+            return InvalidInput();
+        }
+
+        var result = await useCase.ExecuteAsync(serviceId, ToUpdateCommand(request!), cancellationToken);
         return ToResult(result, _ => Results.Ok());
     }
 
@@ -78,6 +88,12 @@ public static class ServiceEndpoints
             _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError)
         };
 
+    private static IResult InvalidInput() =>
+        Results.BadRequest(new { error = "Revise os dados do serviço e tente novamente." });
+
+    private static bool HasValidChecklistItems(ServiceRequest? request) =>
+        request?.ChecklistItems is not null && request.ChecklistItems.All(item => item is not null);
+
     private static CreateServiceCommand ToCreateCommand(ServiceRequest request) =>
         new(
             request.Name,
@@ -88,7 +104,7 @@ public static class ServiceEndpoints
             request.AllowOnlineBooking,
             request.RequireBeforePhotos,
             request.RequireAfterPhotos,
-            ToChecklistItemInputs(request.ChecklistItems));
+            ToChecklistItemInputs(request.ChecklistItems!));
 
     private static UpdateServiceCommand ToUpdateCommand(ServiceRequest request) =>
         new(
@@ -100,12 +116,12 @@ public static class ServiceEndpoints
             request.AllowOnlineBooking,
             request.RequireBeforePhotos,
             request.RequireAfterPhotos,
-            ToChecklistItemInputs(request.ChecklistItems));
+            ToChecklistItemInputs(request.ChecklistItems!));
 
     private static IReadOnlyList<ServiceChecklistItemInput> ToChecklistItemInputs(
-        IReadOnlyList<ServiceChecklistItemRequest> checklistItems) =>
+        IReadOnlyList<ServiceChecklistItemRequest?> checklistItems) =>
         checklistItems
-            .Select(item => new ServiceChecklistItemInput(item.Description, item.IsRequired))
+            .Select(item => new ServiceChecklistItemInput(item!.Description, item.IsRequired))
             .ToArray();
 
     public sealed record ServiceRequest(
@@ -117,7 +133,7 @@ public static class ServiceEndpoints
         bool AllowOnlineBooking,
         bool RequireBeforePhotos,
         bool RequireAfterPhotos,
-        IReadOnlyList<ServiceChecklistItemRequest> ChecklistItems);
+        IReadOnlyList<ServiceChecklistItemRequest?>? ChecklistItems);
 
     public sealed record ServiceChecklistItemRequest(string Description, bool IsRequired);
 }

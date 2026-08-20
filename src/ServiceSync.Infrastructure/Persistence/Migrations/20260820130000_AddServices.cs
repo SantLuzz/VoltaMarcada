@@ -33,6 +33,7 @@ public partial class AddServices : Migration
             constraints: table =>
             {
                 table.PrimaryKey("PK_Services", x => x.Id);
+                table.UniqueConstraint("AK_Services_CompanyId_Id", x => new { x.CompanyId, x.Id });
                 table.ForeignKey(
                     name: "FK_Services_Companies_CompanyId",
                     column: x => x.CompanyId,
@@ -46,6 +47,7 @@ public partial class AddServices : Migration
             columns: table => new
             {
                 Id = table.Column<Guid>(type: "uuid", nullable: false),
+                CompanyId = table.Column<Guid>(type: "uuid", nullable: false),
                 ServiceId = table.Column<Guid>(type: "uuid", nullable: false),
                 Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                 IsRequired = table.Column<bool>(type: "boolean", nullable: false),
@@ -55,10 +57,10 @@ public partial class AddServices : Migration
             {
                 table.PrimaryKey("PK_ServiceChecklistItems", x => x.Id);
                 table.ForeignKey(
-                    name: "FK_ServiceChecklistItems_Services_ServiceId",
-                    column: x => x.ServiceId,
+                    name: "FK_ServiceChecklistItems_Services_CompanyId_ServiceId",
+                    columns: x => new { x.CompanyId, x.ServiceId },
                     principalTable: "Services",
-                    principalColumn: "Id",
+                    principalColumns: new[] { "CompanyId", "Id" },
                     onDelete: ReferentialAction.Cascade);
             });
 
@@ -68,9 +70,9 @@ public partial class AddServices : Migration
             columns: new[] { "CompanyId", "Name" });
 
         migrationBuilder.CreateIndex(
-            name: "IX_ServiceChecklistItems_ServiceId_DisplayOrder",
+            name: "IX_ServiceChecklistItems_CompanyId_ServiceId_DisplayOrder",
             table: "ServiceChecklistItems",
-            columns: new[] { "ServiceId", "DisplayOrder" });
+            columns: new[] { "CompanyId", "ServiceId", "DisplayOrder" });
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

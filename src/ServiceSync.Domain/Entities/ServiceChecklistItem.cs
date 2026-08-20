@@ -10,6 +10,8 @@ public sealed class ServiceChecklistItem
 
     public Guid Id { get; private set; }
 
+    public Guid CompanyId { get; private set; }
+
     public Guid ServiceId { get; private set; }
 
     public string Description { get; private set; } = string.Empty;
@@ -34,11 +36,21 @@ public sealed class ServiceChecklistItem
         };
     }
 
-    internal void AssignToService(Guid serviceId)
+    internal void AssignToService(Guid companyId, Guid serviceId)
     {
+        if (companyId == Guid.Empty)
+        {
+            throw new DomainException("Company ID is required.");
+        }
+
         if (serviceId == Guid.Empty)
         {
             throw new DomainException("Service ID is required.");
+        }
+
+        if (CompanyId != Guid.Empty && CompanyId != companyId)
+        {
+            throw new DomainException("Checklist item already belongs to another company.");
         }
 
         if (ServiceId != Guid.Empty && ServiceId != serviceId)
@@ -46,6 +58,7 @@ public sealed class ServiceChecklistItem
             throw new DomainException("Checklist item already belongs to another service.");
         }
 
+        CompanyId = companyId;
         ServiceId = serviceId;
     }
 

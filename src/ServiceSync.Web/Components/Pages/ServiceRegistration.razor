@@ -179,12 +179,14 @@ else
                                     <MudText>@item.Description</MudText>
                                     <MudChip T="string" Size="Size.Small" Color="@(item.IsRequired ? Color.Warning : Color.Default)" Variant="Variant.Outlined">@(item.IsRequired ? "Obrigatório" : "Opcional")</MudChip>
                                 </MudStack>
-                                <MudIconButton Icon="@Icons.Material.Filled.Close"
-                                               Color="Color.Error"
-                                               Size="Size.Small"
-                                               aria-label="Remover item do checklist"
-                                               OnClick="@(() => RemoveChecklistItem(item))"
-                                               Disabled="@isSaving" />
+                                <MudTooltip Text="Remover item do checklist">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                   Color="Color.Error"
+                                                   Size="Size.Small"
+                                                   aria-label="Remover item do checklist"
+                                                   OnClick="@(() => RemoveChecklistItem(item))"
+                                                   Disabled="@isSaving" />
+                                </MudTooltip>
                             </MudStack>
                         </MudListItem>
                     }

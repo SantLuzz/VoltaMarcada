@@ -16,6 +16,7 @@ public sealed class ServiceRepository(AppDbContext dbContext) : IServiceReposito
     {
         var services = dbContext.Services
             .AsNoTracking()
+            .Include(service => service.ChecklistItems)
             .Where(service => service.CompanyId == companyId);
 
         if (query.SearchFilter is { } searchFilter)

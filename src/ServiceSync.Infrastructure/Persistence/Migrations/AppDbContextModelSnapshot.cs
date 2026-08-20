@@ -507,6 +507,9 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasAlternateKey("CompanyId", "Id")
+                        .HasName("AK_Services_CompanyId_Id");
+
                     b.HasIndex("CompanyId", "Name")
                         .HasDatabaseName("IX_Services_CompanyId_Name");
 
@@ -516,6 +519,9 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("ServiceSync.Domain.Entities.ServiceChecklistItem", b =>
                 {
                     b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Description")
@@ -534,8 +540,8 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ServiceId", "DisplayOrder")
-                        .HasDatabaseName("IX_ServiceChecklistItems_ServiceId_DisplayOrder");
+                    b.HasIndex("CompanyId", "ServiceId", "DisplayOrder")
+                        .HasDatabaseName("IX_ServiceChecklistItems_CompanyId_ServiceId_DisplayOrder");
 
                     b.ToTable("ServiceChecklistItems", (string)null);
                 });
@@ -834,7 +840,8 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                 {
                     b.HasOne("ServiceSync.Domain.Entities.Service", null)
                         .WithMany("ChecklistItems")
-                        .HasForeignKey("ServiceId")
+                        .HasForeignKey("CompanyId", "ServiceId")
+                        .HasPrincipalKey("CompanyId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

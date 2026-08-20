@@ -125,7 +125,7 @@ public sealed class Service : ICompanyScopedEntity
 
         foreach (var item in normalizedItems)
         {
-            item.AssignToService(Id);
+            item.AssignToService(CompanyId, Id);
         }
 
         _checklistItems.Clear();
