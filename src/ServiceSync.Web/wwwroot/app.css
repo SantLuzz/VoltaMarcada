@@ -62,6 +62,15 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 .equipment-type-form-section { max-width: 720px; padding: 24px; }
 .equipment-type-form-section-header { margin-bottom: 24px; }
 .equipment-type-form-actions { display: flex; gap: 12px; justify-content: flex-end; }
+.service-list-surface { padding: 24px; }
+.service-list-toolbar { align-items: center; display: flex; gap: 24px; justify-content: space-between; margin-bottom: 24px; }
+.service-list-toolbar > .mud-input-control { flex: 1; max-width: 520px; }
+.service-actions { white-space: nowrap; }
+.service-form-section { margin-bottom: 24px; max-width: 840px; padding: 24px; }
+.service-form-section-header { margin-bottom: 24px; }
+.service-form-actions { display: flex; gap: 12px; justify-content: flex-end; }
+.service-checklist-list { margin-top: 16px; }
+.service-checklist-row { width: 100%; }
 .status-page { align-items: center; display: flex; justify-content: center; min-height: 60vh; padding: 24px; }
 .status-surface { max-width: 520px; padding: 32px; text-align: center; width: 100%; }
 
@@ -84,6 +93,11 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
     .equipment-type-list-toolbar > .mud-input-control, .equipment-type-list-toolbar > .mud-button-root { max-width: none; width: 100%; }
     .equipment-type-form-actions { flex-direction: column-reverse; }
     .equipment-type-form-actions > * { width: 100%; }
+    .service-list-surface, .service-form-section { padding: 16px; }
+    .service-list-toolbar { align-items: stretch; flex-direction: column; }
+    .service-list-toolbar > .mud-input-control, .service-list-toolbar > .mud-button-root { max-width: none; width: 100%; }
+    .service-form-actions { flex-direction: column-reverse; }
+    .service-form-actions > * { width: 100%; }
 }
 .company-page {
     display: grid;
