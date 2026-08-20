@@ -99,10 +99,10 @@ else if (overview is not null)
             }
             else
             {
-                <MudTable Items="@overview.Employees" Hover="true" Breakpoint="Breakpoint.Md">
-                    <HeaderContent><MudTh>Nome</MudTh><MudTh>E-mail</MudTh><MudTh>CPF</MudTh><MudTh>Telefone</MudTh><MudTh>Endereço</MudTh><MudTh>Cadastro</MudTh><MudTh aria-label="Ações"></MudTh></HeaderContent>
+                <MudTable Items="@overview.Employees" Class="servicesync-data-grid" Hover="true" Breakpoint="Breakpoint.Md">
+                    <HeaderContent><MudTh>Nome</MudTh><MudTh>Tipo</MudTh><MudTh>E-mail</MudTh><MudTh>CPF</MudTh><MudTh>Telefone</MudTh><MudTh>Endereço</MudTh><MudTh>Cadastro</MudTh><MudTh aria-label="Ações"></MudTh></HeaderContent>
                     <RowTemplate>
-                        <MudTd DataLabel="Nome"><MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1"><span>@context.FullName</span><MudChip T="string" Size="Size.Small" Color="@GetRoleColor(context.Role)">@GetRoleLabel(context.Role)</MudChip></MudStack></MudTd><MudTd DataLabel="E-mail">@context.Email</MudTd><MudTd DataLabel="CPF">@context.Document</MudTd><MudTd DataLabel="Telefone">@context.Phone</MudTd><MudTd DataLabel="Endereço">@context.Address</MudTd><MudTd DataLabel="Cadastro">@context.CreatedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")</MudTd><MudTd DataLabel="Ações"><MudTooltip Text="Editar perfil"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" aria-label="Editar perfil" OnClick="@(() => OpenProfileDialog(context))" /></MudTooltip></MudTd>
+                        <MudTd DataLabel="Nome"><GridTextCell Value="@context.FullName" /></MudTd><MudTd DataLabel="Tipo"><MudChip T="string" Size="Size.Small" Color="@GetRoleColor(context.Role)">@GetRoleLabel(context.Role)</MudChip></MudTd><MudTd DataLabel="E-mail"><GridTextCell Value="@context.Email" /></MudTd><MudTd DataLabel="CPF"><GridTextCell Value="@context.Document" /></MudTd><MudTd DataLabel="Telefone"><GridTextCell Value="@context.Phone" /></MudTd><MudTd DataLabel="Endereço"><GridTextCell Value="@context.Address" /></MudTd><MudTd DataLabel="Cadastro"><GridTextCell Value="@context.CreatedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")" /></MudTd><MudTd DataLabel="Ações"><MudTooltip Text="Editar perfil"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" aria-label="Editar perfil" OnClick="@(() => OpenProfileDialog(context))" /></MudTooltip></MudTd>
                     </RowTemplate>
                 </MudTable>
             }
@@ -116,10 +116,10 @@ else if (overview is not null)
             }
             else
             {
-                <MudTable Items="@overview.Invitations" Hover="true" Breakpoint="Breakpoint.Md">
+                <MudTable Items="@overview.Invitations" Class="servicesync-data-grid" Hover="true" Breakpoint="Breakpoint.Md">
                     <HeaderContent><MudTh>Funcionário</MudTh><MudTh>E-mail</MudTh><MudTh>Expira em</MudTh><MudTh>Status</MudTh><MudTh aria-label="Ações"></MudTh></HeaderContent>
                     <RowTemplate>
-                        <MudTd DataLabel="Funcionário">@context.FullName</MudTd><MudTd DataLabel="E-mail">@context.Email</MudTd><MudTd DataLabel="Expira em">@context.ExpiresAtUtc.LocalDateTime.ToString("dd/MM/yyyy HH:mm")</MudTd>
+                        <MudTd DataLabel="Funcionário"><GridTextCell Value="@context.FullName" /></MudTd><MudTd DataLabel="E-mail"><GridTextCell Value="@context.Email" /></MudTd><MudTd DataLabel="Expira em"><GridTextCell Value="@context.ExpiresAtUtc.LocalDateTime.ToString("dd/MM/yyyy HH:mm")" /></MudTd>
                         <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context)">@GetStatusLabel(context)</MudChip></MudTd>
                         <MudTd DataLabel="Ações">
                             @if (!context.IsAccepted)

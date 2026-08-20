@@ -103,6 +103,8 @@ public static class CustomerEndpoints
         {
             CustomerOperationResultCode.Success => Results.NoContent(),
             CustomerOperationResultCode.NotFound => Results.NotFound(),
+            CustomerOperationResultCode.HasLinkedEquipment => Results.Conflict(
+                new { error = "O cliente possui equipamentos vinculados e n\u00e3o pode ser exclu\u00eddo." }),
             _ => UnexpectedResult()
         };
     }

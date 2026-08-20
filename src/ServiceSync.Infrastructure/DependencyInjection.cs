@@ -32,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<ICompanyOnboardingRepository, CompanyOnboardingRepository>();
         services.AddScoped<ICustomerRepository, CustomerRepository>();
+        services.AddScoped<IEquipmentRepository, EquipmentRepository>();
         services.AddScoped<IEmployeeInvitationRepository, EmployeeInvitationRepository>();
         services.AddScoped<IEmployeeInvitationAccountService, EmployeeInvitationAccountService>();
         services.AddOptions<CloudinaryOptions>()

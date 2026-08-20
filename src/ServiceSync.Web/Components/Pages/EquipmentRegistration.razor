@@ -1,0 +1,287 @@
+@page "/equipamentos/registro"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@using ServiceSync.Application.Customers
+@using ServiceSync.Application.Equipment
+@inject GetCustomersUseCase GetCustomersUseCase
+@inject CreateEquipmentUseCase CreateEquipmentUseCase
+@inject UpdateEquipmentUseCase UpdateEquipmentUseCase
+@inject GetEquipmentForEditUseCase GetEquipmentForEditUseCase
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ILogger<EquipmentRegistration> Logger
+
+<PageTitle>@(isEditing ? "Editar equipamento" : "Novo equipamento") | ServiceSync</PageTitle>
+
+<PageHeader Title="@(isEditing ? "Editar equipamento" : "Novo equipamento")"
+            Description="@(isEditing ? "Atualize os dados e o cliente vinculado ao equipamento." : "Cadastre um equipamento e vincule-o a um cliente.")">
+    <Actions>
+        <div class="equipment-type-form-actions">
+            <MudButton Href="/equipamentos" Variant="Variant.Outlined" Color="Color.Default" Disabled="@isSaving">Cancelar</MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Save"
+                       OnClick="SaveAsync"
+                       Disabled="@(isLoading || isSaving || loadError is not null)">
+                @(isSaving ? "Salvando..." : "Salvar equipamento")
+            </MudButton>
+        </div>
+    </Actions>
+</PageHeader>
+
+@if (isLoading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (loadError is not null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@loadError</MudAlert>
+}
+else
+{
+    @if (submitError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">@submitError</MudAlert>
+    }
+
+    <MudPaper Class="equipment-type-form-section" Elevation="0" Outlined="true">
+        <header class="equipment-type-form-section-header">
+            <MudText Typo="Typo.h6">Dados do equipamento</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">O cliente é obrigatório e pode ser localizado pelo nome ou CPF/CNPJ.</MudText>
+        </header>
+
+        <MudForm @ref="equipmentForm">
+            <MudGrid Spacing="2">
+                <MudItem xs="12">
+                    <MudAutocomplete T="CustomerOption"
+                                     @bind-Value="equipment.Customer"
+                                     Label="Cliente"
+                                     Placeholder="Pesquise pelo nome ou CPF/CNPJ"
+                                     SearchFunc="SearchCustomersAsync"
+                                     ToStringFunc="GetCustomerDisplayName"
+                                     Required="true"
+                                     RequiredError="Selecione o cliente do equipamento."
+                                     Variant="Variant.Outlined"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.Search"
+                                     Clearable="true"
+                                     FullWidth="true"
+                                     Disabled="@isSaving" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="equipment.Type"
+                                  Label="Tipo de equipamento"
+                                  Required="true"
+                                  RequiredError="Informe o tipo de equipamento."
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Disabled="@isSaving" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="equipment.Manufacturer" Label="Fabricante" Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="equipment.Model" Label="Modelo" Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="equipment.SerialNumber" Label="Número de série" Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="equipment.Capacity" Label="Capacidade" Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker @bind-Date="equipment.InstallationDate" Label="Data de instalação" Variant="Variant.Outlined" Disabled="@isSaving" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="equipment.LocationDescription" Label="Local de instalação" Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="equipment.Notes" Label="Observações" Variant="Variant.Outlined" Lines="4" FullWidth="true" Disabled="@isSaving" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </MudPaper>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "id")]
+    public Guid? EquipmentId { get; set; }
+
+    private MudForm equipmentForm = default!;
+    private EquipmentFormModel equipment = new();
+    private IReadOnlyList<CustomerOption> customers = [];
+    private bool isLoading = true;
+    private bool isSaving;
+    private string? loadError;
+    private string? submitError;
+
+    private bool isEditing => EquipmentId.HasValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            customers = (await GetCustomersUseCase.ExecuteAsync())
+                .Select(customer => new CustomerOption(customer.Id, customer.Name, customer.Document))
+                .ToArray();
+
+            if (EquipmentId is { } equipmentId)
+            {
+                await LoadEquipmentAsync(equipmentId);
+            }
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to initialize equipment registration page");
+            loadError = "Não foi possível carregar os dados necessários. Tente novamente.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadEquipmentAsync(Guid equipmentId)
+    {
+        var existingEquipment = await GetEquipmentForEditUseCase.ExecuteAsync(equipmentId);
+        if (existingEquipment is null)
+        {
+            loadError = "Equipamento não encontrado.";
+            return;
+        }
+
+        equipment = new EquipmentFormModel
+        {
+            Customer = customers.SingleOrDefault(customer => customer.Id == existingEquipment.CustomerId),
+            Type = existingEquipment.Type,
+            Manufacturer = existingEquipment.Manufacturer,
+            Model = existingEquipment.Model,
+            SerialNumber = existingEquipment.SerialNumber,
+            Capacity = existingEquipment.Capacity,
+            LocationDescription = existingEquipment.LocationDescription,
+            InstallationDate = existingEquipment.InstallationDate?.ToDateTime(TimeOnly.MinValue),
+            Notes = existingEquipment.Notes
+        };
+
+        if (equipment.Customer is null)
+        {
+            loadError = "O cliente vinculado ao equipamento não foi encontrado.";
+        }
+    }
+
+    private Task<IEnumerable<CustomerOption>> SearchCustomersAsync(string value, CancellationToken cancellationToken)
+    {
+        var documentFilter = new string(value.Where(char.IsDigit).ToArray());
+        return Task.FromResult<IEnumerable<CustomerOption>>(customers.Where(customer =>
+            string.IsNullOrWhiteSpace(value) ||
+            customer.Name.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+            (!string.IsNullOrEmpty(documentFilter) && customer.Document.Contains(documentFilter, StringComparison.Ordinal))));
+    }
+
+    private async Task SaveAsync()
+    {
+        submitError = null;
+        await equipmentForm.ValidateAsync();
+        if (!equipmentForm.IsValid || equipment.Customer is null)
+        {
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var result = EquipmentId is { } equipmentId
+                ? await UpdateEquipmentUseCase.ExecuteAsync(equipmentId, ToUpdateCommand(equipment))
+                : await CreateEquipmentUseCase.ExecuteAsync(ToCreateCommand(equipment));
+
+            if (result.Code == EquipmentOperationResultCode.Success)
+            {
+                Snackbar.Add(isEditing ? "Equipamento atualizado com sucesso." : "Equipamento cadastrado com sucesso.", Severity.Success);
+                NavigationManager.NavigateTo("/equipamentos");
+                return;
+            }
+
+            submitError = result.Code switch
+            {
+                EquipmentOperationResultCode.InvalidInput => "Revise os dados do equipamento e tente novamente.",
+                EquipmentOperationResultCode.CustomerNotFound => "Selecione um cliente válido da sua empresa.",
+                EquipmentOperationResultCode.NotFound => "Equipamento não encontrado.",
+                _ => "Não foi possível salvar o equipamento. Tente novamente."
+            };
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to save equipment {EquipmentId}", EquipmentId);
+            submitError = "Não foi possível salvar o equipamento. Tente novamente.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static CreateEquipmentCommand ToCreateCommand(EquipmentFormModel model) =>
+        new(
+            model.Customer!.Id,
+            model.Type,
+            model.Manufacturer,
+            model.Model,
+            model.SerialNumber,
+            model.Capacity,
+            model.LocationDescription,
+            ToDateOnly(model.InstallationDate),
+            model.Notes);
+
+    private static UpdateEquipmentCommand ToUpdateCommand(EquipmentFormModel model) =>
+        new(
+            model.Customer!.Id,
+            model.Type,
+            model.Manufacturer,
+            model.Model,
+            model.SerialNumber,
+            model.Capacity,
+            model.LocationDescription,
+            ToDateOnly(model.InstallationDate),
+            model.Notes);
+
+    private static string GetCustomerDisplayName(CustomerOption? customer) =>
+        customer is null ? string.Empty : $"{customer.Name} - {FormatDocument(customer.Document)}";
+
+    private static DateOnly? ToDateOnly(DateTime? value) =>
+        value.HasValue ? DateOnly.FromDateTime(value.Value) : null;
+
+    private static string FormatDocument(string document)
+    {
+        var digits = new string(document.Where(char.IsDigit).Take(14).ToArray());
+        return digits.Length <= 11
+            ? digits.Length switch
+            {
+                <= 3 => digits,
+                <= 6 => $"{digits[..3]}.{digits[3..]}",
+                <= 9 => $"{digits[..3]}.{digits[3..6]}.{digits[6..]}",
+                _ => $"{digits[..3]}.{digits[3..6]}.{digits[6..9]}-{digits[9..]}"
+            }
+            : digits.Length switch
+            {
+                <= 2 => digits,
+                <= 5 => $"{digits[..2]}.{digits[2..]}",
+                <= 8 => $"{digits[..2]}.{digits[2..5]}.{digits[5..]}",
+                <= 12 => $"{digits[..2]}.{digits[2..5]}.{digits[5..8]}/{digits[8..]}",
+                _ => $"{digits[..2]}.{digits[2..5]}.{digits[5..8]}/{digits[8..12]}-{digits[12..]}"
+            };
+    }
+
+    private sealed class EquipmentFormModel
+    {
+        public CustomerOption? Customer { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string? Manufacturer { get; set; }
+        public string? Model { get; set; }
+        public string? SerialNumber { get; set; }
+        public string? Capacity { get; set; }
+        public string? LocationDescription { get; set; }
+        public DateTime? InstallationDate { get; set; }
+        public string? Notes { get; set; }
+    }
+
+    private sealed record CustomerOption(Guid Id, string Name, string Document);
+}

@@ -302,7 +302,7 @@ aplicável.
 
 # 5. Roadmap atualizado
 
-# Fase 1 --- Fundação
+# Fase 1 --- Fundação (Concluída)
 
 ## Desenvolver
 
@@ -373,7 +373,11 @@ Dados possíveis:
 -   nome;
 -   descrição;
 -   duração aproximada;
--   tipo de preço;
+-   tipo de preço:
+   - preço fixo;
+   - a partir de;
+   - sob orçamento;
+   - não exibir preço.     
 -   valor;
 -   permitir solicitação online;
 -   regras operacionais.

@@ -16,6 +16,9 @@ public sealed record CustomerOperationResult(CustomerOperationResultCode Code, G
 
     public static CustomerOperationResult NotFound() =>
         new(CustomerOperationResultCode.NotFound, null);
+
+    public static CustomerOperationResult HasLinkedEquipment() =>
+        new(CustomerOperationResultCode.HasLinkedEquipment, null);
 }
 
 public enum CustomerOperationResultCode
@@ -24,5 +27,6 @@ public enum CustomerOperationResultCode
     InvalidInput,
     InvalidLocation,
     DuplicateDocument,
-    NotFound
+    NotFound,
+    HasLinkedEquipment
 }

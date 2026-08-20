@@ -50,7 +50,7 @@
     }
     else
     {
-        <MudTable Items="@customers" Hover="true" Breakpoint="Breakpoint.Md">
+        <MudTable Items="@customers" Class="servicesync-data-grid" Hover="true" Breakpoint="Breakpoint.Md">
             <HeaderContent>
                 <MudTh>Nome</MudTh>
                 <MudTh>Documento</MudTh>
@@ -59,10 +59,10 @@
                 <MudTh aria-label="Ações"></MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd DataLabel="Nome">@context.Name</MudTd>
-                <MudTd DataLabel="Documento">@FormatDocument(context.Document)</MudTd>
-                <MudTd DataLabel="Telefone">@context.WhatsApp</MudTd>
-                <MudTd DataLabel="Endereço">@GetPrimaryAddress(context)</MudTd>
+                <MudTd DataLabel="Nome"><GridTextCell Value="@context.Name" /></MudTd>
+                <MudTd DataLabel="Documento"><GridTextCell Value="@FormatDocument(context.Document)" /></MudTd>
+                <MudTd DataLabel="Telefone"><GridTextCell Value="@context.WhatsApp" /></MudTd>
+                <MudTd DataLabel="Endereço"><GridTextCell Value="@GetPrimaryAddress(context)" /></MudTd>
                 <MudTd DataLabel="Ações" Class="customer-actions">
                     <MudTooltip Text="Editar cliente">
                         <MudIconButton Href="@GetCustomerRegistrationUrl(context.Id)"
@@ -191,6 +191,13 @@
             {
                 customers = customers.Where(item => item.Id != customer.Id).ToArray();
                 Snackbar.Add("Cliente excluído com sucesso.", Severity.Success);
+                CloseDeleteDialog();
+                return;
+            }
+
+            if (result.Code == CustomerOperationResultCode.HasLinkedEquipment)
+            {
+                Snackbar.Add("Este cliente possui equipamentos vinculados e não pode ser excluído.", Severity.Warning);
                 CloseDeleteDialog();
                 return;
             }

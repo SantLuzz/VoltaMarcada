@@ -2,12 +2,14 @@
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
 @using Microsoft.EntityFrameworkCore
 @using ServiceSync.Application.Customers
+@using ServiceSync.Application.Equipment
 @using ServiceSync.Domain.Enums
 @using ServiceSync.Infrastructure.Persistence
 @inject IDbContextFactory<AppDbContext> DbContextFactory
 @inject CreateCustomerUseCase CreateCustomerUseCase
 @inject UpdateCustomerUseCase UpdateCustomerUseCase
 @inject GetCustomerForEditUseCase GetCustomerForEditUseCase
+@inject GetCustomerEquipmentUseCase GetCustomerEquipmentUseCase
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject ILogger<CustomerRegistration> Logger
@@ -230,7 +232,7 @@ else
             }
             else
             {
-                <MudTable Items="@addresses" Hover="true" Breakpoint="Breakpoint.Md">
+                <MudTable Items="@addresses" Class="servicesync-data-grid" Hover="true" Breakpoint="Breakpoint.Md">
                     <HeaderContent>
                         <MudTh>Tipo</MudTh>
                         <MudTh>CEP</MudTh>
@@ -240,10 +242,10 @@ else
                         <MudTh aria-label="Ações"></MudTh>
                     </HeaderContent>
                     <RowTemplate>
-                        <MudTd DataLabel="Tipo">@GetAddressTypeLabel(context.AddressType)</MudTd>
-                        <MudTd DataLabel="CEP">@context.PostalCode</MudTd>
-                        <MudTd DataLabel="Endereço">@GetAddressDescription(context)</MudTd>
-                        <MudTd DataLabel="Localização">@context.CityName/@context.StateAbbreviation</MudTd>
+                        <MudTd DataLabel="Tipo"><GridTextCell Value="@GetAddressTypeLabel(context.AddressType)" /></MudTd>
+                        <MudTd DataLabel="CEP"><GridTextCell Value="@context.PostalCode" /></MudTd>
+                        <MudTd DataLabel="Endereço"><GridTextCell Value="@GetAddressDescription(context)" /></MudTd>
+                        <MudTd DataLabel="Localização"><GridTextCell Value="@($"{context.CityName}/{context.StateAbbreviation}")" /></MudTd>
                         <MudTd DataLabel="Principal">
                             @if (context.IsPrimary)
                             {
@@ -270,6 +272,49 @@ else
                 </MudTable>
             }
         </MudPaper>
+
+        @if (isEditing)
+        {
+            <MudPaper Class="customer-form-section" Elevation="0" Outlined="true">
+                <header class="customer-form-section-header">
+                    <MudText Typo="Typo.h6">Equipamentos cadastrados</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Equipamentos vinculados a este cliente.</MudText>
+                </header>
+
+                @if (equipment.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                        Este cliente ainda não possui equipamentos cadastrados.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudTable Items="@equipment" Class="servicesync-data-grid" Hover="true" Breakpoint="Breakpoint.Md">
+                        <HeaderContent>
+                            <MudTh>Equipamento</MudTh>
+                            <MudTh>Número de série</MudTh>
+                            <MudTh>Capacidade</MudTh>
+                            <MudTh>Localização</MudTh>
+                            <MudTh aria-label="Ações"></MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Equipamento"><GridTextCell Value="@GetEquipmentDescription(context)" /></MudTd>
+                            <MudTd DataLabel="Número de série"><GridTextCell Value="@(context.SerialNumber ?? string.Empty)" /></MudTd>
+                            <MudTd DataLabel="Capacidade"><GridTextCell Value="@(context.Capacity ?? string.Empty)" /></MudTd>
+                            <MudTd DataLabel="Localização"><GridTextCell Value="@(context.LocationDescription ?? string.Empty)" /></MudTd>
+                            <MudTd DataLabel="Ações" Class="customer-actions">
+                                <MudTooltip Text="Editar equipamento">
+                                    <MudIconButton Href="@GetEquipmentRegistrationUrl(context.Id)"
+                                                   Icon="@Icons.Material.Filled.Edit"
+                                                   Color="Color.Primary"
+                                                   aria-label="Editar equipamento" />
+                                </MudTooltip>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudPaper>
+        }
     </div>
 }
 
@@ -284,6 +329,7 @@ else
     private CustomerAddressDraft address = CustomerAddressDraft.CreateEmpty(isPrimary: true);
     private CustomerAddressDraft? editingAddress;
     private List<CustomerAddressDraft> addresses = [];
+    private IReadOnlyList<EquipmentDto> equipment = [];
     private IReadOnlyList<StateOption> states = [];
     private IReadOnlyList<CityOption> cities = [];
     private bool isLoading = true;
@@ -344,6 +390,7 @@ else
         addresses = existingCustomer.Addresses
             .Select(CustomerAddressDraft.FromDto)
             .ToList();
+        equipment = await GetCustomerEquipmentUseCase.ExecuteAsync(customerId);
         address = CustomerAddressDraft.CreateEmpty(isPrimary: addresses.Count == 0);
     }
 
@@ -556,6 +603,14 @@ else
         string.IsNullOrWhiteSpace(address.Complement)
             ? $"{address.Street}, {address.Number}"
             : $"{address.Street}, {address.Number} - {address.Complement}";
+
+    private static string GetEquipmentRegistrationUrl(Guid equipmentId) =>
+        $"/equipamentos/registro?id={equipmentId}";
+
+    private static string GetEquipmentDescription(EquipmentDto equipment) =>
+        string.IsNullOrWhiteSpace(equipment.Manufacturer) || string.IsNullOrWhiteSpace(equipment.Model)
+            ? equipment.Type
+            : $"{equipment.Type} - {equipment.Manufacturer} {equipment.Model}";
 
     private sealed class CustomerFormModel
     {

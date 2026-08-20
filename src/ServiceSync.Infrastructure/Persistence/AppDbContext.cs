@@ -23,6 +23,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<CustomerAddress> CustomerAddresses => Set<CustomerAddress>();
 
+    public DbSet<Equipment> Equipment => Set<Equipment>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

@@ -57,6 +57,7 @@ app.MapStaticAssets();
 app.MapAccountEndpoints();
 app.MapCompanyOnboardingEndpoints();
 app.MapCustomerEndpoints();
+app.MapEquipmentEndpoints();
 app.MapEmployeeInvitationEndpoints();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

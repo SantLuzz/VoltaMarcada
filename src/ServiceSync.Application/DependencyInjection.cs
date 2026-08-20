@@ -3,6 +3,7 @@ using ServiceSync.Application.Customers;
 using Microsoft.Extensions.DependencyInjection;
 using ServiceSync.Application.CompanyOnboarding;
 using ServiceSync.Application.EmployeeInvitations;
+using ServiceSync.Application.Equipment;
 
 namespace ServiceSync.Application;
 
@@ -18,6 +19,12 @@ public static class DependencyInjection
         services.AddScoped<GetCustomerForEditUseCase>();
         services.AddScoped<UpdateCustomerUseCase>();
         services.AddScoped<DeleteCustomerUseCase>();
+        services.AddScoped<CreateEquipmentUseCase>();
+        services.AddScoped<GetEquipmentUseCase>();
+        services.AddScoped<GetCustomerEquipmentUseCase>();
+        services.AddScoped<GetEquipmentForEditUseCase>();
+        services.AddScoped<UpdateEquipmentUseCase>();
+        services.AddScoped<DeleteEquipmentUseCase>();
         services.AddScoped<CreateEmployeeInvitationUseCase>();
         services.AddScoped<GetOwnerCompanyOverviewUseCase>();
         services.AddScoped<RenewEmployeeInvitationUseCase>();

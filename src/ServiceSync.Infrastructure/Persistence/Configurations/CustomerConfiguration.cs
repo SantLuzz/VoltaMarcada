@@ -27,6 +27,9 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
             .IsUnique()
             .HasDatabaseName("UX_Customers_CompanyId_Document");
 
+        builder.HasAlternateKey(customer => new { customer.CompanyId, customer.Id })
+            .HasName("AK_Customers_CompanyId_Id");
+
         builder.HasOne<Company>()
             .WithMany()
             .HasForeignKey(customer => customer.CompanyId)

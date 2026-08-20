@@ -127,3 +127,28 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
     display: grid;
     gap: .125rem;
 }
+
+.servicesync-data-grid .mud-table-root {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.servicesync-data-grid .mud-table-container {
+    overflow-x: hidden;
+}
+
+.grid-text-cell {
+    display: block;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.grid-text-cell .mud-tooltip-root,
+.grid-text-cell-value {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

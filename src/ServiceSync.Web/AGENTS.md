@@ -1174,6 +1174,8 @@ Tables must have:
 - error state when appropriate
 - pagination or virtualized loading when the data volume requires it
 
+Every `MudTable` and `MudDataGrid` must use the shared `servicesync-data-grid` styling to remain within its container without horizontal scrolling. Render textual data cells with `GridTextCell`, which truncates overflow and exposes the complete value in a tooltip. Keep explicit tooltips on icon-only actions; do not truncate status chips or action controls.
+
 Actions in a table should normally use an action menu instead of several buttons.
 
 Do not create a table that becomes unusable on small screens.

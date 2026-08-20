@@ -302,7 +302,7 @@ aplicável.
 
 # 5. Roadmap atualizado
 
-# Fase 1 --- Fundação
+# Fase 1 --- Fundação (Concluída)
 
 ## Desenvolver
 

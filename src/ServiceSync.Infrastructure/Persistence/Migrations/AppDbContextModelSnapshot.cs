@@ -387,6 +387,9 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasAlternateKey("CompanyId", "Id")
+                        .HasName("AK_Customers_CompanyId_Id");
+
                     b.HasIndex("CompanyId", "Name")
                         .HasDatabaseName("IX_Customers_CompanyId_Name");
 
@@ -395,6 +398,66 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("UX_Customers_CompanyId_Document");
 
                     b.ToTable("Customers", (string)null);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.Equipment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Capacity")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("InstallationDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("LocationDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Manufacturer")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "CustomerId")
+                        .HasDatabaseName("IX_Equipment_CompanyId_CustomerId");
+
+                    b.HasIndex("CompanyId", "Type")
+                        .HasDatabaseName("IX_Equipment_CompanyId_Type");
+
+                    b.ToTable("Equipment", (string)null);
                 });
 
             modelBuilder.Entity("ServiceSync.Domain.Entities.CustomerAddress", b =>
@@ -660,6 +723,22 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.Equipment", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ServiceSync.Domain.Entities.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "CustomerId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ServiceSync.Domain.Entities.CustomerAddress", b =>
