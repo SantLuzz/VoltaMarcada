@@ -460,6 +460,86 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                     b.ToTable("Equipment", (string)null);
                 });
 
+            modelBuilder.Entity("ServiceSync.Domain.Entities.Service", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AllowOnlineBooking")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("BasePrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("PriceType")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("RequireAfterPhotos")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequireBeforePhotos")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "Name")
+                        .HasDatabaseName("IX_Services_CompanyId_Name");
+
+                    b.ToTable("Services", (string)null);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.ServiceChecklistItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceId", "DisplayOrder")
+                        .HasDatabaseName("IX_ServiceChecklistItems_ServiceId_DisplayOrder");
+
+                    b.ToTable("ServiceChecklistItems", (string)null);
+                });
+
             modelBuilder.Entity("ServiceSync.Domain.Entities.CustomerAddress", b =>
                 {
                     b.Property<Guid>("Id")
@@ -741,6 +821,24 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ServiceSync.Domain.Entities.Service", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.ServiceChecklistItem", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.Service", null)
+                        .WithMany("ChecklistItems")
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ServiceSync.Domain.Entities.CustomerAddress", b =>
                 {
                     b.HasOne("ServiceSync.Domain.Entities.City", "City")
@@ -780,6 +878,12 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("ServiceSync.Domain.Entities.Customer", b =>
                 {
                     b.Navigation("Addresses")
+                        .UsePropertyAccessMode(PropertyAccessMode.Field);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.Service", b =>
+                {
+                    b.Navigation("ChecklistItems")
                         .UsePropertyAccessMode(PropertyAccessMode.Field);
                 });
 #pragma warning restore 612, 618

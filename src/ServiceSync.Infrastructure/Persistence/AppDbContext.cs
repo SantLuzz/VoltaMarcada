@@ -25,6 +25,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<Equipment> Equipment => Set<Equipment>();
 
+    public DbSet<Service> Services => Set<Service>();
+
+    public DbSet<ServiceChecklistItem> ServiceChecklistItems => Set<ServiceChecklistItem>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
