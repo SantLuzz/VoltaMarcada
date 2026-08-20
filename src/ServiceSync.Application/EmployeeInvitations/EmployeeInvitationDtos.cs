@@ -1,3 +1,5 @@
+using ServiceSync.Domain.Enums;
+
 namespace ServiceSync.Application.EmployeeInvitations;
 
 public sealed record CompanyOverviewDto(
@@ -14,13 +16,14 @@ public sealed record CompanyOverviewDto(
     IReadOnlyList<EmployeeInvitationDto> Invitations);
 
 public sealed record EmployeeDto(
-    Guid InvitationId,
+    Guid MembershipId,
     string FullName,
     string Email,
     string Document,
     string Phone,
     string Address,
-    DateTimeOffset AcceptedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    CompanyUserRole Role);
 
 public sealed record EmployeeInvitationDto(
     Guid Id,

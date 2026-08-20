@@ -20,6 +20,10 @@
         <input name="returnUrl" type="hidden" value="@ReturnUrl" />
 
         <MudTextField T="string" Id="email" Name="email" Label="E-mail" InputType="InputType.Email" AutoComplete="email" Required="true" RequiredError="Campo obrigatório." Variant="Variant.Outlined" FullWidth="true" />
+        <MudTextField T="string" Id="full-name" Name="fullName" Label="Nome completo" AutoComplete="name" Required="true" Variant="Variant.Outlined" FullWidth="true" />
+        <BrazilianCpfInput Id="document" Name="document" Required="true" />
+        <BrazilianPhoneInput Id="phone" Name="phone" Required="true" />
+        <MudTextField T="string" Id="address" Name="address" Label="Endereço" AutoComplete="street-address" Required="true" Variant="Variant.Outlined" FullWidth="true" />
         <PasswordInput Id="password" Name="password" Label="Senha" Autocomplete="new-password" MinLength="6" Required="true" />
         <PasswordInput Id="confirm-password" Name="confirmPassword" Label="Confirmar senha" Autocomplete="new-password" MinLength="6" Required="true" />
         <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large">

@@ -38,6 +38,10 @@ public sealed class EmployeeInvitationAccountService(
 
         var user = new ApplicationUser
         {
+            FullName = invitation.FullName,
+            Document = invitation.Document,
+            Phone = invitation.Phone,
+            Address = invitation.Address,
             UserName = invitation.Email,
             Email = invitation.Email
         };

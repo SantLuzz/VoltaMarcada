@@ -17,7 +17,10 @@
             <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" aria-label="Abrir ou recolher menu" OnClick="ToggleDrawer" />
         </MudTooltip>
         <MudSpacer />
-        <MudText Typo="Typo.body2" Class="app-bar-company-name">@companyName</MudText>
+        <MudStack Spacing="0" AlignItems="AlignItems.End" Class="app-bar-account-summary">
+            <MudText Typo="Typo.body2" Class="app-bar-company-name">@companyName</MudText>
+            <MudText Typo="Typo.caption" Class="app-bar-user-name">@accountSummary</MudText>
+        </MudStack>
     </MudAppBar>
 
     <MudDrawer @bind-Open="isDrawerOpen" Variant="DrawerVariant.Responsive" Breakpoint="Breakpoint.Md" Elevation="0" Width="348px" Class="main-drawer">
@@ -63,6 +66,7 @@
     private bool isDrawerOpen = true;
     private bool isOwner;
     private string companyName = string.Empty;
+    private string accountSummary = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -81,6 +85,15 @@
         var userIdValue = authenticationState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (Guid.TryParse(userIdValue, out var userId))
         {
+            var user = await dbContext.Users.AsNoTracking()
+                .Where(item => item.Id == userId)
+                .Select(item => new { item.Email, item.FullName })
+                .SingleOrDefaultAsync();
+            accountSummary = user is null
+                ? string.Empty
+                : string.IsNullOrWhiteSpace(user.FullName)
+                    ? user.Email ?? string.Empty
+                    : $"{user.Email} · {user.FullName}";
             isOwner = await dbContext.CompanyUsers.AsNoTracking()
                 .AnyAsync(companyUser =>
                     companyUser.UserId == userId &&

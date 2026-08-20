@@ -1,0 +1,56 @@
+@using ServiceSync.Domain.ValueObjects
+
+<MudTextField T="string"
+              Id="@Id"
+              Name="@Name"
+              Label="@Label"
+              Value="@Value"
+              ValueChanged="OnValueChangedAsync"
+              Immediate="true"
+              MaxLength="14"
+              InputMode="InputMode.numeric"
+              AutoComplete="@Autocomplete"
+              Required="@Required"
+              RequiredError="Campo obrigatÃ³rio."
+              Validation="ValidateCpf"
+              Variant="Variant.Outlined"
+              FullWidth="true"
+              Disabled="@Disabled" />
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    [Parameter] public string Label { get; set; } = "CPF";
+    [Parameter] public string Autocomplete { get; set; } = "off";
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private async Task OnValueChangedAsync(string value)
+    {
+        var digits = new string(value.Where(char.IsDigit).Take(11).ToArray());
+        Value = FormatCpf(digits);
+        await ValueChanged.InvokeAsync(Value);
+    }
+
+    private static IEnumerable<string> ValidateCpf(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return [];
+        }
+
+        return BrazilianDocument.TryNormalize(value, out var normalizedDocument) && normalizedDocument.Length == 11
+            ? []
+            : ["Informe um CPF válido."];
+    }
+
+    private static string FormatCpf(string value) => value.Length switch
+    {
+        <= 3 => value,
+        <= 6 => $"{value[..3]}.{value[3..]}",
+        <= 9 => $"{value[..3]}.{value[3..6]}.{value[6..]}",
+        _ => $"{value[..3]}.{value[3..6]}.{value[6..9]}-{value[9..]}"
+    };
+}

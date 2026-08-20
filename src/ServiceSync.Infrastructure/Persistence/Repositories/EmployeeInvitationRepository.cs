@@ -60,17 +60,24 @@ public sealed class EmployeeInvitationRepository(AppDbContext dbContext) : IEmpl
                 invitation.RevokedAtUtc))
             .ToListAsync(cancellationToken);
 
-        var employeeDtos = invitations
-            .Where(invitation => invitation.AcceptedAtUtc is not null)
-            .Select(invitation => new EmployeeDto(
-                invitation.Id,
-                invitation.FullName,
-                invitation.Email,
-                invitation.Document,
-                invitation.Phone,
-                invitation.Address,
-                invitation.AcceptedAtUtc!.Value))
-            .ToArray();
+        var employeeDtos = await dbContext.CompanyUsers.AsNoTracking()
+            .Where(companyUser => companyUser.CompanyId == companyId)
+            .Join(
+                dbContext.Users.AsNoTracking(),
+                companyUser => companyUser.UserId,
+                user => user.Id,
+                (companyUser, user) => new EmployeeDto(
+                    companyUser.Id,
+                    user.FullName ?? user.Email ?? string.Empty,
+                    user.Email ?? string.Empty,
+                    user.Document ?? string.Empty,
+                    user.Phone ?? string.Empty,
+                    user.Address ?? string.Empty,
+                    companyUser.CreatedAtUtc,
+                    companyUser.Role))
+            .OrderBy(employee => employee.Role)
+            .ThenBy(employee => employee.FullName)
+            .ToArrayAsync(cancellationToken);
 
         var invitationDtos = invitations
             .Select(invitation => new EmployeeInvitationDto(

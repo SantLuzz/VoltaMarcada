@@ -3,6 +3,8 @@
 @using ServiceSync.Application.EmployeeInvitations
 @using ServiceSync.Web.Authorization
 @using Microsoft.JSInterop
+@using ServiceSync.Domain.Enums
+@using ServiceSync.Application.Abstractions.Storage
 @inject GetOwnerCompanyOverviewUseCase GetOwnerCompanyOverviewUseCase
 @inject CreateEmployeeInvitationUseCase CreateEmployeeInvitationUseCase
 @inject RenewEmployeeInvitationUseCase RenewEmployeeInvitationUseCase
@@ -11,6 +13,7 @@
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 @inject ILogger<Company> Logger
+@inject IFileStorage FileStorage
 
 <PageTitle>Empresa | ServiceSync</PageTitle>
 
@@ -33,6 +36,12 @@ else if (overview is not null)
         }
 
         <MudPaper Class="company-section" Elevation="0" Outlined="true">
+            @if (companyLogoDataUrl is not null)
+            {
+                <div class="company-logo-container">
+                    <img src="@companyLogoDataUrl" alt="Logo da @overview.TradeName" class="company-logo" />
+                </div>
+            }
             <header class="company-section-header">
                 <MudText Typo="Typo.h6">Informações da empresa</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">Dados cadastrados na criação da conta.</MudText>
@@ -46,7 +55,6 @@ else if (overview is not null)
                 <MudItem xs="12" sm="4"><CompanyDetail Label="CEP" Value="@overview.PostalCode" /></MudItem>
                 <MudItem xs="12" sm="4"><CompanyDetail Label="Cidade" Value="@overview.CityName" /></MudItem>
                 <MudItem xs="12" sm="4"><CompanyDetail Label="Estado" Value="@overview.StateName" /></MudItem>
-                <MudItem xs="12" sm="4"><CompanyDetail Label="Logo" Value="@(string.IsNullOrWhiteSpace(overview.LogoKey) ? "Não cadastrada" : "Cadastrada")" /></MudItem>
             </MudGrid>
         </MudPaper>
 
@@ -59,7 +67,7 @@ else if (overview is not null)
                 <MudGrid Spacing="2">
                     <MudItem xs="12"><MudTextField @bind-Value="employee.FullName" Label="Nome completo" Required="true" RequiredError="Informe o nome completo." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" /></MudItem>
                     <MudItem xs="12" sm="6"><MudTextField @bind-Value="employee.Email" Label="E-mail" InputType="InputType.Email" Required="true" RequiredError="Informe o e-mail." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" /></MudItem>
-                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="employee.Document" Label="CPF" Required="true" RequiredError="Informe o CPF." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" /></MudItem>
+                    <MudItem xs="12" sm="6"><BrazilianCpfInput @bind-Value="employee.Document" Id="employee-document" Name="employeeDocument" Required="true" Disabled="@isSaving" /></MudItem>
                     <MudItem xs="12" sm="6"><BrazilianPhoneInput @bind-Value="employee.Phone" Id="employee-phone" Name="employeePhone" Required="true" Disabled="@isSaving" /></MudItem>
                     <MudItem xs="12"><MudTextField @bind-Value="employee.Address" Label="Endereço" Required="true" RequiredError="Informe o endereço." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" /></MudItem>
                 </MudGrid>
@@ -93,7 +101,7 @@ else if (overview is not null)
                 <MudTable Items="@overview.Employees" Hover="true" Breakpoint="Breakpoint.Md">
                     <HeaderContent><MudTh>Nome</MudTh><MudTh>E-mail</MudTh><MudTh>CPF</MudTh><MudTh>Telefone</MudTh><MudTh>Endereço</MudTh><MudTh>Cadastro</MudTh></HeaderContent>
                     <RowTemplate>
-                        <MudTd DataLabel="Nome">@context.FullName</MudTd><MudTd DataLabel="E-mail">@context.Email</MudTd><MudTd DataLabel="CPF">@context.Document</MudTd><MudTd DataLabel="Telefone">@context.Phone</MudTd><MudTd DataLabel="Endereço">@context.Address</MudTd><MudTd DataLabel="Cadastro">@context.AcceptedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")</MudTd>
+                        <MudTd DataLabel="Nome"><MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1"><span>@context.FullName</span><MudChip T="string" Size="Size.Small" Color="@GetRoleColor(context.Role)">@GetRoleLabel(context.Role)</MudChip></MudStack></MudTd><MudTd DataLabel="E-mail">@context.Email</MudTd><MudTd DataLabel="CPF">@context.Document</MudTd><MudTd DataLabel="Telefone">@context.Phone</MudTd><MudTd DataLabel="Endereço">@context.Address</MudTd><MudTd DataLabel="Cadastro">@context.CreatedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")</MudTd>
                     </RowTemplate>
                 </MudTable>
             }
@@ -138,6 +146,7 @@ else if (overview is not null)
     private string? loadError;
     private string? operationError;
     private string? generatedInvitationLink;
+    private string? companyLogoDataUrl;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -149,7 +158,10 @@ else if (overview is not null)
             if (overview is null)
             {
                 loadError = "Não foi possível carregar as informações da empresa.";
+                return;
             }
+
+            await LoadCompanyLogoAsync();
         }
         catch (Exception exception)
         {
@@ -159,6 +171,24 @@ else if (overview is not null)
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task LoadCompanyLogoAsync()
+    {
+        if (string.IsNullOrWhiteSpace(overview?.LogoKey))
+        {
+            return;
+        }
+
+        try
+        {
+            var logo = await FileStorage.GetAsync(overview.LogoKey, CancellationToken.None);
+            companyLogoDataUrl = $"data:{logo.ContentType};base64,{Convert.ToBase64String(logo.Content)}";
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(exception, "Unable to load company logo for the owner company page");
         }
     }
 
@@ -208,7 +238,7 @@ else if (overview is not null)
 
     private async Task RevokeInvitationAsync(Guid invitationId)
     {
-        var confirmed = await DialogService.ShowMessageBox("Revogar convite", "O link deixará de funcionar imediatamente.", "Revogar", null, "Cancelar");
+        var confirmed = await DialogService.ShowMessageBoxAsync("Revogar convite", "O link deixará de funcionar imediatamente.", "Revogar", null, "Cancelar");
         if (confirmed != true)
         {
             return;
@@ -291,6 +321,20 @@ else if (overview is not null)
         { IsRevoked: true } => Color.Error,
         { IsExpired: true } => Color.Warning,
         _ => Color.Info
+    };
+
+    private static string GetRoleLabel(CompanyUserRole role) => role switch
+    {
+        CompanyUserRole.Owner => "Dono",
+        CompanyUserRole.Employee => "Funcionário",
+        _ => "Usuário"
+    };
+
+    private static Color GetRoleColor(CompanyUserRole role) => role switch
+    {
+        CompanyUserRole.Owner => Color.Primary,
+        CompanyUserRole.Employee => Color.Default,
+        _ => Color.Default
     };
 
     private sealed class EmployeeFormModel

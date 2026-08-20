@@ -98,6 +98,19 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
     margin-bottom: 1rem;
 }
 
+.company-logo-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+}
+
+.company-logo {
+    display: block;
+    max-width: 180px;
+    max-height: 90px;
+    object-fit: contain;
+}
+
 .company-form-action {
     margin-top: 1rem;
 }
