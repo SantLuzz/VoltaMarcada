@@ -66,17 +66,9 @@ Authenticated company-member authorization protects both service pages and servi
 
 Client-side conditional visibility improves usability only. The backend remains authoritative for all duration, pricing, and checklist validation.
 
-## Testing
+## Verification
 
-Before production implementation, add xUnit tests for the domain and/or application behavior that establishes:
-
-- fixed and starting-at prices reject missing values;
-- quote-required and hidden prices reject a supplied value;
-- duration rejects zero and fractional values;
-- each checklist item preserves its own required flag;
-- company isolation rejects update/delete lookup for a different company.
-
-Tests will use the project test setup and deterministic inputs; no machine-clock values are needed.
+Automated tests are outside this request and are not added during MVP validation. The implementation will receive static review of its domain invariants, FluentValidation rules, tenant-scoped repository predicates, Fluent API mapping, migration structure, endpoint authorization, and UI command mapping. No build, test run, or application launch is performed unless separately requested.
 
 ## Assumptions
 
