@@ -66,17 +66,18 @@ public sealed class EmployeeInvitationRepository(AppDbContext dbContext) : IEmpl
                 dbContext.Users.AsNoTracking(),
                 companyUser => companyUser.UserId,
                 user => user.Id,
-                (companyUser, user) => new EmployeeDto(
-                    companyUser.Id,
-                    user.FullName ?? user.Email ?? string.Empty,
-                    user.Email ?? string.Empty,
-                    user.Document ?? string.Empty,
-                    user.Phone ?? string.Empty,
-                    user.Address ?? string.Empty,
-                    companyUser.CreatedAtUtc,
-                    companyUser.Role))
-            .OrderBy(employee => employee.Role)
-            .ThenBy(employee => employee.FullName)
+                (companyUser, user) => new { CompanyUser = companyUser, User = user })
+            .OrderBy(item => item.CompanyUser.Role)
+            .ThenBy(item => item.User.FullName ?? item.User.Email)
+            .Select(item => new EmployeeDto(
+                item.CompanyUser.Id,
+                item.User.FullName ?? item.User.Email ?? string.Empty,
+                item.User.Email ?? string.Empty,
+                item.User.Document ?? string.Empty,
+                item.User.Phone ?? string.Empty,
+                item.User.Address ?? string.Empty,
+                item.CompanyUser.CreatedAtUtc,
+                item.CompanyUser.Role))
             .ToArrayAsync(cancellationToken);
 
         var invitationDtos = invitations
