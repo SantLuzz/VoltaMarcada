@@ -1,3 +1,5 @@
+using ServiceSync.Domain.Enums;
+
 namespace ServiceSync.Application.Professionals;
 
 public sealed record SaveProfessionalAvailabilityCommand(

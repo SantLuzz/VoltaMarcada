@@ -1,4 +1,5 @@
 using ServiceSync.Domain.Entities;
+using ServiceSync.Domain.Enums;
 
 namespace ServiceSync.Application.Professionals;
 
