@@ -12,6 +12,8 @@ public sealed class EquipmentConfiguration : IEntityTypeConfiguration<Equipment>
         builder.HasKey(equipment => equipment.Id);
         builder.Property(equipment => equipment.Id).ValueGeneratedNever();
         builder.Property(equipment => equipment.CompanyId).IsRequired();
+        builder.HasAlternateKey(equipment => new { equipment.CompanyId, equipment.Id })
+            .HasName("AK_Equipment_CompanyId_Id");
         builder.Property(equipment => equipment.CustomerId).IsRequired();
         builder.Property(equipment => equipment.Type).HasMaxLength(200).IsRequired();
         builder.Property(equipment => equipment.Manufacturer).HasMaxLength(200).IsRequired(false);

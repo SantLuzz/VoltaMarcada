@@ -1,0 +1,73 @@
+@using ServiceSync.Application.WorkOrders
+
+<MudStack Spacing="2">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+        <MudText Typo="Typo.h6">Itens e valores</MudText>
+        @if (!ReadOnly)
+        {
+            <MudButton Variant="Variant.Outlined" OnClick="AddItem">Adicionar item</MudButton>
+        }
+    </MudStack>
+
+    @if (Items.Count == 0)
+    {
+        <MudText Color="Color.Secondary">Nenhum item adicionado.</MudText>
+    }
+    else
+    {
+        @foreach (var item in Items.Select((value, index) => new { value, index }))
+        {
+            <MudGrid Class="work-order-item-row" AlignItems="AlignItems.Center">
+                <MudItem xs="12" sm="5">
+                    <MudTextField Value="@item.value.Description" ValueChanged="@(value => UpdateItem(item.index, item.value with { Description = value ?? string.Empty }))" Label="Descrição" ReadOnly="ReadOnly" />
+                </MudItem>
+                <MudItem xs="6" sm="2">
+                    <MudNumericField T="decimal" Value="@item.value.Quantity" ValueChanged="@(value => UpdateItem(item.index, item.value with { Quantity = value }))" Label="Quantidade" Min="0.01m" ReadOnly="ReadOnly" />
+                </MudItem>
+                <MudItem xs="6" sm="2">
+                    <MudNumericField T="decimal" Value="@item.value.UnitPrice" ValueChanged="@(value => UpdateItem(item.index, item.value with { UnitPrice = value }))" Label="Valor unitário" Min="0m" ReadOnly="ReadOnly" />
+                </MudItem>
+                <MudItem xs="8" sm="2">
+                    <MudText>Subtotal: @((item.value.Quantity * item.value.UnitPrice).ToString("C"))</MudText>
+                </MudItem>
+                @if (!ReadOnly)
+                {
+                    <MudItem xs="4" sm="1">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover item" OnClick="@(() => RemoveItem(item.index))" />
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    }
+
+    <MudText Typo="Typo.subtitle1">Total da OS: @Items.Sum(item => item.Quantity * item.UnitPrice).ToString("C")</MudText>
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<WorkOrderItemInput> Items { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<List<WorkOrderItemInput>> ItemsChanged { get; set; }
+
+    [Parameter]
+    public bool ReadOnly { get; set; }
+
+    private async Task AddItem()
+    {
+        var updated = Items.Append(new WorkOrderItemInput(string.Empty, 1, 0)).ToList();
+        await ItemsChanged.InvokeAsync(updated);
+    }
+
+    private async Task RemoveItem(int index)
+    {
+        var updated = Items.Where((_, currentIndex) => currentIndex != index).ToList();
+        await ItemsChanged.InvokeAsync(updated);
+    }
+
+    private async Task UpdateItem(int index, WorkOrderItemInput updatedItem)
+    {
+        var updated = Items.Select((item, currentIndex) => currentIndex == index ? updatedItem : item).ToList();
+        await ItemsChanged.InvokeAsync(updated);
+    }
+}

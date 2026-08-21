@@ -1,0 +1,82 @@
+@page "/ordens-servico"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@using ServiceSync.Application.WorkOrders
+@using ServiceSync.Domain.Enums
+@inject GetWorkOrdersUseCase GetWorkOrdersUseCase
+
+<PageTitle>Ordens de serviço | ServiceSync</PageTitle>
+<PageHeader Title="Ordens de serviço" Description="Acompanhe os atendimentos e a execução dos serviços.">
+    <Actions><MudButton Href="/ordens-servico/registro" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">Nova OS</MudButton></Actions>
+</PageHeader>
+
+<MudPaper Class="pa-4">
+    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.End" Class="work-order-list-toolbar">
+        <MudTextField @bind-Value="searchFilter" Label="Buscar cliente ou serviço" Immediate="true" />
+        <MudSelect T="WorkOrderStatus?" @bind-Value="statusFilter" Label="Status" Clearable="true">
+            @foreach (var status in Enum.GetValues<WorkOrderStatus>())
+            {
+                <MudSelectItem Value="@((WorkOrderStatus?)status)">@GetStatusName(status)</MudSelectItem>
+            }
+        </MudSelect>
+        <MudButton OnClick="LoadAsync" Variant="Variant.Outlined">Filtrar</MudButton>
+    </MudStack>
+
+    @if (isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else
+    {
+        <MudTable Items="@orders" Hover="true" Breakpoint="Breakpoint.Md" Class="servicesync-data-grid">
+            <HeaderContent>
+                <MudTh>Cliente</MudTh>
+                <MudTh>Equipamento</MudTh>
+                <MudTh>Serviço</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Prioridade</MudTh>
+                <MudTh aria-label="Abrir ordem de serviço"></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Cliente"><GridTextCell Value="@context.CustomerName" /></MudTd>
+                <MudTd DataLabel="Equipamento"><GridTextCell Value="@context.EquipmentDescription" /></MudTd>
+                <MudTd DataLabel="Serviço"><GridTextCell Value="@context.ServiceName" /></MudTd>
+                <MudTd DataLabel="Status">@GetStatusName(context.Status)</MudTd>
+                <MudTd DataLabel="Prioridade">@GetPriorityName(context.Priority)</MudTd>
+                <MudTd><MudIconButton Href="@($"/ordens-servico/registro?id={context.Id}")" Icon="@Icons.Material.Filled.OpenInNew" AriaLabel="Abrir ordem de serviço" /></MudTd>
+            </RowTemplate>
+            <NoRecordsContent><MudText>Nenhuma ordem de serviço encontrada.</MudText></NoRecordsContent>
+        </MudTable>
+    }
+</MudPaper>
+
+@code {
+    private IReadOnlyList<WorkOrderListItem> orders = [];
+    private string? searchFilter;
+    private WorkOrderStatus? statusFilter;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        orders = await GetWorkOrdersUseCase.ExecuteAsync(new GetWorkOrdersQuery(searchFilter, statusFilter));
+        isLoading = false;
+    }
+
+    private static string GetStatusName(WorkOrderStatus value) => value switch
+    {
+        WorkOrderStatus.InProgress => "Em execução",
+        WorkOrderStatus.Completed => "Concluída",
+        WorkOrderStatus.Cancelled => "Cancelada",
+        _ => "Pendente"
+    };
+
+    private static string GetPriorityName(WorkOrderPriority value) => value switch
+    {
+        WorkOrderPriority.Low => "Baixa",
+        WorkOrderPriority.High => "Alta",
+        WorkOrderPriority.Urgent => "Urgente",
+        _ => "Normal"
+    };
+}
