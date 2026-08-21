@@ -21,6 +21,7 @@ public sealed class EquipmentConfiguration : IEntityTypeConfiguration<Equipment>
         builder.Property(equipment => equipment.LocationDescription).HasMaxLength(500).IsRequired(false);
         builder.Property(equipment => equipment.InstallationDate).HasColumnType("date").IsRequired(false);
         builder.Property(equipment => equipment.Notes).HasMaxLength(2_000).IsRequired(false);
+        builder.Property(equipment => equipment.IsActive).IsRequired();
         builder.Property(equipment => equipment.CreatedAtUtc).IsRequired();
         builder.Property(equipment => equipment.UpdatedAtUtc).IsRequired();
 

@@ -29,6 +29,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<ServiceChecklistItem> ServiceChecklistItems => Set<ServiceChecklistItem>();
 
+    public DbSet<Professional> Professionals => Set<Professional>();
+
+    public DbSet<ProfessionalService> ProfessionalServices => Set<ProfessionalService>();
+
+    public DbSet<ProfessionalAvailability> ProfessionalAvailabilities => Set<ProfessionalAvailability>();
+
+    public DbSet<ScheduleBlock> ScheduleBlocks => Set<ScheduleBlock>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

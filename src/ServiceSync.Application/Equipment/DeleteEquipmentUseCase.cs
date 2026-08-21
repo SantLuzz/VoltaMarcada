@@ -5,7 +5,8 @@ namespace ServiceSync.Application.Equipment;
 
 public sealed class DeleteEquipmentUseCase(
     ICurrentCompany currentCompany,
-    IEquipmentRepository repository)
+    IEquipmentRepository repository,
+    TimeProvider timeProvider)
 {
     public async Task<EquipmentOperationResult> ExecuteAsync(Guid equipmentId, CancellationToken cancellationToken = default)
     {
@@ -16,7 +17,7 @@ public sealed class DeleteEquipmentUseCase(
             return EquipmentOperationResult.NotFound();
         }
 
-        repository.Remove(equipment);
+        equipment.Deactivate(timeProvider.GetUtcNow());
         await repository.SaveChangesAsync(cancellationToken);
         return EquipmentOperationResult.Success(equipment.Id);
     }

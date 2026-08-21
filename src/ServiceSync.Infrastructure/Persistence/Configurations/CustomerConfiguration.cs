@@ -17,6 +17,7 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(customer => customer.WhatsApp).HasMaxLength(20).IsRequired();
         builder.Property(customer => customer.Email).HasMaxLength(320).IsRequired(false);
         builder.Property(customer => customer.Notes).HasMaxLength(2_000).IsRequired(false);
+        builder.Property(customer => customer.IsActive).IsRequired();
         builder.Property(customer => customer.CreatedAtUtc).IsRequired();
         builder.Property(customer => customer.UpdatedAtUtc).IsRequired();
 

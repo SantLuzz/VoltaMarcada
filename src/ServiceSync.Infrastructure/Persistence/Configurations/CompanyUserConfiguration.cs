@@ -15,6 +15,9 @@ public sealed class CompanyUserConfiguration : IEntityTypeConfiguration<CompanyU
         builder.Property(companyUser => companyUser.Role).IsRequired();
         builder.Property(companyUser => companyUser.CreatedAtUtc).IsRequired();
 
+        builder.HasAlternateKey(companyUser => new { companyUser.CompanyId, companyUser.Id })
+            .HasName("AK_CompanyUsers_CompanyId_Id");
+
         builder.HasOne<ApplicationUser>()
             .WithMany()
             .HasForeignKey(companyUser => companyUser.UserId)

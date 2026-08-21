@@ -31,6 +31,8 @@ public sealed class Equipment : ICompanyScopedEntity
 
     public string? Notes { get; private set; }
 
+    public bool IsActive { get; private set; }
+
     public DateTimeOffset CreatedAtUtc { get; private set; }
 
     public DateTimeOffset UpdatedAtUtc { get; private set; }
@@ -72,6 +74,7 @@ public sealed class Equipment : ICompanyScopedEntity
             LocationDescription = NormalizeOptionalText(locationDescription),
             InstallationDate = installationDate,
             Notes = NormalizeOptionalText(notes),
+            IsActive = true,
             CreatedAtUtc = utcNow,
             UpdatedAtUtc = utcNow
         };
@@ -103,6 +106,18 @@ public sealed class Equipment : ICompanyScopedEntity
         LocationDescription = NormalizeOptionalText(locationDescription);
         InstallationDate = installationDate;
         Notes = NormalizeOptionalText(notes);
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
+    public void Activate(DateTimeOffset now)
+    {
+        IsActive = true;
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
+    public void Deactivate(DateTimeOffset now)
+    {
+        IsActive = false;
         UpdatedAtUtc = now.ToUniversalTime();
     }
 

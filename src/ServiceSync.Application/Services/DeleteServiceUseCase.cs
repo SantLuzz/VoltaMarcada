@@ -5,7 +5,8 @@ namespace ServiceSync.Application.Services;
 
 public sealed class DeleteServiceUseCase(
     ICurrentCompany currentCompany,
-    IServiceRepository repository)
+    IServiceRepository repository,
+    TimeProvider timeProvider)
 {
     public async Task<ServiceOperationResult> ExecuteAsync(Guid serviceId, CancellationToken cancellationToken = default)
     {
@@ -16,7 +17,7 @@ public sealed class DeleteServiceUseCase(
             return ServiceOperationResult.NotFound();
         }
 
-        repository.Remove(service);
+        service.Deactivate(timeProvider.GetUtcNow());
         await repository.SaveChangesAsync(cancellationToken);
         return ServiceOperationResult.Success(service.Id);
     }

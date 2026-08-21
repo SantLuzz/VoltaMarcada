@@ -104,6 +104,18 @@ public sealed class Service : ICompanyScopedEntity
         UpdatedAtUtc = now.ToUniversalTime();
     }
 
+    public void Activate(DateTimeOffset now)
+    {
+        IsActive = true;
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
+    public void Deactivate(DateTimeOffset now)
+    {
+        IsActive = false;
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
     private void ReplaceChecklistItems(IEnumerable<ServiceChecklistItem> checklistItems)
     {
         if (checklistItems is null)

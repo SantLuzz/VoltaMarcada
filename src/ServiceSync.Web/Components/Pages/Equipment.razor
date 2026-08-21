@@ -21,12 +21,16 @@
                       Clearable="true"
                       Immediate="true" />
 
+        <AuthorizeView Policy="@AuthorizationPolicies.CompanyOwner">
+            <Authorized Context="authorizationState">
         <MudButton Href="/equipamentos/registro"
                    Variant="Variant.Filled"
                    Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Add">
             Novo equipamento
         </MudButton>
+            </Authorized>
+        </AuthorizeView>
     </div>
 
     @if (isLoading)
@@ -61,6 +65,8 @@
                 <MudTd DataLabel="Cliente"><GridTextCell Value="@context.CustomerName" /></MudTd>
                 <MudTd DataLabel="Número de série"><GridTextCell Value="@(context.SerialNumber ?? string.Empty)" /></MudTd>
                 <MudTd DataLabel="Local de instalação"><GridTextCell Value="@(context.LocationDescription ?? string.Empty)" /></MudTd>
+                <AuthorizeView Policy="@AuthorizationPolicies.CompanyOwner">
+                    <Authorized Context="authorizationState">
                 <MudTd DataLabel="Ações" Class="equipment-type-actions">
                     <MudTooltip Text="Editar equipamento">
                         <MudIconButton Href="@GetEquipmentRegistrationUrl(context.Id)"
@@ -68,13 +74,15 @@
                                        Color="Color.Primary"
                                        aria-label="Editar equipamento" />
                     </MudTooltip>
-                    <MudTooltip Text="Excluir equipamento">
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                    <MudTooltip Text="Inativar equipamento">
+                        <MudIconButton Icon="@Icons.Material.Filled.Block"
                                        Color="Color.Error"
-                                       aria-label="Excluir equipamento"
+                                       aria-label="Inativar equipamento"
                                        OnClick="@(() => OpenDeleteDialog(context))" />
                     </MudTooltip>
                 </MudTd>
+                    </Authorized>
+                </AuthorizeView>
             </RowTemplate>
         </MudTable>
     }
@@ -82,16 +90,16 @@
 
 <MudDialog @bind-Visible="isDeleteDialogOpen" Options="deleteDialogOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">Excluir equipamento</MudText>
+        <MudText Typo="Typo.h6">Inativar equipamento</MudText>
     </TitleContent>
     <DialogContent>
-        <MudText>Tem certeza que deseja excluir o equipamento <strong>@GetEquipmentDescription(equipmentPendingDeletion)</strong>?</MudText>
+        <MudText>Tem certeza que deseja inativar o equipamento <strong>@GetEquipmentDescription(equipmentPendingDeletion)</strong>?</MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">Esta ação não poderá ser desfeita.</MudText>
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CloseDeleteDialog" Disabled="@isDeleting">Cancelar</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="DeleteEquipmentAsync" Disabled="@isDeleting">
-            @(isDeleting ? "Excluindo..." : "Excluir equipamento")
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Block" OnClick="DeleteEquipmentAsync" Disabled="@isDeleting">
+            @(isDeleting ? "Inativando..." : "Inativar equipamento")
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -176,7 +184,7 @@
             if (result.Code == EquipmentOperationResultCode.Success)
             {
                 equipment = equipment.Where(item => item.Id != equipmentToDelete.Id).ToArray();
-                Snackbar.Add("Equipamento excluído com sucesso.", Severity.Success);
+                Snackbar.Add("Equipamento inativado com sucesso.", Severity.Success);
                 CloseDeleteDialog();
                 return;
             }

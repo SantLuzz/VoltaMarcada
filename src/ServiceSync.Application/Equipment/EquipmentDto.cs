@@ -11,7 +11,8 @@ public sealed record EquipmentDto(
     string? Capacity,
     string? LocationDescription,
     DateOnly? InstallationDate,
-    string? Notes)
+    string? Notes,
+    bool IsActive)
 {
     internal static EquipmentDto FromEntity(global::ServiceSync.Domain.Entities.Equipment equipment, string customerName) =>
         new(
@@ -25,5 +26,6 @@ public sealed record EquipmentDto(
             equipment.Capacity,
             equipment.LocationDescription,
             equipment.InstallationDate,
-            equipment.Notes);
+            equipment.Notes,
+            equipment.IsActive);
 }

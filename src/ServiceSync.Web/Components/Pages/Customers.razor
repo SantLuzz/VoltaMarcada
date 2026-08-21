@@ -23,12 +23,16 @@
                           Immediate="true" />
         </div>
 
+        <AuthorizeView Policy="@AuthorizationPolicies.CompanyOwner">
+            <Authorized Context="authorizationState">
         <MudButton Href="/clientes/registro"
                    Variant="Variant.Filled"
                    Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Add">
             Novo cliente
         </MudButton>
+            </Authorized>
+        </AuthorizeView>
     </div>
 
     @if (isLoading)
@@ -63,6 +67,8 @@
                 <MudTd DataLabel="Documento"><GridTextCell Value="@FormatDocument(context.Document)" /></MudTd>
                 <MudTd DataLabel="Telefone"><GridTextCell Value="@context.WhatsApp" /></MudTd>
                 <MudTd DataLabel="Endereço"><GridTextCell Value="@GetPrimaryAddress(context)" /></MudTd>
+                <AuthorizeView Policy="@AuthorizationPolicies.CompanyOwner">
+                    <Authorized Context="authorizationState">
                 <MudTd DataLabel="Ações" Class="customer-actions">
                     <MudTooltip Text="Editar cliente">
                         <MudIconButton Href="@GetCustomerRegistrationUrl(context.Id)"
@@ -70,13 +76,15 @@
                                        Color="Color.Primary"
                                        aria-label="Editar cliente" />
                     </MudTooltip>
-                    <MudTooltip Text="Excluir cliente">
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                    <MudTooltip Text="Inativar cliente">
+                        <MudIconButton Icon="@Icons.Material.Filled.Block"
                                        Color="Color.Error"
-                                       aria-label="Excluir cliente"
+                                       aria-label="Inativar cliente"
                                        OnClick="@(() => OpenDeleteDialog(context))" />
                     </MudTooltip>
                 </MudTd>
+                    </Authorized>
+                </AuthorizeView>
             </RowTemplate>
         </MudTable>
     }
@@ -84,14 +92,14 @@
 
 <MudDialog @bind-Visible="isDeleteDialogOpen" Options="deleteDialogOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">Excluir cliente</MudText>
+                        <MudText Typo="Typo.h6">Inativar cliente</MudText>
     </TitleContent>
     <DialogContent>
         <MudText>
-            Tem certeza que deseja excluir o cliente <strong>@customerPendingDeletion?.Name</strong>?
+            Tem certeza que deseja inativar o cliente <strong>@customerPendingDeletion?.Name</strong>?
         </MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
-            Esta ação não poderá ser desfeita.
+            O cliente deixará de aparecer em novos vínculos operacionais.
         </MudText>
     </DialogContent>
     <DialogActions>
@@ -100,10 +108,10 @@
         </MudButton>
         <MudButton Variant="Variant.Filled"
                    Color="Color.Error"
-                   StartIcon="@Icons.Material.Filled.Delete"
+                   StartIcon="@Icons.Material.Filled.Block"
                    OnClick="DeleteCustomerAsync"
                    Disabled="@isDeleting">
-            @(isDeleting ? "Excluindo..." : "Excluir cliente")
+            @(isDeleting ? "Inativando..." : "Inativar cliente")
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -190,14 +198,7 @@
             if (result.Code == CustomerOperationResultCode.Success)
             {
                 customers = customers.Where(item => item.Id != customer.Id).ToArray();
-                Snackbar.Add("Cliente excluído com sucesso.", Severity.Success);
-                CloseDeleteDialog();
-                return;
-            }
-
-            if (result.Code == CustomerOperationResultCode.HasLinkedEquipment)
-            {
-                Snackbar.Add("Este cliente possui equipamentos vinculados e não pode ser excluído.", Severity.Warning);
+                Snackbar.Add("Cliente inativado com sucesso.", Severity.Success);
                 CloseDeleteDialog();
                 return;
             }

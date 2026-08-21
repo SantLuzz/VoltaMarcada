@@ -23,12 +23,16 @@
                       Clearable="true"
                       Immediate="true" />
 
+        <AuthorizeView Policy="@AuthorizationPolicies.CompanyOwner">
+            <Authorized Context="authorizationState">
         <MudButton Href="/servicos/registro"
                    Variant="Variant.Filled"
                    Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Add">
             Novo serviço
         </MudButton>
+            </Authorized>
+        </AuthorizeView>
     </div>
 
     @if (isLoading)
@@ -63,6 +67,8 @@
                 <MudTd DataLabel="Duração">@context.DurationMinutes min</MudTd>
                 <MudTd DataLabel="Preço">@GetPriceLabel(context)</MudTd>
                 <MudTd DataLabel="Solicitação online">@(context.AllowOnlineBooking ? "Permitida" : "Não permitida")</MudTd>
+                <AuthorizeView Policy="@AuthorizationPolicies.CompanyOwner">
+                    <Authorized Context="authorizationState">
                 <MudTd DataLabel="Ações" Class="service-actions">
                     <MudTooltip Text="Editar serviço">
                         <MudIconButton Href="@GetRegistrationUrl(context.Id)"
@@ -70,13 +76,15 @@
                                        Color="Color.Primary"
                                        aria-label="Editar serviço" />
                     </MudTooltip>
-                    <MudTooltip Text="Excluir serviço">
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                    <MudTooltip Text="Inativar serviço">
+                        <MudIconButton Icon="@Icons.Material.Filled.Block"
                                        Color="Color.Error"
-                                       aria-label="Excluir serviço"
+                                       aria-label="Inativar serviço"
                                        OnClick="@(() => OpenDeleteDialog(context))" />
                     </MudTooltip>
                 </MudTd>
+                    </Authorized>
+                </AuthorizeView>
             </RowTemplate>
         </MudTable>
     }
@@ -84,16 +92,16 @@
 
 <MudDialog @bind-Visible="isDeleteDialogOpen" Options="deleteDialogOptions">
     <TitleContent>
-        <MudText Typo="Typo.h6">Excluir serviço</MudText>
+        <MudText Typo="Typo.h6">Inativar serviço</MudText>
     </TitleContent>
     <DialogContent>
-        <MudText>Tem certeza que deseja excluir o serviço <strong>@servicePendingDeletion?.Name</strong>?</MudText>
+        <MudText>Tem certeza que deseja inativar o serviço <strong>@servicePendingDeletion?.Name</strong>?</MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">Esta ação não poderá ser desfeita.</MudText>
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CloseDeleteDialog" Disabled="@isDeleting">Cancelar</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" OnClick="DeleteServiceAsync" Disabled="@isDeleting">
-            @(isDeleting ? "Excluindo..." : "Excluir serviço")
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Block" OnClick="DeleteServiceAsync" Disabled="@isDeleting">
+            @(isDeleting ? "Inativando..." : "Inativar serviço")
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -178,7 +186,7 @@
             if (result.Code == ServiceOperationResultCode.Success)
             {
                 services = services.Where(item => item.Id != service.Id).ToArray();
-                Snackbar.Add("Serviço excluído com sucesso.", Severity.Success);
+                Snackbar.Add("Serviço inativado com sucesso.", Severity.Success);
                 CloseDeleteDialog();
                 return;
             }

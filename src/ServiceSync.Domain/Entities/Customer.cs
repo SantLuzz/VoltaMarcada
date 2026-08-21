@@ -26,6 +26,8 @@ public sealed class Customer : ICompanyScopedEntity
 
     public string? Notes { get; private set; }
 
+    public bool IsActive { get; private set; }
+
     public IReadOnlyCollection<CustomerAddress> Addresses => _addresses;
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
@@ -64,6 +66,7 @@ public sealed class Customer : ICompanyScopedEntity
             WhatsApp = RequireText(whatsApp, "WhatsApp"),
             Email = NormalizeOptionalText(email),
             Notes = NormalizeOptionalText(notes),
+            IsActive = true,
             CreatedAtUtc = utcNow,
             UpdatedAtUtc = utcNow
         };
@@ -90,6 +93,18 @@ public sealed class Customer : ICompanyScopedEntity
         WhatsApp = RequireText(whatsApp, "WhatsApp");
         Email = NormalizeOptionalText(email);
         Notes = NormalizeOptionalText(notes);
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
+    public void Activate(DateTimeOffset now)
+    {
+        IsActive = true;
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
+    public void Deactivate(DateTimeOffset now)
+    {
+        IsActive = false;
         UpdatedAtUtc = now.ToUniversalTime();
     }
 

@@ -9,6 +9,7 @@ public sealed record CustomerDto(
     string WhatsApp,
     string? Email,
     string? Notes,
+    bool IsActive,
     IReadOnlyList<CustomerAddressDto> Addresses)
 {
     internal static CustomerDto FromEntity(Customer customer) =>
@@ -19,6 +20,7 @@ public sealed record CustomerDto(
             customer.WhatsApp,
             customer.Email,
             customer.Notes,
+            customer.IsActive,
             customer.Addresses
                 .Select(address => new CustomerAddressDto(
                     address.Id,

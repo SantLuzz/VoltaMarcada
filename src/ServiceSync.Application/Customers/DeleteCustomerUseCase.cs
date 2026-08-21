@@ -6,7 +6,7 @@ namespace ServiceSync.Application.Customers;
 public sealed class DeleteCustomerUseCase(
     ICurrentCompany currentCompany,
     ICustomerRepository repository,
-    IEquipmentRepository equipmentRepository)
+    TimeProvider timeProvider)
 {
     public async Task<CustomerOperationResult> ExecuteAsync(Guid customerId, CancellationToken cancellationToken = default)
     {
@@ -17,12 +17,7 @@ public sealed class DeleteCustomerUseCase(
             return CustomerOperationResult.NotFound();
         }
 
-        if (await equipmentRepository.ExistsForCustomerAsync(customer.Id, companyId, cancellationToken))
-        {
-            return CustomerOperationResult.HasLinkedEquipment();
-        }
-
-        repository.Remove(customer);
+        customer.Deactivate(timeProvider.GetUtcNow());
         await repository.SaveChangesAsync(cancellationToken);
         return CustomerOperationResult.Success(customer.Id);
     }

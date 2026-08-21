@@ -1,5 +1,5 @@
 @page "/equipamentos/registro"
-@attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
 @using ServiceSync.Application.Customers
 @using ServiceSync.Application.Equipment
 @inject GetCustomersUseCase GetCustomersUseCase

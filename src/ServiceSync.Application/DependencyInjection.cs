@@ -5,6 +5,7 @@ using ServiceSync.Application.CompanyOnboarding;
 using ServiceSync.Application.EmployeeInvitations;
 using ServiceSync.Application.Equipment;
 using ServiceSync.Application.Services;
+using ServiceSync.Application.Professionals;
 
 namespace ServiceSync.Application;
 
@@ -31,6 +32,18 @@ public static class DependencyInjection
         services.AddScoped<GetServiceForEditUseCase>();
         services.AddScoped<UpdateServiceUseCase>();
         services.AddScoped<DeleteServiceUseCase>();
+        services.AddScoped<ProfessionalOwnerAuthorization>();
+        services.AddScoped<CreateProfessionalUseCase>();
+        services.AddScoped<GetProfessionalsUseCase>();
+        services.AddScoped<GetProfessionalForEditUseCase>();
+        services.AddScoped<GetCurrentEmployeeProfessionalUseCase>();
+        services.AddScoped<GetProfessionalRegistrationOptionsUseCase>();
+        services.AddScoped<UpdateProfessionalUseCase>();
+        services.AddScoped<ChangeProfessionalStatusUseCase>();
+        services.AddScoped<GetProfessionalAvailabilityUseCase>();
+        services.AddScoped<SaveProfessionalAvailabilityUseCase>();
+        services.AddScoped<CreateScheduleBlockUseCase>();
+        services.AddScoped<DeleteScheduleBlockUseCase>();
         services.AddScoped<CreateEmployeeInvitationUseCase>();
         services.AddScoped<GetOwnerCompanyOverviewUseCase>();
         services.AddScoped<RenewEmployeeInvitationUseCase>();
