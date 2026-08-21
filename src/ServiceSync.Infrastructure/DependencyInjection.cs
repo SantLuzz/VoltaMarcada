@@ -1,4 +1,6 @@
 using CloudinaryDotNet;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -24,6 +26,10 @@ public static class DependencyInjection
         services.AddDbContextFactory<AppDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql =>
                 npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
+
+        services.AddDataProtection()
+            .SetApplicationName("ServiceSync")
+            .PersistKeysToDbContext<AppDbContext>();
 
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
             .AddEntityFrameworkStores<AppDbContext>()
