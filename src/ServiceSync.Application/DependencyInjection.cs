@@ -6,6 +6,7 @@ using ServiceSync.Application.EmployeeInvitations;
 using ServiceSync.Application.Equipment;
 using ServiceSync.Application.Services;
 using ServiceSync.Application.Professionals;
+using ServiceSync.Application.WorkOrders;
 
 namespace ServiceSync.Application;
 
@@ -32,6 +33,18 @@ public static class DependencyInjection
         services.AddScoped<GetServiceForEditUseCase>();
         services.AddScoped<UpdateServiceUseCase>();
         services.AddScoped<DeleteServiceUseCase>();
+        services.AddScoped<WorkOrderAuthorization>();
+        services.AddScoped<CreateWorkOrderUseCase>();
+        services.AddScoped<GetWorkOrdersUseCase>();
+        services.AddScoped<GetWorkOrderDetailsUseCase>();
+        services.AddScoped<UpdateWorkOrderUseCase>();
+        services.AddScoped<CancelWorkOrderUseCase>();
+        services.AddScoped<StartWorkOrderUseCase>();
+        services.AddScoped<SaveWorkOrderChecklistProgressUseCase>();
+        services.AddScoped<CompleteWorkOrderUseCase>();
+        services.AddScoped<AddWorkOrderPhotoUseCase>();
+        services.AddScoped<GetWorkOrderPhotoContentUseCase>();
+        services.AddScoped<RemoveWorkOrderPhotoUseCase>();
         services.AddScoped<ProfessionalOwnerAuthorization>();
         services.AddScoped<CreateProfessionalUseCase>();
         services.AddScoped<GetProfessionalsUseCase>();

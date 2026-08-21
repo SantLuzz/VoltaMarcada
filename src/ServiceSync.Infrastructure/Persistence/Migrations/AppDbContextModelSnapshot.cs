@@ -514,6 +514,9 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasAlternateKey("CompanyId", "Id")
+                        .HasName("AK_Equipment_CompanyId_Id");
+
                     b.HasIndex("CompanyId", "CustomerId")
                         .HasDatabaseName("IX_Equipment_CompanyId_CustomerId");
 
@@ -692,6 +695,189 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("IX_ScheduleBlocks_CompanyId_ProfessionalId_StartDate_EndDate");
 
                     b.ToTable("ScheduleBlocks", (string)null);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.WorkOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EquipmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExecutionNotes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ProfessionalId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReportedProblem")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("CompanyId", "Id")
+                        .HasName("AK_WorkOrders_CompanyId_Id");
+
+                    b.HasIndex("CompanyId", "CustomerId");
+
+                    b.HasIndex("CompanyId", "EquipmentId");
+
+                    b.HasIndex("CompanyId", "ProfessionalId");
+
+                    b.HasIndex("CompanyId", "ProfessionalId", "CreatedAtUtc")
+                        .HasDatabaseName("IX_WorkOrders_CompanyId_ProfessionalId_CreatedAtUtc");
+
+                    b.HasIndex("CompanyId", "ServiceId");
+
+                    b.HasIndex("CompanyId", "Status", "CreatedAtUtc")
+                        .HasDatabaseName("IX_WorkOrders_CompanyId_Status_CreatedAtUtc");
+
+                    b.ToTable("WorkOrders", (string)null);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.WorkOrderChecklistItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("WorkOrderId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "WorkOrderId", "DisplayOrder");
+
+                    b.ToTable("WorkOrderChecklistItems", (string)null);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.WorkOrderItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("WorkOrderId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "WorkOrderId", "DisplayOrder");
+
+                    b.ToTable("WorkOrderItems", (string)null);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.WorkOrderPhoto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("FileKey")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UploadedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WorkOrderId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "WorkOrderId", "Type");
+
+                    b.ToTable("WorkOrderPhotos", (string)null);
                 });
 
             modelBuilder.Entity("ServiceSync.Domain.Entities.Service", b =>
@@ -1098,10 +1284,76 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("ServiceSync.Domain.Entities.ScheduleBlock", b =>
+            {
+                b.HasOne("ServiceSync.Domain.Entities.Professional", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "ProfessionalId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.WorkOrder", b =>
                 {
+                    b.HasOne("ServiceSync.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ServiceSync.Domain.Entities.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "CustomerId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ServiceSync.Domain.Entities.Equipment", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "EquipmentId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ServiceSync.Domain.Entities.Professional", null)
                         .WithMany()
                         .HasForeignKey("CompanyId", "ProfessionalId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ServiceSync.Domain.Entities.Service", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "ServiceId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.WorkOrderChecklistItem", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.WorkOrder", null)
+                        .WithMany("ChecklistItems")
+                        .HasForeignKey("CompanyId", "WorkOrderId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.WorkOrderItem", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.WorkOrder", null)
+                        .WithMany("Items")
+                        .HasForeignKey("CompanyId", "WorkOrderId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.WorkOrderPhoto", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.WorkOrder", null)
+                        .WithMany("Photos")
+                        .HasForeignKey("CompanyId", "WorkOrderId")
                         .HasPrincipalKey("CompanyId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1134,6 +1386,15 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("ServiceSync.Domain.Entities.Professional", b =>
                 {
                     b.Navigation("ProfessionalServices");
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.WorkOrder", b =>
+                {
+                    b.Navigation("ChecklistItems");
+
+                    b.Navigation("Items");
+
+                    b.Navigation("Photos");
                 });
 
             modelBuilder.Entity("ServiceSync.Domain.Entities.Service", b =>

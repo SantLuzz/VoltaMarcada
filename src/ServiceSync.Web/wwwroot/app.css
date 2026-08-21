@@ -166,3 +166,18 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+.work-order-tab-content { padding: 24px; }
+.work-order-list-toolbar { margin-bottom: 20px; }
+.work-order-item-row { border-bottom: 1px solid var(--mud-palette-lines-default); padding-bottom: 12px; }
+.work-order-execution-content { max-width: 760px; }
+.work-order-photo-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.work-order-photo-card { align-items: flex-end; display: flex; gap: 4px; }
+
+@media (max-width: 599.95px) {
+    .work-order-tab-content { padding: 16px; }
+    .work-order-list-toolbar { align-items: stretch; flex-direction: column; }
+    .work-order-list-toolbar > * { width: 100%; }
+    .work-order-item-row { gap: 0; }
+    .work-order-photo-card { width: 100%; }
+}
