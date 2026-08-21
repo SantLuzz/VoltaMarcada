@@ -31,3 +31,4 @@ user-secrets.txt
 # OS files
 .DS_Store
 Thumbs.db
+env.txt

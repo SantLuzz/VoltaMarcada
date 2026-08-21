@@ -47,13 +47,23 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto
+});
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+
 app.UseHttpsRedirection();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+
 app.MapAccountEndpoints();
 app.MapCompanyOnboardingEndpoints();
 app.MapCustomerEndpoints();
@@ -62,6 +72,7 @@ app.MapServiceEndpoints();
 app.MapProfessionalEndpoints();
 app.MapEmployeeInvitationEndpoints();
 app.MapWorkOrderEndpoints();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
