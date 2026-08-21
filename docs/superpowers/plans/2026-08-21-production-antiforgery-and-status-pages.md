@@ -180,4 +180,3 @@ git status --short
 ```
 
 Expected: no whitespace errors and no unexpected files.
-
