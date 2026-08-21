@@ -1,5 +1,6 @@
 using MudBlazor.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using ServiceSync.Application;
 using ServiceSync.Application.Abstractions.Identity;
 using ServiceSync.Application.Abstractions.Tenancy;
