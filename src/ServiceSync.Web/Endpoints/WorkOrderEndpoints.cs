@@ -24,7 +24,7 @@ public static class WorkOrderEndpoints
         group.MapPost("/{workOrderId:guid}/photos", async (Guid workOrderId, IFormFile file, WorkOrderPhotoType type, string? description, AddWorkOrderPhotoUseCase useCase, CancellationToken cancellationToken) =>
         {
             if (file.Length > 10 * 1024 * 1024) return Results.BadRequest(new { error = "A foto excede o limite de 10 MB." });
-            await using var stream = file.OpenReadStream(10 * 1024 * 1024 + 1);
+            await using var stream = file.OpenReadStream();
             var result = await useCase.ExecuteAsync(workOrderId, new WorkOrderPhotoUpload(stream, file.FileName, file.ContentType, file.Length, type, description), cancellationToken);
             return MapOperationResult(result);
         });

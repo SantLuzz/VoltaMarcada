@@ -19,7 +19,7 @@
         {
             <MudGrid Class="work-order-item-row" AlignItems="AlignItems.Center">
                 <MudItem xs="12" sm="5">
-                    <MudTextField Value="@item.value.Description" ValueChanged="@(value => UpdateItem(item.index, item.value with { Description = value ?? string.Empty }))" Label="Descrição" ReadOnly="ReadOnly" />
+                    <MudTextField T="string" Value="@item.value.Description" ValueChanged="@(value => UpdateItem(item.index, item.value with { Description = value ?? string.Empty }))" Label="Descrição" ReadOnly="ReadOnly" />
                 </MudItem>
                 <MudItem xs="6" sm="2">
                     <MudNumericField T="decimal" Value="@item.value.Quantity" ValueChanged="@(value => UpdateItem(item.index, item.value with { Quantity = value }))" Label="Quantidade" Min="0.01m" ReadOnly="ReadOnly" />

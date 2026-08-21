@@ -25,6 +25,12 @@
     {
         <MudProgressLinear Indeterminate="true" />
     }
+    else if (orders.Count == 0)
+    {
+        <EmptyState Icon="@Icons.Material.Filled.Assignment"
+                    Title="Nenhuma ordem de serviço encontrada"
+                    Description="Ajuste os filtros ou crie uma nova ordem de serviço para começar." />
+    }
     else
     {
         <MudTable Items="@orders" Hover="true" Breakpoint="Breakpoint.Md" Class="servicesync-data-grid">
@@ -44,7 +50,6 @@
                 <MudTd DataLabel="Prioridade">@GetPriorityName(context.Priority)</MudTd>
                 <MudTd><MudIconButton Href="@($"/ordens-servico/registro?id={context.Id}")" Icon="@Icons.Material.Filled.OpenInNew" AriaLabel="Abrir ordem de serviço" /></MudTd>
             </RowTemplate>
-            <NoRecordsContent><MudText>Nenhuma ordem de serviço encontrada.</MudText></NoRecordsContent>
         </MudTable>
     }
 </MudPaper>

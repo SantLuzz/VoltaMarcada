@@ -13,7 +13,7 @@ public sealed class WorkOrderAuthorization(ICurrentCompany currentCompany, ICurr
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         if (await employeeInvitationRepository.IsCurrentUserOwnerAsync(currentUser.UserId, companyId, cancellationToken)) return new WorkOrderAccessScope(companyId, true, null);
         var professional = await professionalRepository.GetForCurrentUserAsync(currentUser.UserId, companyId, cancellationToken);
-        var professionalId = professional is not null && professional.Professional.IsActive
+        Guid? professionalId = professional is not null && professional.Professional.IsActive
             ? professional.Professional.Id
             : null;
 
