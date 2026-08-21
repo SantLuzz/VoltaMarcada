@@ -1161,7 +1161,7 @@ Usuário consegue criar uma conta, cadastrar sua empresa e acessar o dashboard.
 
 ---
 
-# 36. Fase 2 — Base operacional
+# 36. Fase 2 — Base operacional (Concluída)
 
 Desenvolver:
 
@@ -1178,6 +1178,8 @@ Desenvolver:
 ### Objetivo
 
 Empresa consegue configurar toda a estrutura necessária para trabalhar.
+
+> Decisão de escopo: o vínculo entre profissional e usuário do sistema permanece obrigatório nesta fase. O suporte a profissionais sem acesso será tratado como melhoria posterior.
 
 ---
 

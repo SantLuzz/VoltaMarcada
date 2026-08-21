@@ -328,7 +328,9 @@ ambiente isolado da empresa com autenticação e autorização adequadas.
 
 ------------------------------------------------------------------------
 
-# Fase 2 --- Base operacional
+# Fase 2 --- Base operacional (Concluída)
+
+> Decisão de escopo: o vínculo entre profissional e usuário do sistema permanece obrigatório nesta fase. O suporte a profissionais sem acesso será tratado como melhoria posterior.
 
 ## Clientes
 
