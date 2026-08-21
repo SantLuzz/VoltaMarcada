@@ -8,6 +8,7 @@ public sealed record CompleteCompanyOnboardingCommand(
     string Document,
     string WhatsApp,
     string PostalCode,
+    string Address,
     Guid StateId,
     Guid CityId,
-    CompanyLogoUpload? Logo);
+    FileUpload? Logo);

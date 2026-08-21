@@ -1,0 +1,10 @@
+<span class="grid-text-cell">
+    <MudTooltip Text="@Value" Disabled="@string.IsNullOrWhiteSpace(Value)">
+        <span class="grid-text-cell-value">@Value</span>
+    </MudTooltip>
+</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Value { get; set; } = string.Empty;
+}

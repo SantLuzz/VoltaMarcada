@@ -21,6 +21,8 @@ public sealed class Company
 
     public string PostalCode { get; private set; } = string.Empty;
 
+    public string Address { get; private set; } = string.Empty;
+
     public Guid StateId { get; private set; }
 
     public Guid CityId { get; private set; }
@@ -39,6 +41,7 @@ public sealed class Company
         string document,
         string whatsApp,
         string postalCode,
+        string address,
         Guid stateId,
         Guid cityId,
         string? logoKey,
@@ -73,6 +76,7 @@ public sealed class Company
             Document = normalizedDocument,
             WhatsApp = RequireText(whatsApp, "WhatsApp"),
             PostalCode = normalizedPostalCode,
+            Address = RequireText(address, "Address"),
             StateId = stateId,
             CityId = cityId,
             LogoKey = NormalizeOptionalText(logoKey),

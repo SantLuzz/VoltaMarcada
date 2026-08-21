@@ -1,0 +1,53 @@
+@using System.Globalization
+
+<MudTextField T="string"
+              Id="@Id"
+              Name="@Name"
+              Label="@Label"
+              Value="@DisplayValue"
+              ValueChanged="OnValueChangedAsync"
+              Immediate="true"
+              MaxLength="18"
+              InputMode="InputMode.numeric"
+              AutoComplete="off"
+              Required="@Required"
+              RequiredError="@RequiredError"
+              Variant="Variant.Outlined"
+              Adornment="Adornment.Start"
+              AdornmentText="R$"
+              FullWidth="true"
+              Disabled="@Disabled" />
+
+@code {
+    private static readonly CultureInfo BrazilianCulture = CultureInfo.GetCultureInfo("pt-BR");
+
+    [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+    [Parameter] public string Label { get; set; } = "Valor";
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public string RequiredError { get; set; } = "Informe um valor.";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public decimal? Value { get; set; }
+    [Parameter] public EventCallback<decimal?> ValueChanged { get; set; }
+
+    private string DisplayValue => Value?.ToString("N2", BrazilianCulture) ?? string.Empty;
+
+    private async Task OnValueChangedAsync(string value)
+    {
+        var digits = new string(value.Where(char.IsDigit).Take(13).ToArray());
+        if (string.IsNullOrEmpty(digits))
+        {
+            Value = null;
+            await ValueChanged.InvokeAsync(Value);
+            return;
+        }
+
+        if (!decimal.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var cents))
+        {
+            return;
+        }
+
+        Value = cents / 100m;
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using ServiceSync.Infrastructure.Identity;
 using ServiceSync.Infrastructure.Persistence;
 using ServiceSync.Web.Routing;
+using ServiceSync.Domain.ValueObjects;
 
 namespace ServiceSync.Web.Endpoints;
 
@@ -25,13 +26,21 @@ public static class AccountEndpoints
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager)
     {
-        if (!IsValidEmail(request.Email) || string.IsNullOrWhiteSpace(request.Password) || request.Password != request.ConfirmPassword)
+        if (string.IsNullOrWhiteSpace(request.FullName) || request.FullName.Trim().Length > 200 ||
+            !BrazilianDocument.TryNormalize(request.Document, out var document) || document.Length != 11 ||
+            string.IsNullOrWhiteSpace(request.Phone) || request.Phone.Trim().Length > 20 ||
+            string.IsNullOrWhiteSpace(request.Address) || request.Address.Trim().Length > 300 ||
+            !IsValidEmail(request.Email) || string.IsNullOrWhiteSpace(request.Password) || request.Password != request.ConfirmPassword)
         {
             return RedirectWithError("/account/register", "Informe um e-mail válido e senhas iguais.", request.ReturnUrl);
         }
 
         var user = new ApplicationUser
         {
+            FullName = request.FullName.Trim(),
+            Document = document,
+            Phone = request.Phone.Trim(),
+            Address = request.Address.Trim(),
             UserName = request.Email.Trim(),
             Email = request.Email.Trim()
         };
@@ -106,7 +115,15 @@ public static class AccountEndpoints
         Results.Redirect("/onboarding/company" + QueryString.Create(
             "returnUrl", LocalReturnUrl.Normalize(returnUrl, "/")));
 
-    public sealed record RegisterAccountRequest(string Email, string Password, string ConfirmPassword, string? ReturnUrl);
+    public sealed record RegisterAccountRequest(
+        string FullName,
+        string Document,
+        string Phone,
+        string Address,
+        string Email,
+        string Password,
+        string ConfirmPassword,
+        string? ReturnUrl);
 
     public sealed record LoginAccountRequest(string Email, string Password, string? ReturnUrl);
 }

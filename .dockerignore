@@ -1,0 +1,14 @@
+.git
+.vs
+.vscode
+.idea
+**/bin
+**/obj
+artifacts
+TestResults
+user-secrets.txt
+secrets.json
+.env
+.env.*
+appsettings.Local.json
+appsettings.*.Local.json

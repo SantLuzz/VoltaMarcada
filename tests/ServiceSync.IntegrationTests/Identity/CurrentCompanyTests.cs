@@ -28,6 +28,7 @@ public sealed class CurrentCompanyTests
             "04.252.011/0001-10",
             "11999999999",
             "01001-000",
+            "Praça da Sé, 1",
             Guid.NewGuid(),
             Guid.NewGuid(),
             null,

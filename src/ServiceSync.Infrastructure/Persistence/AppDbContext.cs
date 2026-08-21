@@ -13,9 +13,31 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<CompanyUser> CompanyUsers => Set<CompanyUser>();
 
+    public DbSet<EmployeeInvitation> EmployeeInvitations => Set<EmployeeInvitation>();
+
     public DbSet<State> States => Set<State>();
 
     public DbSet<City> Cities => Set<City>();
+
+    public DbSet<Customer> Customers => Set<Customer>();
+
+    public DbSet<CustomerAddress> CustomerAddresses => Set<CustomerAddress>();
+
+    public DbSet<Equipment> Equipment => Set<Equipment>();
+
+    public DbSet<Service> Services => Set<Service>();
+
+    public DbSet<ServiceChecklistItem> ServiceChecklistItems => Set<ServiceChecklistItem>();
+
+    public DbSet<Professional> Professionals => Set<Professional>();
+
+    public DbSet<ProfessionalService> ProfessionalServices => Set<ProfessionalService>();
+
+    public DbSet<ProfessionalAvailability> ProfessionalAvailabilities => Set<ProfessionalAvailability>();
+
+    public DbSet<ProfessionalDailySchedule> ProfessionalDailySchedules => Set<ProfessionalDailySchedule>();
+
+    public DbSet<ScheduleBlock> ScheduleBlocks => Set<ScheduleBlock>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

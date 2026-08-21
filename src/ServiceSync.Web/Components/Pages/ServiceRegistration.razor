@@ -1,0 +1,378 @@
+@page "/servicos/registro"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
+@using ServiceSync.Application.Services
+@using ServiceSync.Domain.Enums
+@inject CreateServiceUseCase CreateServiceUseCase
+@inject UpdateServiceUseCase UpdateServiceUseCase
+@inject GetServiceForEditUseCase GetServiceForEditUseCase
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject ILogger<ServiceRegistration> Logger
+
+<PageTitle>@(isEditing ? "Editar serviço" : "Novo serviço") | ServiceSync</PageTitle>
+
+<PageHeader Title="@(isEditing ? "Editar serviço" : "Novo serviço")"
+            Description="@(isEditing ? "Atualize as informações, regras e checklist do serviço." : "Cadastre um serviço, suas regras operacionais e itens de checklist.")">
+    <Actions>
+        <div class="service-form-actions">
+            <MudButton Href="/servicos" Variant="Variant.Outlined" Color="Color.Default" Disabled="@isSaving">Cancelar</MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Save"
+                       OnClick="SaveAsync"
+                       Disabled="@(isLoading || isSaving || loadError is not null)">
+                @(isSaving ? "Salvando..." : "Salvar serviço")
+            </MudButton>
+        </div>
+    </Actions>
+</PageHeader>
+
+@if (isLoading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (loadError is not null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@loadError</MudAlert>
+}
+else
+{
+    @if (submitError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">@submitError</MudAlert>
+    }
+
+    <MudForm @ref="serviceForm">
+        <MudPaper Class="service-form-section" Elevation="0" Outlined="true">
+            <header class="service-form-section-header">
+                <MudText Typo="Typo.h6">Dados do serviço</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Defina o nome, a descrição e a duração aproximada.</MudText>
+            </header>
+            <MudGrid Spacing="2">
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="service.Name"
+                                  Label="Nome do serviço"
+                                  Required="true"
+                                  RequiredError="Informe o nome do serviço."
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Disabled="@isSaving" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="service.Description"
+                                  Label="Descrição"
+                                  Lines="4"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Disabled="@isSaving" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int"
+                                     @bind-Value="service.DurationMinutes"
+                                     Label="Duração aproximada (min)"
+                                     Min="1"
+                                     Required="true"
+                                     RequiredError="Informe a duração em minutos."
+                                     Variant="Variant.Outlined"
+                                     FullWidth="true"
+                                     Disabled="@isSaving" />
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <MudPaper Class="service-form-section" Elevation="0" Outlined="true">
+            <header class="service-form-section-header">
+                <MudText Typo="Typo.h6">Preço</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Informe o tipo de preço apresentado ao cliente.</MudText>
+            </header>
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="ServicePriceType"
+                               @bind-Value="service.PriceType"
+                               @bind-Value:after="OnPriceTypeChanged"
+                               Label="Tipo de preço"
+                               Variant="Variant.Outlined"
+                               FullWidth="true"
+                               Disabled="@isSaving">
+                        @foreach (var priceType in priceTypes)
+                        {
+                            <MudSelectItem Value="@priceType">@GetPriceTypeLabel(priceType)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                @if (RequiresBasePrice)
+                {
+                    <MudItem xs="12" sm="6">
+                        <BrazilianCurrencyInput Id="base-price"
+                                                Name="base-price"
+                                                @bind-Value="service.BasePrice"
+                                                Label="Valor"
+                                                Required="true"
+                                                RequiredError="Informe o valor do serviço."
+                                                Disabled="@isSaving" />
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudPaper>
+
+        <MudPaper Class="service-form-section" Elevation="0" Outlined="true">
+            <header class="service-form-section-header">
+                <MudText Typo="Typo.h6">Regras operacionais</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Configure solicitações online e os registros necessários durante o atendimento.</MudText>
+            </header>
+            <MudStack Spacing="1">
+                <MudSwitch @bind-Value="service.AllowOnlineBooking" Color="Color.Primary" Disabled="@isSaving">Permitir solicitação online</MudSwitch>
+                <MudSwitch @bind-Value="service.RequireBeforePhotos" Color="Color.Primary" Disabled="@isSaving">Exigir fotos antes do atendimento</MudSwitch>
+                <MudSwitch @bind-Value="service.RequireAfterPhotos" Color="Color.Primary" Disabled="@isSaving">Exigir fotos depois do atendimento</MudSwitch>
+            </MudStack>
+        </MudPaper>
+
+        <MudPaper Class="service-form-section" Elevation="0" Outlined="true">
+            <header class="service-form-section-header">
+                <MudText Typo="Typo.h6">Checklist</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Adicione os itens que devem ser verificados durante este serviço.</MudText>
+            </header>
+            @if (checklistItemError is not null)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mb-4">@checklistItemError</MudAlert>
+            }
+            <MudGrid Spacing="2" AlignItems="AlignItems.Center">
+                <MudItem xs="12" sm="7">
+                    <MudTextField @bind-Value="checklistItemDescription"
+                                  Label="Item do checklist"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Disabled="@isSaving" />
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudCheckBox @bind-Value="checklistItemIsRequired" Color="Color.Primary" Disabled="@isSaving">Obrigatório</MudCheckBox>
+                </MudItem>
+                <MudItem xs="12" sm="2">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               FullWidth="true"
+                               OnClick="AddChecklistItem"
+                               Disabled="@isSaving">
+                        Adicionar item
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+
+            @if (service.ChecklistItems.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-4">Nenhum item adicionado ao checklist.</MudText>
+            }
+            else
+            {
+                <MudList T="ChecklistItemFormModel" Dense="true" Class="service-checklist-list">
+                    @foreach (var item in service.ChecklistItems)
+                    {
+                        <MudListItem T="ChecklistItemFormModel">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="service-checklist-row">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudIcon Icon="@(item.IsRequired ? Icons.Material.Filled.AssignmentTurnedIn : Icons.Material.Filled.Assignment)" Color="@(item.IsRequired ? Color.Warning : Color.Default)" />
+                                    <MudText>@item.Description</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@(item.IsRequired ? Color.Warning : Color.Default)" Variant="Variant.Outlined">@(item.IsRequired ? "Obrigatório" : "Opcional")</MudChip>
+                                </MudStack>
+                                <MudTooltip Text="Remover item do checklist">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                   Color="Color.Error"
+                                                   Size="Size.Small"
+                                                   aria-label="Remover item do checklist"
+                                                   OnClick="@(() => RemoveChecklistItem(item))"
+                                                   Disabled="@isSaving" />
+                                </MudTooltip>
+                            </MudStack>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+        </MudPaper>
+    </MudForm>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "id")]
+    public Guid? ServiceId { get; set; }
+
+    private readonly ServicePriceType[] priceTypes = Enum.GetValues<ServicePriceType>();
+    private MudForm serviceForm = default!;
+    private ServiceFormModel service = new();
+    private string? checklistItemDescription;
+    private bool checklistItemIsRequired;
+    private string? checklistItemError;
+    private bool isLoading = true;
+    private bool isSaving;
+    private string? loadError;
+    private string? submitError;
+
+    private bool isEditing => ServiceId.HasValue;
+
+    private bool RequiresBasePrice =>
+        service.PriceType is ServicePriceType.Fixed or ServicePriceType.StartingAt;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (ServiceId is { } serviceId)
+            {
+                await LoadServiceAsync(serviceId);
+            }
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to initialize service registration page");
+            loadError = "Não foi possível carregar os dados do serviço. Tente novamente.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadServiceAsync(Guid serviceId)
+    {
+        var existingService = await GetServiceForEditUseCase.ExecuteAsync(serviceId);
+        if (existingService is null)
+        {
+            loadError = "Serviço não encontrado.";
+            return;
+        }
+
+        service = new ServiceFormModel
+        {
+            Name = existingService.Name,
+            Description = existingService.Description,
+            DurationMinutes = existingService.DurationMinutes,
+            PriceType = existingService.PriceType,
+            BasePrice = existingService.BasePrice,
+            AllowOnlineBooking = existingService.AllowOnlineBooking,
+            RequireBeforePhotos = existingService.RequireBeforePhotos,
+            RequireAfterPhotos = existingService.RequireAfterPhotos,
+            ChecklistItems = existingService.ChecklistItems
+                .Select(item => new ChecklistItemFormModel(item.Description, item.IsRequired))
+                .ToList()
+        };
+    }
+
+    private void OnPriceTypeChanged()
+    {
+        if (!RequiresBasePrice)
+        {
+            service.BasePrice = null;
+        }
+    }
+
+    private void AddChecklistItem()
+    {
+        if (string.IsNullOrWhiteSpace(checklistItemDescription))
+        {
+            checklistItemError = "Informe a descrição do item antes de adicioná-lo.";
+            return;
+        }
+
+        service.ChecklistItems.Add(new ChecklistItemFormModel(checklistItemDescription.Trim(), checklistItemIsRequired));
+        checklistItemDescription = null;
+        checklistItemIsRequired = false;
+        checklistItemError = null;
+    }
+
+    private void RemoveChecklistItem(ChecklistItemFormModel item) =>
+        service.ChecklistItems.Remove(item);
+
+    private async Task SaveAsync()
+    {
+        submitError = null;
+        await serviceForm.ValidateAsync();
+        if (!serviceForm.IsValid)
+        {
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var result = ServiceId is { } serviceId
+                ? await UpdateServiceUseCase.ExecuteAsync(serviceId, ToUpdateCommand(service))
+                : await CreateServiceUseCase.ExecuteAsync(ToCreateCommand(service));
+
+            if (result.Code == ServiceOperationResultCode.Success)
+            {
+                Snackbar.Add(isEditing ? "Serviço atualizado com sucesso." : "Serviço cadastrado com sucesso.", Severity.Success);
+                NavigationManager.NavigateTo("/servicos");
+                return;
+            }
+
+            submitError = result.Code switch
+            {
+                ServiceOperationResultCode.InvalidInput => "Revise os dados do serviço e tente novamente.",
+                ServiceOperationResultCode.NotFound => "Serviço não encontrado.",
+                _ => "Não foi possível salvar o serviço. Tente novamente."
+            };
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to save service {ServiceId}", ServiceId);
+            submitError = "Não foi possível salvar o serviço. Tente novamente.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static CreateServiceCommand ToCreateCommand(ServiceFormModel model) =>
+        new(
+            model.Name,
+            model.Description,
+            model.DurationMinutes,
+            model.PriceType,
+            model.BasePrice,
+            model.AllowOnlineBooking,
+            model.RequireBeforePhotos,
+            model.RequireAfterPhotos,
+            ToChecklistInputs(model.ChecklistItems));
+
+    private static UpdateServiceCommand ToUpdateCommand(ServiceFormModel model) =>
+        new(
+            model.Name,
+            model.Description,
+            model.DurationMinutes,
+            model.PriceType,
+            model.BasePrice,
+            model.AllowOnlineBooking,
+            model.RequireBeforePhotos,
+            model.RequireAfterPhotos,
+            ToChecklistInputs(model.ChecklistItems));
+
+    private static IReadOnlyList<ServiceChecklistItemInput> ToChecklistInputs(
+        IReadOnlyList<ChecklistItemFormModel> items) =>
+        items.Select(item => new ServiceChecklistItemInput(item.Description, item.IsRequired)).ToArray();
+
+    private static string GetPriceTypeLabel(ServicePriceType priceType) =>
+        priceType switch
+        {
+            ServicePriceType.Fixed => "Preço fixo",
+            ServicePriceType.StartingAt => "A partir de",
+            ServicePriceType.QuoteRequired => "Sob orçamento",
+            ServicePriceType.Hidden => "Não exibir preço",
+            _ => string.Empty
+        };
+
+    private sealed class ServiceFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public int DurationMinutes { get; set; }
+        public ServicePriceType PriceType { get; set; } = ServicePriceType.QuoteRequired;
+        public decimal? BasePrice { get; set; }
+        public bool AllowOnlineBooking { get; set; }
+        public bool RequireBeforePhotos { get; set; }
+        public bool RequireAfterPhotos { get; set; }
+        public List<ChecklistItemFormModel> ChecklistItems { get; set; } = [];
+    }
+
+    private sealed record ChecklistItemFormModel(string Description, bool IsRequired);
+}

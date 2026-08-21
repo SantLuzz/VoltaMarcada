@@ -1,0 +1,27 @@
+using ServiceSync.Application.Abstractions.Persistence;
+
+namespace ServiceSync.Application.Professionals;
+
+public sealed record ProfessionalDto(
+    Guid Id,
+    Guid CompanyUserId,
+    string CompanyMemberName,
+    string CompanyMemberEmail,
+    bool IsActive,
+    IReadOnlyList<Guid> ServiceIds,
+    IReadOnlyList<string> ServiceNames)
+{
+    internal static ProfessionalDto FromItem(ProfessionalListItem item) =>
+        new(
+            item.Professional.Id,
+            item.Professional.CompanyUserId,
+            item.CompanyMemberName,
+            item.CompanyMemberEmail,
+            item.Professional.IsActive,
+            item.ServiceIds,
+            item.ServiceNames);
+}
+
+public sealed record ProfessionalRegistrationOptionsDto(
+    IReadOnlyList<CompanyMemberOption> CompanyMembers,
+    IReadOnlyList<ProfessionalServiceOption> Services);

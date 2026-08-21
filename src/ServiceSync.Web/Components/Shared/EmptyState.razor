@@ -1,0 +1,16 @@
+<MudPaper Class="empty-state" Elevation="0" Outlined="true">
+    <div class="empty-state-icon" aria-hidden="true"><MudIcon Icon="@Icon" Size="Size.Large" /></div>
+    <MudText Typo="Typo.h6">@Title</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary">@Description</MudText>
+    @if (Actions is not null)
+    {
+        @Actions
+    }
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    [Parameter] public RenderFragment? Actions { get; set; }
+}

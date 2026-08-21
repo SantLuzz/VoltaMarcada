@@ -30,7 +30,7 @@ public static class CompanyOnboardingEndpoints
         await using var logoStream = request.Logo?.OpenReadStream();
         var logo = logoStream is null || request.Logo is null
             ? null
-            : new CompanyLogoUpload(
+            : new FileUpload(
                 logoStream,
                 request.Logo.FileName,
                 request.Logo.ContentType,
@@ -42,6 +42,7 @@ public static class CompanyOnboardingEndpoints
             request.Document,
             request.WhatsApp,
             request.PostalCode,
+            request.Address,
             request.StateId,
             request.CityId,
             logo);
@@ -91,6 +92,7 @@ public static class CompanyOnboardingEndpoints
         string Document,
         string WhatsApp,
         string PostalCode,
+        string Address,
         Guid StateId,
         Guid CityId,
         IFormFile? Logo,

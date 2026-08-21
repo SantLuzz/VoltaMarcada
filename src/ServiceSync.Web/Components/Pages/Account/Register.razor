@@ -4,40 +4,35 @@
 
 <PageTitle>Criar conta | ServiceSync</PageTitle>
 
-<section class="auth-card" aria-labelledby="register-title">
-    <a class="auth-brand" href="/account/login">ServiceSync</a>
-
-    <h1 id="register-title">Crie sua conta</h1>
-    <p class="auth-subtitle">Comece a organizar seus atendimentos e transforme manutenção em novas oportunidades.</p>
+<section aria-labelledby="register-title">
+    <header class="auth-page-header">
+        <MudText id="register-title" Typo="Typo.h4">Crie sua conta</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Comece a organizar seus atendimentos e transforme manutenção em novas oportunidades.</MudText>
+    </header>
 
     @if (!string.IsNullOrWhiteSpace(Error))
     {
-        <div class="auth-feedback" role="alert">@Error</div>
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@Error</MudAlert>
     }
 
-    <form method="post" action="/account/register">
+    <form method="post" action="/account/register" class="auth-form">
         <AntiforgeryToken />
         <input name="returnUrl" type="hidden" value="@ReturnUrl" />
 
-        <div class="auth-field">
-            <label for="email">E-mail</label>
-            <input id="email" name="email" type="email" autocomplete="email" required />
-        </div>
-
-        <div class="auth-field">
-            <label for="password">Senha</label>
-            <PasswordInput Id="password" Name="password" Autocomplete="new-password" MinLength="6" Required="true" />
-        </div>
-
-        <div class="auth-field">
-            <label for="confirm-password">Confirmar senha</label>
-            <PasswordInput Id="confirm-password" Name="confirmPassword" Autocomplete="new-password" MinLength="6" Required="true" />
-        </div>
-
-        <button class="auth-submit" type="submit">Criar conta</button>
+        <MudTextField T="string" Id="email" Name="email" Label="E-mail" InputType="InputType.Email" AutoComplete="email" Required="true" RequiredError="Campo obrigatório." Variant="Variant.Outlined" FullWidth="true" />
+        <MudTextField T="string" Id="full-name" Name="fullName" Label="Nome completo" AutoComplete="name" Required="true" Variant="Variant.Outlined" FullWidth="true" />
+        <BrazilianCpfInput Id="document" Name="document" Required="true" />
+        <BrazilianPhoneInput Id="phone" Name="phone" Required="true" />
+        <MudTextField T="string" Id="address" Name="address" Label="Endereço" AutoComplete="street-address" Required="true" Variant="Variant.Outlined" FullWidth="true" />
+        <PasswordInput Id="password" Name="password" Label="Senha" Autocomplete="new-password" MinLength="6" Required="true" />
+        <PasswordInput Id="confirm-password" Name="confirmPassword" Label="Confirmar senha" Autocomplete="new-password" MinLength="6" Required="true" />
+        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large">
+            <span data-loading-label>Criar conta</span>
+            <MudProgressCircular data-loading-spinner Indeterminate="true" Size="Size.Small" aria-hidden="true" />
+        </MudButton>
     </form>
 
-    <p class="auth-footer">Já tem uma conta? <a href="@LoginUrl">Entrar</a></p>
+    <p class="auth-footer">Já tem uma conta? <MudLink Href="@LoginUrl">Entrar</MudLink></p>
 </section>
 
 @code {

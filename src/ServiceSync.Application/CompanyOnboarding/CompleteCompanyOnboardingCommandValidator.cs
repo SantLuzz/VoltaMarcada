@@ -17,6 +17,7 @@ public sealed class CompleteCompanyOnboardingCommandValidator : AbstractValidato
         RuleFor(command => command.PostalCode)
             .Must(BeAValidBrazilianPostalCode)
             .WithMessage("A valid Brazilian postal code is required.");
+        RuleFor(command => command.Address).NotEmpty();
         RuleFor(command => command.StateId).NotEmpty();
         RuleFor(command => command.CityId).NotEmpty();
     }
