@@ -17,8 +17,9 @@ public sealed class CreateWorkOrderUseCase(IWorkOrderRepository workOrderReposit
         Guid? professionalId = command.ProfessionalId;
         if (!scope.IsOwner) { if (scope.ProfessionalId is null) return WorkOrderOperationResult.Failure(WorkOrderOperationResultCode.ProfessionalProfileRequired); professionalId = scope.ProfessionalId; }
         if (professionalId is { } id) { var professional = await professionalRepository.GetForCompanyAsync(id, scope.CompanyId, cancellationToken); if (professional is null) return WorkOrderOperationResult.Failure(WorkOrderOperationResultCode.ProfessionalNotFound); if (!professional.IsActive || professional.ProfessionalServices.All(x => x.ServiceId != service.Id)) return WorkOrderOperationResult.Failure(WorkOrderOperationResultCode.ProfessionalNotQualified); }
+        if (!WorkOrderFinancialItems.TryCreate(service, command.ServiceUnitPrice, command.AdditionalItems, out var items)) return WorkOrderOperationResult.Failure(WorkOrderOperationResultCode.InvalidInput);
         var now = timeProvider.GetUtcNow();
-        var workOrder = global::ServiceSync.Domain.Entities.WorkOrder.Create(scope.CompanyId, customer.Id, equipment.Id, service.Id, professionalId, currentUser.UserId, command.Priority, command.ReportedProblem, command.Items.Select(x => new WorkOrderItemDefinition(x.Description, x.Quantity, x.UnitPrice)).ToArray(), service.ChecklistItems.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderChecklistItemDefinition(x.Description, x.IsRequired, x.DisplayOrder)).ToArray(), now);
+        var workOrder = global::ServiceSync.Domain.Entities.WorkOrder.Create(scope.CompanyId, customer.Id, equipment.Id, service.Id, professionalId, currentUser.UserId, command.Priority, command.ReportedProblem, items, service.ChecklistItems.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderChecklistItemDefinition(x.Description, x.IsRequired, x.DisplayOrder)).ToArray(), now);
         await workOrderRepository.AddAsync(workOrder, cancellationToken); await workOrderRepository.SaveChangesAsync(cancellationToken); return WorkOrderOperationResult.Success(workOrder.Id);
     }
 }

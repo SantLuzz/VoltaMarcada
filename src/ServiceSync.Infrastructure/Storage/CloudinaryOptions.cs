@@ -10,5 +10,4 @@ public sealed class CloudinaryOptions
 
     public string ApiSecret { get; init; } = string.Empty;
 
-    public string BaseUrl { get; init; } = string.Empty;
 }

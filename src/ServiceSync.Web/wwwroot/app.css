@@ -75,6 +75,11 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 .status-surface { max-width: 520px; padding: 32px; text-align: center; width: 100%; }
 
 @media (max-width: 599.95px) {
+    html, body { height: 100%; min-height: 100%; overflow-y: auto; }
+    .mud-layout { height: auto !important; min-height: 100dvh; }
+    .mud-main-content { min-height: 0; overflow: visible; }
+    .work-order-customer-dialog { max-height: calc(100dvh - 32px); }
+    .work-order-customer-dialog-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
     .auth-layout, .status-page { align-items: flex-start; padding: 16px; }
     .auth-card, .status-surface { margin-top: 24px; padding: 24px; }
     .page-content { padding: 24px 16px; }
@@ -169,8 +174,13 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 
 .work-order-tab-content { padding: 24px; }
 .work-order-list-toolbar { margin-bottom: 20px; }
+.work-order-selection-row { flex-wrap: nowrap; width: 100%; }
+.work-order-selection-row > .mud-tooltip-root { display: block; flex: 1 1 0; min-width: 0; }
+.work-order-selection-control { max-width: 100%; min-width: 0; width: 100%; }
+.work-order-selection-control .mud-select-input { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.work-order-selection-action { flex: 0 0 184px; white-space: nowrap; width: 184px; }
 .work-order-item-row { border-bottom: 1px solid var(--mud-palette-lines-default); padding-bottom: 12px; }
-.work-order-execution-content { max-width: 760px; }
+.work-order-execution-content { margin-top: 24px; max-width: 760px; }
 .work-order-photo-grid { display: flex; flex-wrap: wrap; gap: 12px; }
 .work-order-photo-card { align-items: flex-end; display: flex; gap: 4px; }
 

@@ -12,7 +12,7 @@
               AutoComplete="off"
               Required="@Required"
               RequiredError="@RequiredError"
-              Variant="Variant.Outlined"
+              Variant="@Variant"
               Adornment="Adornment.Start"
               AdornmentText="R$"
               FullWidth="true"
@@ -26,6 +26,7 @@
     [Parameter] public string Label { get; set; } = "Valor";
     [Parameter] public bool Required { get; set; }
     [Parameter] public string RequiredError { get; set; } = "Informe um valor.";
+    [Parameter] public MudBlazor.Variant Variant { get; set; } = MudBlazor.Variant.Outlined;
     [Parameter] public bool Disabled { get; set; }
     [Parameter] public decimal? Value { get; set; }
     [Parameter] public EventCallback<decimal?> ValueChanged { get; set; }

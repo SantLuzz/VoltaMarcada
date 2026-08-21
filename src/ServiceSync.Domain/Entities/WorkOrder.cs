@@ -21,7 +21,7 @@ public sealed class WorkOrder : ICompanyScopedEntity
     public Guid? ProfessionalId { get; private set; }
     public Guid CreatedByUserId { get; private set; }
     public WorkOrderPriority Priority { get; private set; }
-    public string ReportedProblem { get; private set; } = string.Empty;
+    public string? ReportedProblem { get; private set; }
     public string? ExecutionNotes { get; private set; }
     public WorkOrderStatus Status { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
@@ -33,22 +33,22 @@ public sealed class WorkOrder : ICompanyScopedEntity
     public IReadOnlyCollection<WorkOrderPhoto> Photos => _photos;
     public decimal TotalAmount => _items.Sum(item => item.TotalAmount);
 
-    public static WorkOrder Create(Guid companyId, Guid customerId, Guid equipmentId, Guid serviceId, Guid? professionalId, Guid createdByUserId, WorkOrderPriority priority, string reportedProblem, IReadOnlyCollection<WorkOrderItemDefinition> items, IReadOnlyCollection<WorkOrderChecklistItemDefinition> checklistItems, DateTimeOffset now)
+    public static WorkOrder Create(Guid companyId, Guid customerId, Guid equipmentId, Guid serviceId, Guid? professionalId, Guid createdByUserId, WorkOrderPriority priority, string? reportedProblem, IReadOnlyCollection<WorkOrderItemDefinition> items, IReadOnlyCollection<WorkOrderChecklistItemDefinition> checklistItems, DateTimeOffset now)
     {
         RequireId(companyId, "Company"); RequireId(customerId, "Customer"); RequireId(equipmentId, "Equipment"); RequireId(serviceId, "Service"); RequireId(createdByUserId, "Creator");
         if (!Enum.IsDefined(priority)) throw new DomainException("Work order priority is invalid.");
         var utcNow = now.ToUniversalTime();
-        var workOrder = new WorkOrder { Id = Guid.NewGuid(), CompanyId = companyId, CustomerId = customerId, EquipmentId = equipmentId, ServiceId = serviceId, ProfessionalId = professionalId, CreatedByUserId = createdByUserId, Priority = priority, ReportedProblem = RequireText(reportedProblem, "Reported problem"), Status = WorkOrderStatus.Pending, CreatedAtUtc = utcNow, UpdatedAtUtc = utcNow };
+        var workOrder = new WorkOrder { Id = Guid.NewGuid(), CompanyId = companyId, CustomerId = customerId, EquipmentId = equipmentId, ServiceId = serviceId, ProfessionalId = professionalId, CreatedByUserId = createdByUserId, Priority = priority, ReportedProblem = NormalizeOptionalText(reportedProblem), Status = WorkOrderStatus.Pending, CreatedAtUtc = utcNow, UpdatedAtUtc = utcNow };
         workOrder.ReplaceItems(items, utcNow);
         workOrder.ReplaceChecklistItems(checklistItems);
         return workOrder;
     }
 
-    public void UpdatePendingDetails(Guid customerId, Guid equipmentId, Guid serviceId, Guid? professionalId, WorkOrderPriority priority, string reportedProblem, IReadOnlyCollection<WorkOrderItemDefinition> items, IReadOnlyCollection<WorkOrderChecklistItemDefinition> checklistItems, DateTimeOffset now)
+    public void UpdatePendingDetails(Guid customerId, Guid equipmentId, Guid serviceId, Guid? professionalId, WorkOrderPriority priority, string? reportedProblem, IReadOnlyCollection<WorkOrderItemDefinition> items, IReadOnlyCollection<WorkOrderChecklistItemDefinition> checklistItems, DateTimeOffset now)
     {
         EnsurePending(); RequireId(customerId, "Customer"); RequireId(equipmentId, "Equipment"); RequireId(serviceId, "Service");
         if (!Enum.IsDefined(priority)) throw new DomainException("Work order priority is invalid.");
-        CustomerId = customerId; EquipmentId = equipmentId; ServiceId = serviceId; ProfessionalId = professionalId; Priority = priority; ReportedProblem = RequireText(reportedProblem, "Reported problem");
+        CustomerId = customerId; EquipmentId = equipmentId; ServiceId = serviceId; ProfessionalId = professionalId; Priority = priority; ReportedProblem = NormalizeOptionalText(reportedProblem);
         ReplaceItems(items, now); ReplaceChecklistItems(checklistItems); UpdatedAtUtc = now.ToUniversalTime();
     }
 
@@ -112,7 +112,9 @@ public sealed class WorkOrder : ICompanyScopedEntity
     private void ReplaceItems(IReadOnlyCollection<WorkOrderItemDefinition> items, DateTimeOffset now)
     {
         if (items is null) throw new DomainException("Work order items are required.");
-        var utcNow = now.ToUniversalTime(); var normalized = items.ToArray(); _items.Clear();
+        var utcNow = now.ToUniversalTime(); var normalized = items.ToArray();
+        if (normalized.Count(item => item.Type == WorkOrderItemType.Service) != 1 || normalized.Any(item => item.Type is not (WorkOrderItemType.Service or WorkOrderItemType.Additional))) throw new DomainException("Work order items must contain exactly one service item.");
+        _items.Clear();
         for (var index = 0; index < normalized.Length; index++) _items.Add(WorkOrderItem.Create(CompanyId, Id, normalized[index], index, utcNow));
     }
 
@@ -127,5 +129,5 @@ public sealed class WorkOrder : ICompanyScopedEntity
     private void EnsurePending() { if (Status != WorkOrderStatus.Pending) throw new DomainException("Work order must be pending."); }
     private void EnsureInProgress() { if (Status != WorkOrderStatus.InProgress) throw new DomainException("Work order must be in progress."); }
     private static void RequireId(Guid value, string name) { if (value == Guid.Empty) throw new DomainException($"{name} ID is required."); }
-    private static string RequireText(string? value, string name) => string.IsNullOrWhiteSpace(value) ? throw new DomainException($"{name} is required.") : value.Trim();
+    private static string? NormalizeOptionalText(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

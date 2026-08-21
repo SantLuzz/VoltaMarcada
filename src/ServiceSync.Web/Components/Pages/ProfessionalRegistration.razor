@@ -33,13 +33,13 @@ else
             <MudPaper Elevation="0" Outlined="true" Class="service-form-section">
                 <MudText Typo="Typo.h6">Dados do profissional</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">O vínculo com o funcionário e ao menos um serviço são obrigatórios.</MudText>
-                <MudSelect T="Guid?" @bind-Value="model.CompanyUserId" Label="Funcionário" Variant="Variant.Outlined" FullWidth="true" Required="true" Class="mt-4" Disabled="@isSaving">
+                <MudSelect T="Guid?" @bind-Value="model.CompanyUserId" Label="Funcionário" Placeholder="Selecione um funcionário" Variant="Variant.Outlined" FullWidth="true" Required="true" Class="mt-4" Disabled="@isSaving">
                     @foreach (var member in options.CompanyMembers)
                     {
                         <MudSelectItem Value="@((Guid?)member.Id)">@member.Name (@member.Email)</MudSelectItem>
                     }
                 </MudSelect>
-                <MudSelect T="Guid" SelectedValues="@model.ServiceIds" SelectedValuesChanged="OnServiceIdsChanged" MultiSelectionTextFunc="GetSelectedServicesText" Label="Serviços executados" Variant="Variant.Outlined" FullWidth="true" MultiSelection="true" Required="true" Class="mt-4" Disabled="@isSaving">
+                <MudSelect T="Guid" SelectedValues="@model.ServiceIds" SelectedValuesChanged="OnServiceIdsChanged" MultiSelectionTextFunc="GetSelectedServicesText" Label="Serviços executados" Placeholder="Selecione os serviços executados" Variant="Variant.Outlined" FullWidth="true" MultiSelection="true" Required="true" Class="mt-4" Disabled="@isSaving">
                     @foreach (var service in options.Services)
                     {
                         <MudSelectItem Value="@service.Id">@service.Name</MudSelectItem>

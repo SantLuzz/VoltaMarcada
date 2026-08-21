@@ -89,9 +89,10 @@ public sealed class UpdateWorkOrderUseCase(
             .OrderBy(x => x.DisplayOrder)
             .Select(x => new WorkOrderChecklistItemDefinition(x.Description, x.IsRequired, x.DisplayOrder))
             .ToArray();
-        var items = command.Items
-            .Select(x => new WorkOrderItemDefinition(x.Description, x.Quantity, x.UnitPrice))
-            .ToArray();
+        if (!WorkOrderFinancialItems.TryCreate(service, command.ServiceUnitPrice, command.AdditionalItems, out var items))
+        {
+            return WorkOrderOperationResult.Failure(WorkOrderOperationResultCode.InvalidInput);
+        }
 
         workOrder.UpdatePendingDetails(
             customer.Id,

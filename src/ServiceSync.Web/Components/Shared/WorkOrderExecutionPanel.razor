@@ -13,17 +13,21 @@
 {
     @if (WorkOrder.Capabilities.CanStart)
     {
-        <MudButton OnClick="StartAsync" Color="Color.Primary" Variant="Variant.Filled">Iniciar atendimento</MudButton>
+        <MudStack Spacing="3" Class="work-order-execution-content">
+            <MudButton OnClick="StartAsync" Color="Color.Primary" Variant="Variant.Filled">Iniciar atendimento</MudButton>
+        </MudStack>
     }
     else
     {
-        <MudAlert Severity="Severity.Info">A OS precisa de um profissional habilitado antes de iniciar o atendimento.</MudAlert>
+        <MudStack Spacing="3" Class="work-order-execution-content">
+            <MudAlert Severity="Severity.Info">A OS precisa de um profissional habilitado antes de iniciar o atendimento.</MudAlert>
+        </MudStack>
     }
 }
 else
 {
     <MudStack Spacing="3" Class="work-order-execution-content">
-        <MudText Typo="Typo.h6">Fotos antes</MudText>
+        <MudText Typo="Typo.h6">Fotos antes @(WorkOrder.RequireBeforePhotos ? "(obrigatória)" : string.Empty)</MudText>
         @if (CanExecute)
         {
             <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.Before))" accept="image/*" capture="environment" />
@@ -35,7 +39,7 @@ else
                     <MudImage Src="@($"/work-orders/{WorkOrder.Id}/photos/{photo.Id}/content")" Alt="Foto antes" Width="160" Height="120" ObjectFit="ObjectFit.Cover" />
                     @if (CanExecute)
                     {
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover foto" OnClick="@(() => RemovePhotoAsync(photo.Id))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover foto" OnClick="@(() => RemovePhotoAsync(photo.Id))" Disabled="@IsRemovingPhoto" />
                     }
                 </div>
             }
@@ -56,7 +60,7 @@ else
             }
         }
 
-        <MudText Typo="Typo.h6">Fotos depois</MudText>
+        <MudText Typo="Typo.h6">Fotos depois @(WorkOrder.RequireAfterPhotos ? "(obrigatória)" : string.Empty)</MudText>
         @if (CanExecute)
         {
             <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.After))" accept="image/*" capture="environment" />
@@ -68,7 +72,7 @@ else
                     <MudImage Src="@($"/work-orders/{WorkOrder.Id}/photos/{photo.Id}/content")" Alt="Foto depois" Width="160" Height="120" ObjectFit="ObjectFit.Cover" />
                     @if (CanExecute)
                     {
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover foto" OnClick="@(() => RemovePhotoAsync(photo.Id))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover foto" OnClick="@(() => RemovePhotoAsync(photo.Id))" Disabled="@IsRemovingPhoto" />
                     }
                 </div>
             }
@@ -86,7 +90,7 @@ else
                     <MudImage Src="@($"/work-orders/{WorkOrder.Id}/photos/{photo.Id}/content")" Alt="Outra foto" Width="160" Height="120" ObjectFit="ObjectFit.Cover" />
                     @if (CanExecute)
                     {
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover foto" OnClick="@(() => RemovePhotoAsync(photo.Id))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover foto" OnClick="@(() => RemovePhotoAsync(photo.Id))" Disabled="@IsRemovingPhoto" />
                     }
                 </div>
             }
@@ -98,7 +102,7 @@ else
         {
             <MudStack Row="true">
                 <MudButton OnClick="SaveAsync" Variant="Variant.Outlined" Disabled="isSaving">Salvar progresso</MudButton>
-                <MudButton OnClick="CompleteAsync" Color="Color.Success" Variant="Variant.Filled" Disabled="isSaving">Concluir serviço</MudButton>
+                <MudButton OnClick="CompleteAsync" Color="Color.Success" Variant="Variant.Filled" Disabled="@(!CanComplete)">Concluir serviço</MudButton>
             </MudStack>
         }
     </MudStack>
@@ -116,8 +120,33 @@ else
     private Guid loadedWorkOrderId;
     private string? executionNotes;
     private bool isSaving;
+    private Guid? photoPendingRemoval;
 
     private bool CanExecute => WorkOrder.Status == WorkOrderStatus.InProgress && WorkOrder.Capabilities.CanExecute;
+    private bool IsRemovingPhoto => photoPendingRemoval is not null;
+    private bool CanComplete => CanExecute && !isSaving && !HasMissingRequiredPhotos && !IsCompletionBlockedByPhotoRemoval;
+    private bool HasMissingRequiredPhotos =>
+        (WorkOrder.RequireBeforePhotos && !HasPhotoOfType(WorkOrderPhotoType.Before)) ||
+        (WorkOrder.RequireAfterPhotos && !HasPhotoOfType(WorkOrderPhotoType.After));
+
+    private bool IsCompletionBlockedByPhotoRemoval
+    {
+        get
+        {
+            if (photoPendingRemoval is not { } photoId)
+            {
+                return false;
+            }
+
+            var photo = WorkOrder.Photos.SingleOrDefault(item => item.Id == photoId);
+            if (photo is null || !IsRequiredPhotoType(photo.Type))
+            {
+                return false;
+            }
+
+            return WorkOrder.Photos.Count(item => item.Type == photo.Type) == 1;
+        }
+    }
 
     protected override void OnParametersSet()
     {
@@ -259,15 +288,40 @@ else
 
     private async Task RemovePhotoAsync(Guid photoId)
     {
-        var result = await RemoveWorkOrderPhotoUseCase.ExecuteAsync(WorkOrder.Id, photoId);
-        if (result.Code == WorkOrderOperationResultCode.Success)
+        if (IsRemovingPhoto)
         {
-            await OnChanged.InvokeAsync();
             return;
         }
 
-        ShowOperationError(result.Code);
+        photoPendingRemoval = photoId;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var result = await RemoveWorkOrderPhotoUseCase.ExecuteAsync(WorkOrder.Id, photoId);
+            if (result.Code == WorkOrderOperationResultCode.Success)
+            {
+                await OnChanged.InvokeAsync();
+                return;
+            }
+
+            ShowOperationError(result.Code);
+        }
+        finally
+        {
+            photoPendingRemoval = null;
+        }
     }
+
+    private bool IsRequiredPhotoType(WorkOrderPhotoType type) => type switch
+    {
+        WorkOrderPhotoType.Before => WorkOrder.RequireBeforePhotos,
+        WorkOrderPhotoType.After => WorkOrder.RequireAfterPhotos,
+        _ => false
+    };
+
+    private bool HasPhotoOfType(WorkOrderPhotoType type) =>
+        WorkOrder.Photos.Any(photo => photo.Type == type);
 
     private void ShowOperationError(WorkOrderOperationResultCode code)
     {

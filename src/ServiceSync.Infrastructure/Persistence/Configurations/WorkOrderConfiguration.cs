@@ -10,7 +10,7 @@ public sealed class WorkOrderConfiguration : IEntityTypeConfiguration<WorkOrder>
     {
         builder.ToTable("WorkOrders"); builder.HasKey(x => x.Id); builder.Property(x => x.Id).ValueGeneratedNever();
         builder.Property(x => x.CompanyId).IsRequired(); builder.Property(x => x.CustomerId).IsRequired(); builder.Property(x => x.EquipmentId).IsRequired(); builder.Property(x => x.ServiceId).IsRequired(); builder.Property(x => x.CreatedByUserId).IsRequired();
-        builder.Property(x => x.ReportedProblem).HasMaxLength(2000).IsRequired(); builder.Property(x => x.ExecutionNotes).HasMaxLength(4000);
+        builder.Property(x => x.ReportedProblem).HasMaxLength(2000); builder.Property(x => x.ExecutionNotes).HasMaxLength(4000);
         builder.HasAlternateKey(x => new { x.CompanyId, x.Id }).HasName("AK_WorkOrders_CompanyId_Id");
         builder.HasIndex(x => new { x.CompanyId, x.Status, x.CreatedAtUtc }).HasDatabaseName("IX_WorkOrders_CompanyId_Status_CreatedAtUtc");
         builder.HasIndex(x => new { x.CompanyId, x.ProfessionalId, x.CreatedAtUtc }).HasDatabaseName("IX_WorkOrders_CompanyId_ProfessionalId_CreatedAtUtc");

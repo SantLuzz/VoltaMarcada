@@ -1,14 +1,12 @@
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
-using Microsoft.Extensions.Options;
 using ServiceSync.Application.Abstractions.Storage;
 
 namespace ServiceSync.Infrastructure.Storage;
 
 public sealed class CloudinaryFileStorage(
     Cloudinary cloudinary,
-    HttpClient httpClient,
-    IOptions<CloudinaryOptions> options) : IFileStorage
+    HttpClient httpClient) : IFileStorage
 {
     public async Task<FileStorageUploadResult> UploadAsync(
         FileStorageUploadRequest request,
@@ -33,7 +31,7 @@ public sealed class CloudinaryFileStorage(
 
     public async Task<FileStorageDownloadResult> GetAsync(string key, CancellationToken cancellationToken)
     {
-        var fileUrl = BuildFileUrl(options.Value.BaseUrl, key);
+        var fileUrl = BuildFileUrl(cloudinary, key);
         using var response = await httpClient.GetAsync(fileUrl, cancellationToken);
         response.EnsureSuccessStatusCode();
 
@@ -59,32 +57,19 @@ public sealed class CloudinaryFileStorage(
         }
     }
 
-    private static Uri BuildFileUrl(string baseUrl, string key)
+    private static Uri BuildFileUrl(Cloudinary cloudinary, string key)
     {
-        if (string.IsNullOrWhiteSpace(baseUrl))
-        {
-            throw new InvalidOperationException("Cloudinary base URL is required to download files.");
-        }
-
         if (string.IsNullOrWhiteSpace(key))
         {
             throw new ArgumentException("File key is required.", nameof(key));
         }
 
-        if (!Uri.TryCreate(baseUrl.TrimEnd('/') + "/", UriKind.Absolute, out var baseUri))
+        var fileUrl = cloudinary.Api.UrlImgUp.BuildUrl(key);
+        if (!Uri.TryCreate(fileUrl, UriKind.Absolute, out var uri))
         {
-            throw new InvalidOperationException("Cloudinary base URL is invalid.");
+            throw new InvalidOperationException("Cloudinary did not generate a valid delivery URL.");
         }
 
-        var encodedKey = string.Join(
-            '/',
-            key.Split('/', StringSplitOptions.RemoveEmptyEntries).Select(Uri.EscapeDataString));
-
-        if (string.IsNullOrEmpty(encodedKey))
-        {
-            throw new ArgumentException("File key is required.", nameof(key));
-        }
-
-        return new Uri(baseUri, encodedKey);
+        return uri;
     }
 }
