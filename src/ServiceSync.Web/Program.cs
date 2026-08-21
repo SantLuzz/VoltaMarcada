@@ -44,7 +44,7 @@ await PlatformAdministratorInitializer.InitializeAsync(app.Services, builder.Con
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseExceptionHandler("/error", createScopeForErrors: true);
     app.UseHsts();
 }
 
@@ -55,7 +55,23 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
         ForwardedHeaders.XForwardedProto
 });
 
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseStatusCodePages(statusCodeContext =>
+{
+    var response = statusCodeContext.HttpContext.Response;
+    var target = response.StatusCode switch
+    {
+        StatusCodes.Status400BadRequest => "/error",
+        StatusCodes.Status404NotFound => "/not-found",
+        _ => null
+    };
+
+    if (target is not null)
+    {
+        response.Redirect(target);
+    }
+
+    return Task.CompletedTask;
+});
 
 app.UseHttpsRedirection();
 
