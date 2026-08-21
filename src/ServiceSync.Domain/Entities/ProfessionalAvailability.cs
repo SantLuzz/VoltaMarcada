@@ -1,11 +1,13 @@
 using ServiceSync.Domain.Abstractions.Tenancy;
-using ServiceSync.Domain.Enums;
 using ServiceSync.Domain.Exceptions;
+using ServiceSync.Domain.ValueObjects;
 
 namespace ServiceSync.Domain.Entities;
 
 public sealed class ProfessionalAvailability : ICompanyScopedEntity
 {
+    private readonly List<ProfessionalDailySchedule> _dailySchedules = [];
+
     private ProfessionalAvailability()
     {
     }
@@ -16,15 +18,7 @@ public sealed class ProfessionalAvailability : ICompanyScopedEntity
 
     public Guid ProfessionalId { get; private set; }
 
-    public ProfessionalWorkDays WorkDays { get; private set; }
-
-    public TimeOnly EntryTime { get; private set; }
-
-    public TimeOnly LunchStartTime { get; private set; }
-
-    public TimeOnly LunchEndTime { get; private set; }
-
-    public TimeOnly ExitTime { get; private set; }
+    public IReadOnlyCollection<ProfessionalDailySchedule> DailySchedules => _dailySchedules;
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
 
@@ -33,47 +27,33 @@ public sealed class ProfessionalAvailability : ICompanyScopedEntity
     public static ProfessionalAvailability Create(
         Guid companyId,
         Guid professionalId,
-        ProfessionalWorkDays workDays,
-        TimeOnly entryTime,
-        TimeOnly lunchStartTime,
-        TimeOnly lunchEndTime,
-        TimeOnly exitTime,
+        IReadOnlyCollection<ProfessionalDailyScheduleDefinition> dailyScheduleDefinitions,
         DateTimeOffset now)
     {
         EnsureIdentifiers(companyId, professionalId);
-        EnsureValidSchedule(workDays, entryTime, lunchStartTime, lunchEndTime, exitTime);
+        EnsureValidDailySchedules(dailyScheduleDefinitions);
         var utcNow = now.ToUniversalTime();
 
-        return new ProfessionalAvailability
+        var availability = new ProfessionalAvailability
         {
             Id = Guid.NewGuid(),
             CompanyId = companyId,
             ProfessionalId = professionalId,
-            WorkDays = workDays,
-            EntryTime = entryTime,
-            LunchStartTime = lunchStartTime,
-            LunchEndTime = lunchEndTime,
-            ExitTime = exitTime,
             CreatedAtUtc = utcNow,
             UpdatedAtUtc = utcNow
         };
+
+        availability.ReplaceDailySchedules(dailyScheduleDefinitions);
+        return availability;
     }
 
     public void Update(
-        ProfessionalWorkDays workDays,
-        TimeOnly entryTime,
-        TimeOnly lunchStartTime,
-        TimeOnly lunchEndTime,
-        TimeOnly exitTime,
+        IReadOnlyCollection<ProfessionalDailyScheduleDefinition> dailyScheduleDefinitions,
         DateTimeOffset now)
     {
-        EnsureValidSchedule(workDays, entryTime, lunchStartTime, lunchEndTime, exitTime);
+        EnsureValidDailySchedules(dailyScheduleDefinitions);
 
-        WorkDays = workDays;
-        EntryTime = entryTime;
-        LunchStartTime = lunchStartTime;
-        LunchEndTime = lunchEndTime;
-        ExitTime = exitTime;
+        ReplaceDailySchedules(dailyScheduleDefinitions);
         UpdatedAtUtc = now.ToUniversalTime();
     }
 
@@ -90,21 +70,51 @@ public sealed class ProfessionalAvailability : ICompanyScopedEntity
         }
     }
 
-    private static void EnsureValidSchedule(
-        ProfessionalWorkDays workDays,
-        TimeOnly entryTime,
-        TimeOnly lunchStartTime,
-        TimeOnly lunchEndTime,
-        TimeOnly exitTime)
+    private void ReplaceDailySchedules(IReadOnlyCollection<ProfessionalDailyScheduleDefinition> dailyScheduleDefinitions)
     {
-        if (workDays == ProfessionalWorkDays.None || (workDays & ~ProfessionalWorkDays.All) != 0)
+        _dailySchedules.Clear();
+        _dailySchedules.AddRange(dailyScheduleDefinitions.Select(definition =>
+            ProfessionalDailySchedule.Create(CompanyId, Id, definition)));
+    }
+
+    private static void EnsureValidDailySchedules(
+        IReadOnlyCollection<ProfessionalDailyScheduleDefinition> dailyScheduleDefinitions)
+    {
+        if (dailyScheduleDefinitions.Count == 0)
         {
-            throw new DomainException("At least one valid workday is required.");
+            throw new DomainException("At least one daily schedule is required.");
         }
 
-        if (entryTime >= lunchStartTime || lunchStartTime >= lunchEndTime || lunchEndTime >= exitTime)
+        if (dailyScheduleDefinitions.Any(definition => !Enum.IsDefined(definition.Weekday)))
         {
-            throw new DomainException("Work schedule times must follow entry, lunch start, lunch end, and exit order.");
+            throw new DomainException("Each daily schedule must have a valid weekday.");
+        }
+
+        if (dailyScheduleDefinitions.Select(definition => definition.Weekday).Distinct().Count() != dailyScheduleDefinitions.Count)
+        {
+            throw new DomainException("Each weekday can have only one daily schedule.");
+        }
+
+        foreach (var definition in dailyScheduleDefinitions)
+        {
+            if (definition.EntryTime >= definition.ExitTime)
+            {
+                throw new DomainException("Daily schedule entry time must be earlier than exit time.");
+            }
+
+            if (definition.LunchStartTime.HasValue != definition.LunchEndTime.HasValue)
+            {
+                throw new DomainException("Daily schedule lunch times must both be provided or both be empty.");
+            }
+
+            if (definition.LunchStartTime is { } lunchStartTime &&
+                definition.LunchEndTime is { } lunchEndTime &&
+                (definition.EntryTime >= lunchStartTime ||
+                 lunchStartTime >= lunchEndTime ||
+                 lunchEndTime >= definition.ExitTime))
+            {
+                throw new DomainException("Daily schedule lunch times must be within work hours.");
+            }
         }
     }
 }

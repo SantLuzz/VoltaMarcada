@@ -13,11 +13,6 @@ public sealed class ProfessionalAvailabilityConfiguration : IEntityTypeConfigura
         builder.Property(availability => availability.Id).ValueGeneratedNever();
         builder.Property(availability => availability.CompanyId).IsRequired();
         builder.Property(availability => availability.ProfessionalId).IsRequired();
-        builder.Property(availability => availability.WorkDays).IsRequired();
-        builder.Property(availability => availability.EntryTime).HasColumnType("time without time zone").IsRequired();
-        builder.Property(availability => availability.LunchStartTime).HasColumnType("time without time zone").IsRequired();
-        builder.Property(availability => availability.LunchEndTime).HasColumnType("time without time zone").IsRequired();
-        builder.Property(availability => availability.ExitTime).HasColumnType("time without time zone").IsRequired();
         builder.Property(availability => availability.CreatedAtUtc).IsRequired();
         builder.Property(availability => availability.UpdatedAtUtc).IsRequired();
 
@@ -34,5 +29,15 @@ public sealed class ProfessionalAvailabilityConfiguration : IEntityTypeConfigura
             .HasPrincipalKey<Professional>(professional => new { professional.CompanyId, professional.Id })
             .OnDelete(DeleteBehavior.Cascade)
             .IsRequired();
+
+        builder.HasMany(availability => availability.DailySchedules)
+            .WithOne()
+            .HasForeignKey(schedule => new { schedule.CompanyId, schedule.ProfessionalAvailabilityId })
+            .HasPrincipalKey(availability => new { availability.CompanyId, availability.Id })
+            .OnDelete(DeleteBehavior.Cascade)
+            .IsRequired();
+
+        builder.Navigation(availability => availability.DailySchedules)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

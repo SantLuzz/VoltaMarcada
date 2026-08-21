@@ -25,7 +25,7 @@ public sealed class ProfessionalAvailabilityRepository(AppDbContext dbContext)
             ? dbContext.ProfessionalAvailabilities
             : dbContext.ProfessionalAvailabilities.AsNoTracking();
 
-        return query.SingleOrDefaultAsync(
+        return query.Include(availability => availability.DailySchedules).SingleOrDefaultAsync(
             availability => availability.ProfessionalId == professionalId && availability.CompanyId == companyId,
             cancellationToken);
     }

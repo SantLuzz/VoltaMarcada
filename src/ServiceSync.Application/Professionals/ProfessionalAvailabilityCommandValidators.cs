@@ -8,16 +8,42 @@ public sealed class SaveProfessionalAvailabilityCommandValidator : AbstractValid
 {
     public SaveProfessionalAvailabilityCommandValidator()
     {
-        RuleFor(command => command.WorkDays)
-            .Must(workDays => workDays != ProfessionalWorkDays.None && (workDays & ~ProfessionalWorkDays.All) == 0)
-            .WithMessage("At least one valid workday is required.");
+        RuleFor(command => command.DailySchedules)
+            .NotNull()
+            .NotEmpty()
+            .Must(HaveUniqueValidWeekdays)
+            .WithMessage("At least one daily schedule with a unique valid weekday is required.");
 
-        RuleFor(command => command)
-            .Must(command =>
-                command.EntryTime < command.LunchStartTime &&
-                command.LunchStartTime < command.LunchEndTime &&
-                command.LunchEndTime < command.ExitTime)
-            .WithMessage("Work schedule times must follow entry, lunch start, lunch end, and exit order.");
+        RuleForEach(command => command.DailySchedules)
+            .ChildRules(schedule =>
+            {
+                schedule.RuleFor(value => value.Weekday)
+                    .Must(weekday => Enum.IsDefined(weekday))
+                    .WithMessage("Daily schedule weekday is invalid.");
+                schedule.RuleFor(value => value)
+                    .Must(HaveValidTimeRange)
+                    .WithMessage("Daily schedule times are invalid.");
+            });
+    }
+
+    private static bool HaveUniqueValidWeekdays(IReadOnlyList<SaveProfessionalDailyScheduleCommand>? dailySchedules) =>
+        dailySchedules is { Count: > 0 } &&
+        dailySchedules.All(schedule => Enum.IsDefined(schedule.Weekday)) &&
+        dailySchedules.Select(schedule => schedule.Weekday).Distinct().Count() == dailySchedules.Count;
+
+    private static bool HaveValidTimeRange(SaveProfessionalDailyScheduleCommand schedule)
+    {
+        if (schedule.EntryTime >= schedule.ExitTime ||
+            schedule.LunchStartTime.HasValue != schedule.LunchEndTime.HasValue)
+        {
+            return false;
+        }
+
+        return schedule.LunchStartTime is not { } lunchStartTime ||
+               schedule.LunchEndTime is not { } lunchEndTime ||
+               (schedule.EntryTime < lunchStartTime &&
+                lunchStartTime < lunchEndTime &&
+                lunchEndTime < schedule.ExitTime);
     }
 }
 

@@ -569,26 +569,11 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<TimeOnly>("EntryTime")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("ExitTime")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("LunchEndTime")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("LunchStartTime")
-                        .HasColumnType("time without time zone");
-
                     b.Property<Guid>("ProfessionalId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("WorkDays")
-                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -600,6 +585,41 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("UX_ProfessionalAvailabilities_CompanyId_ProfessionalId");
 
                     b.ToTable("ProfessionalAvailabilities", (string)null);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.ProfessionalDailySchedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly>("EntryTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<TimeOnly>("ExitTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<TimeOnly?>("LunchEndTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<TimeOnly?>("LunchStartTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<Guid>("ProfessionalAvailabilityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Weekday")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "ProfessionalAvailabilityId", "Weekday")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ProfessionalDailySchedules_CompanyId_AvailabilityId_Weekday");
+
+                    b.ToTable("ProfessionalDailySchedules", (string)null);
                 });
 
             modelBuilder.Entity("ServiceSync.Domain.Entities.ProfessionalService", b =>
@@ -1046,6 +1066,16 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .WithOne()
                         .HasForeignKey("ServiceSync.Domain.Entities.ProfessionalAvailability", "CompanyId", "ProfessionalId")
                         .HasPrincipalKey("ServiceSync.Domain.Entities.Professional", "CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.ProfessionalDailySchedule", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.ProfessionalAvailability", null)
+                        .WithMany("DailySchedules")
+                        .HasForeignKey("CompanyId", "ProfessionalAvailabilityId")
+                        .HasPrincipalKey("CompanyId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

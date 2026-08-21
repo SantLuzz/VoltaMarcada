@@ -2,6 +2,7 @@ using FluentValidation;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
 using ServiceSync.Domain.Entities;
+using ServiceSync.Domain.ValueObjects;
 
 namespace ServiceSync.Application.Professionals;
 
@@ -34,6 +35,14 @@ public sealed class SaveProfessionalAvailabilityUseCase(
         }
 
         var now = timeProvider.GetUtcNow();
+        var dailyScheduleDefinitions = command.DailySchedules
+            .Select(schedule => new ProfessionalDailyScheduleDefinition(
+                schedule.Weekday,
+                schedule.EntryTime,
+                schedule.ExitTime,
+                schedule.LunchStartTime,
+                schedule.LunchEndTime))
+            .ToArray();
         var availability = await repository.GetAvailabilityAsync(
             professionalId,
             companyId,
@@ -44,22 +53,14 @@ public sealed class SaveProfessionalAvailabilityUseCase(
             availability = ProfessionalAvailability.Create(
                 companyId,
                 professionalId,
-                command.WorkDays,
-                command.EntryTime,
-                command.LunchStartTime,
-                command.LunchEndTime,
-                command.ExitTime,
+                dailyScheduleDefinitions,
                 now);
             await repository.AddAvailabilityAsync(availability, cancellationToken);
         }
         else
         {
             availability.Update(
-                command.WorkDays,
-                command.EntryTime,
-                command.LunchStartTime,
-                command.LunchEndTime,
-                command.ExitTime,
+                dailyScheduleDefinitions,
                 now);
         }
 

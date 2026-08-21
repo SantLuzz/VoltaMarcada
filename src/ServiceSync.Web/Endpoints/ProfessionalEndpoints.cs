@@ -61,11 +61,14 @@ public static class ProfessionalEndpoints
         var result = await useCase.ExecuteAsync(
             professionalId,
             new SaveProfessionalAvailabilityCommand(
-                request.WorkDays,
-                request.EntryTime,
-                request.LunchStartTime,
-                request.LunchEndTime,
-                request.ExitTime),
+                (request.DailySchedules ?? [])
+                    .Select(schedule => new SaveProfessionalDailyScheduleCommand(
+                        schedule.Weekday,
+                        schedule.EntryTime,
+                        schedule.ExitTime,
+                        schedule.LunchStartTime,
+                        schedule.LunchEndTime))
+                    .ToArray()),
             cancellationToken);
         return ToAvailabilityResult(result, _ => Results.Ok());
     }
@@ -152,11 +155,14 @@ public static class ProfessionalEndpoints
     public sealed record ProfessionalStatusRequest(bool IsActive);
 
     public sealed record SaveProfessionalAvailabilityRequest(
-        ServiceSync.Domain.Enums.ProfessionalWorkDays WorkDays,
+        IReadOnlyList<SaveProfessionalDailyScheduleRequest> DailySchedules);
+
+    public sealed record SaveProfessionalDailyScheduleRequest(
+        DayOfWeek Weekday,
         TimeOnly EntryTime,
-        TimeOnly LunchStartTime,
-        TimeOnly LunchEndTime,
-        TimeOnly ExitTime);
+        TimeOnly ExitTime,
+        TimeOnly? LunchStartTime,
+        TimeOnly? LunchEndTime);
 
     public sealed record CreateScheduleBlockRequest(
         ServiceSync.Domain.Enums.ScheduleBlockType Type,

@@ -1,13 +1,14 @@
-using ServiceSync.Domain.Enums;
-
 namespace ServiceSync.Application.Professionals;
 
 public sealed record SaveProfessionalAvailabilityCommand(
-    ProfessionalWorkDays WorkDays,
+    IReadOnlyList<SaveProfessionalDailyScheduleCommand> DailySchedules);
+
+public sealed record SaveProfessionalDailyScheduleCommand(
+    DayOfWeek Weekday,
     TimeOnly EntryTime,
-    TimeOnly LunchStartTime,
-    TimeOnly LunchEndTime,
-    TimeOnly ExitTime);
+    TimeOnly ExitTime,
+    TimeOnly? LunchStartTime,
+    TimeOnly? LunchEndTime);
 
 public sealed record CreateScheduleBlockCommand(
     ScheduleBlockType Type,

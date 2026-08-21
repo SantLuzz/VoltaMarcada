@@ -1,27 +1,26 @@
 using ServiceSync.Domain.Entities;
-using ServiceSync.Domain.Enums;
 
 namespace ServiceSync.Application.Professionals;
 
 public sealed record ProfessionalAvailabilityDto(
     Guid ProfessionalId,
-    WeeklyScheduleDto? WeeklySchedule,
+    IReadOnlyList<DailyScheduleDto>? DailySchedules,
     IReadOnlyList<ScheduleBlockDto> ScheduleBlocks);
 
-public sealed record WeeklyScheduleDto(
-    ProfessionalWorkDays WorkDays,
+public sealed record DailyScheduleDto(
+    DayOfWeek Weekday,
     TimeOnly EntryTime,
-    TimeOnly LunchStartTime,
-    TimeOnly LunchEndTime,
-    TimeOnly ExitTime)
+    TimeOnly ExitTime,
+    TimeOnly? LunchStartTime,
+    TimeOnly? LunchEndTime)
 {
-    internal static WeeklyScheduleDto FromEntity(ProfessionalAvailability availability) =>
+    internal static DailyScheduleDto FromEntity(ProfessionalDailySchedule schedule) =>
         new(
-            availability.WorkDays,
-            availability.EntryTime,
-            availability.LunchStartTime,
-            availability.LunchEndTime,
-            availability.ExitTime);
+            schedule.Weekday,
+            schedule.EntryTime,
+            schedule.ExitTime,
+            schedule.LunchStartTime,
+            schedule.LunchEndTime);
 }
 
 public sealed record ScheduleBlockDto(

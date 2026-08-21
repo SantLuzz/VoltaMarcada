@@ -55,7 +55,12 @@ public sealed class GetProfessionalAvailabilityUseCase(
 
         return new ProfessionalAvailabilityDto(
             professionalId,
-            availability is null ? null : WeeklyScheduleDto.FromEntity(availability),
+            availability is null
+                ? null
+                : availability.DailySchedules
+                    .OrderBy(schedule => ((int)schedule.Weekday + 6) % 7)
+                    .Select(DailyScheduleDto.FromEntity)
+                    .ToArray(),
             blocks.Select(ScheduleBlockDto.FromEntity).ToArray());
     }
 }

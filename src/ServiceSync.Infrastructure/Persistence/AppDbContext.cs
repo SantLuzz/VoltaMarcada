@@ -35,6 +35,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<ProfessionalAvailability> ProfessionalAvailabilities => Set<ProfessionalAvailability>();
 
+    public DbSet<ProfessionalDailySchedule> ProfessionalDailySchedules => Set<ProfessionalDailySchedule>();
+
     public DbSet<ScheduleBlock> ScheduleBlocks => Set<ScheduleBlock>();
 
     protected override void OnModelCreating(ModelBuilder builder)

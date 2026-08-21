@@ -21,37 +21,29 @@ else
 {
     <MudStack Spacing="3">
         <MudPaper Elevation="0" Outlined="true" Class="service-form-section">
-            <MudText Typo="Typo.h6">Horário padrão</MudText>
+            <MudText Typo="Typo.h6">Horários de trabalho</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary">
-                Defina os dias trabalhados e um único horário aplicado a todos eles.
+                Defina horários diferentes para cada dia e copie um dia para os demais quando necessário.
             </MudText>
 
             @if (ReadOnly)
             {
-                @if (availability?.WeeklySchedule is null)
+                @if (availability?.DailySchedules is not { Count: > 0 } dailySchedules)
                 {
                     <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
-                        O horário padrão ainda não foi configurado.
+                        Os horários de trabalho ainda não foram configurados.
                     </MudAlert>
                 }
                 else
                 {
-                    <MudStack Row="true" Spacing="1" Class="mt-4" Style="flex-wrap: wrap;">
-                        @foreach (var dayName in GetSelectedDayNames(availability.WeeklySchedule.WorkDays))
+                    <MudStack Spacing="1" Class="mt-4">
+                        @foreach (var scheduleGroup in GroupDailySchedules(dailySchedules))
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@dayName</MudChip>
+                            <MudText Typo="Typo.body2">
+                                <strong>@scheduleGroup.Label:</strong> @FormatDailySchedule(scheduleGroup.Schedule)
+                            </MudText>
                         }
                     </MudStack>
-                    <MudGrid Spacing="2" Class="mt-2">
-                        <MudItem xs="12" sm="6">
-                            <MudTextField Value="@FormatTimeRange(availability.WeeklySchedule.EntryTime, availability.WeeklySchedule.LunchStartTime)"
-                                          Label="Expediente da manhã" Variant="Variant.Outlined" FullWidth="true" Disabled="true" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <MudTextField Value="@FormatTimeRange(availability.WeeklySchedule.LunchEndTime, availability.WeeklySchedule.ExitTime)"
-                                          Label="Expediente da tarde" Variant="Variant.Outlined" FullWidth="true" Disabled="true" />
-                        </MudItem>
-                    </MudGrid>
                 }
             }
             else
@@ -61,43 +53,57 @@ else
                     <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mt-4">@scheduleError</MudAlert>
                 }
 
-                <MudText Typo="Typo.subtitle2" Class="mt-4">Dias trabalhados</MudText>
-                <MudGrid Spacing="1" Class="mt-1">
-                    @foreach (var day in workdayOptions)
+                <MudStack Spacing="2" Class="mt-4">
+                    @foreach (var schedule in scheduleRows)
                     {
-                        <MudItem xs="6" sm="4" md="3">
-                            <MudCheckBox T="bool" Value="@IsWorkdaySelected(day.Value)"
-                                         ValueChanged="@(selected => SetWorkday(day.Value, selected))"
-                                         Color="Color.Primary" Disabled="@isSavingSchedule">
-                                @day.Label
-                            </MudCheckBox>
-                        </MudItem>
+                        <MudPaper Elevation="0" Outlined="true" Class="pa-3">
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" md="2">
+                                    <MudCheckBox T="bool" @bind-Value="schedule.IsEnabled" Color="Color.Primary" Disabled="@isSavingSchedule">
+                                        @schedule.Label
+                                    </MudCheckBox>
+                                </MudItem>
+                                <MudItem xs="12" sm="6" md="2">
+                                    <MudTimePicker @bind-Time="schedule.EntryTime" Label="Entrada" Variant="Variant.Outlined"
+                                                   AmPm="false" Disabled="@(isSavingSchedule || !schedule.IsEnabled)" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6" md="2">
+                                    <MudTimePicker @bind-Time="schedule.ExitTime" Label="Saída" Variant="Variant.Outlined"
+                                                   AmPm="false" Disabled="@(isSavingSchedule || !schedule.IsEnabled)" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6" md="2">
+                                    <MudSwitch T="bool" @bind-Value="schedule.HasLunchBreak" Color="Color.Primary"
+                                               Disabled="@(isSavingSchedule || !schedule.IsEnabled)">
+                                        Possui intervalo
+                                    </MudSwitch>
+                                </MudItem>
+                                @if (schedule.HasLunchBreak)
+                                {
+                                    <MudItem xs="12" sm="6" md="2">
+                                        <MudTimePicker @bind-Time="schedule.LunchStartTime" Label="Início do intervalo" Variant="Variant.Outlined"
+                                                       AmPm="false" Disabled="@(isSavingSchedule || !schedule.IsEnabled)" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="2">
+                                        <MudTimePicker @bind-Time="schedule.LunchEndTime" Label="Fim do intervalo" Variant="Variant.Outlined"
+                                                       AmPm="false" Disabled="@(isSavingSchedule || !schedule.IsEnabled)" />
+                                    </MudItem>
+                                }
+                                <MudItem xs="12">
+                                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                               OnClick="@(() => ApplyToOtherActiveDays(schedule))"
+                                               Disabled="@(isSavingSchedule || !schedule.IsEnabled)">
+                                        Aplicar aos demais dias ativos
+                                    </MudButton>
+                                </MudItem>
+                            </MudGrid>
+                        </MudPaper>
                     }
-                </MudGrid>
-
-                <MudGrid Spacing="2" Class="mt-2">
-                    <MudItem xs="12" sm="6" md="3">
-                        <MudTimePicker @bind-Time="schedule.EntryTime" Label="Entrada" Variant="Variant.Outlined"
-                                       AmPm="false" Disabled="@isSavingSchedule" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6" md="3">
-                        <MudTimePicker @bind-Time="schedule.LunchStartTime" Label="Início do almoço" Variant="Variant.Outlined"
-                                       AmPm="false" Disabled="@isSavingSchedule" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6" md="3">
-                        <MudTimePicker @bind-Time="schedule.LunchEndTime" Label="Fim do almoço" Variant="Variant.Outlined"
-                                       AmPm="false" Disabled="@isSavingSchedule" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6" md="3">
-                        <MudTimePicker @bind-Time="schedule.ExitTime" Label="Saída" Variant="Variant.Outlined"
-                                       AmPm="false" Disabled="@isSavingSchedule" />
-                    </MudItem>
-                </MudGrid>
+                </MudStack>
 
                 <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save"
                                OnClick="SaveScheduleAsync" Disabled="@isSavingSchedule">
-                        @(isSavingSchedule ? "Salvando..." : "Salvar horário")
+                        @(isSavingSchedule ? "Salvando..." : "Salvar horários")
                     </MudButton>
                 </MudStack>
             }
@@ -226,19 +232,8 @@ else
     [Parameter]
     public bool ReadOnly { get; set; }
 
-    private static readonly (ProfessionalWorkDays Value, string Label)[] workdayOptions =
-    [
-        (ProfessionalWorkDays.Monday, "Segunda-feira"),
-        (ProfessionalWorkDays.Tuesday, "Terça-feira"),
-        (ProfessionalWorkDays.Wednesday, "Quarta-feira"),
-        (ProfessionalWorkDays.Thursday, "Quinta-feira"),
-        (ProfessionalWorkDays.Friday, "Sexta-feira"),
-        (ProfessionalWorkDays.Saturday, "Sábado"),
-        (ProfessionalWorkDays.Sunday, "Domingo")
-    ];
-
     private ProfessionalAvailabilityDto? availability;
-    private readonly WeeklyScheduleFormModel schedule = new();
+    private readonly List<DailyScheduleFormModel> scheduleRows = [];
     private ScheduleBlockFormModel blockForm = ScheduleBlockFormModel.CreateDefault();
     private Guid? loadedProfessionalId;
     private Guid? deletingBlockId;
@@ -274,7 +269,7 @@ else
                 return;
             }
 
-            schedule.Load(availability.WeeklySchedule);
+            LoadScheduleRows(availability.DailySchedules);
         }
         catch (Exception exception)
         {
@@ -285,14 +280,6 @@ else
         {
             isLoading = false;
         }
-    }
-
-    private bool IsWorkdaySelected(ProfessionalWorkDays day) =>
-        (schedule.WorkDays & day) == day;
-
-    private void SetWorkday(ProfessionalWorkDays day, bool selected)
-    {
-        schedule.WorkDays = selected ? schedule.WorkDays | day : schedule.WorkDays & ~day;
     }
 
     private async Task SaveScheduleAsync()
@@ -309,11 +296,15 @@ else
             var result = await SaveProfessionalAvailabilityUseCase.ExecuteAsync(
                 ProfessionalId,
                 new SaveProfessionalAvailabilityCommand(
-                    schedule.WorkDays,
-                    TimeOnly.FromTimeSpan(schedule.EntryTime!.Value),
-                    TimeOnly.FromTimeSpan(schedule.LunchStartTime!.Value),
-                    TimeOnly.FromTimeSpan(schedule.LunchEndTime!.Value),
-                    TimeOnly.FromTimeSpan(schedule.ExitTime!.Value)));
+                    scheduleRows
+                        .Where(schedule => schedule.IsEnabled)
+                        .Select(schedule => new SaveProfessionalDailyScheduleCommand(
+                            schedule.Weekday,
+                            TimeOnly.FromTimeSpan(schedule.EntryTime!.Value),
+                            TimeOnly.FromTimeSpan(schedule.ExitTime!.Value),
+                            schedule.HasLunchBreak ? TimeOnly.FromTimeSpan(schedule.LunchStartTime!.Value) : null,
+                            schedule.HasLunchBreak ? TimeOnly.FromTimeSpan(schedule.LunchEndTime!.Value) : null))
+                        .ToArray()));
             if (result.Code != ProfessionalAvailabilityOperationResultCode.Success)
             {
                 scheduleError = "Revise os dias e horários informados.";
@@ -336,24 +327,55 @@ else
 
     private string? ValidateSchedule()
     {
-        if (schedule.WorkDays == ProfessionalWorkDays.None)
+        var enabledSchedules = scheduleRows.Where(schedule => schedule.IsEnabled).ToArray();
+        if (enabledSchedules.Length == 0)
         {
             return "Selecione ao menos um dia de trabalho.";
         }
 
-        if (schedule.EntryTime is null || schedule.LunchStartTime is null || schedule.LunchEndTime is null || schedule.ExitTime is null)
+        foreach (var schedule in enabledSchedules)
         {
-            return "Informe todos os horários do expediente.";
-        }
+            if (schedule.EntryTime is null || schedule.ExitTime is null)
+            {
+                return $"Informe a entrada e a saída de {schedule.Label.ToLowerInvariant()}.";
+            }
 
-        if (schedule.EntryTime >= schedule.LunchStartTime ||
-            schedule.LunchStartTime >= schedule.LunchEndTime ||
-            schedule.LunchEndTime >= schedule.ExitTime)
-        {
-            return "Os horários devem seguir a ordem: entrada, início do almoço, fim do almoço e saída.";
+            if (schedule.EntryTime >= schedule.ExitTime)
+            {
+                return $"A entrada de {schedule.Label.ToLowerInvariant()} deve ser anterior à saída.";
+            }
+
+            if (!schedule.HasLunchBreak)
+            {
+                continue;
+            }
+
+            if (schedule.LunchStartTime is null || schedule.LunchEndTime is null)
+            {
+                return $"Informe o intervalo de {schedule.Label.ToLowerInvariant()}.";
+            }
+
+            if (schedule.EntryTime >= schedule.LunchStartTime ||
+                schedule.LunchStartTime >= schedule.LunchEndTime ||
+                schedule.LunchEndTime >= schedule.ExitTime)
+            {
+                return $"O intervalo de {schedule.Label.ToLowerInvariant()} deve estar dentro do expediente.";
+            }
         }
 
         return null;
+    }
+
+    private void ApplyToOtherActiveDays(DailyScheduleFormModel source)
+    {
+        foreach (var schedule in scheduleRows.Where(schedule => schedule.IsEnabled && schedule != source))
+        {
+            schedule.EntryTime = source.EntryTime;
+            schedule.ExitTime = source.ExitTime;
+            schedule.HasLunchBreak = source.HasLunchBreak;
+            schedule.LunchStartTime = source.LunchStartTime;
+            schedule.LunchEndTime = source.LunchEndTime;
+        }
     }
 
     private void ShowBlockForm()
@@ -493,14 +515,107 @@ else
             throw new InvalidOperationException("Professional availability could not be reloaded.");
         }
 
-        schedule.Load(availability.WeeklySchedule);
+        LoadScheduleRows(availability.DailySchedules);
     }
 
-    private static IEnumerable<string> GetSelectedDayNames(ProfessionalWorkDays workDays) =>
-        workdayOptions.Where(option => (workDays & option.Value) == option.Value).Select(option => option.Label);
+    private void LoadScheduleRows(IReadOnlyList<DailyScheduleDto>? dailySchedules)
+    {
+        scheduleRows.Clear();
+        foreach (var weekday in GetWeekdaysInDisplayOrder())
+        {
+            var savedSchedule = dailySchedules?.SingleOrDefault(schedule => schedule.Weekday == weekday);
+            var isDefaultWorkday = weekday is >= DayOfWeek.Monday and <= DayOfWeek.Friday;
+            scheduleRows.Add(new DailyScheduleFormModel
+            {
+                Weekday = weekday,
+                Label = GetWeekdayLabel(weekday),
+                IsEnabled = savedSchedule is not null || dailySchedules is null && isDefaultWorkday,
+                EntryTime = savedSchedule?.EntryTime.ToTimeSpan() ?? new TimeSpan(8, 0, 0),
+                ExitTime = savedSchedule?.ExitTime.ToTimeSpan() ?? new TimeSpan(18, 0, 0),
+                HasLunchBreak = savedSchedule?.LunchStartTime is not null || dailySchedules is null && isDefaultWorkday,
+                LunchStartTime = savedSchedule?.LunchStartTime?.ToTimeSpan() ?? new TimeSpan(12, 0, 0),
+                LunchEndTime = savedSchedule?.LunchEndTime?.ToTimeSpan() ?? new TimeSpan(13, 0, 0)
+            });
+        }
+    }
 
-    private static string FormatTimeRange(TimeOnly startTime, TimeOnly endTime) =>
-        $"{startTime:HH:mm} às {endTime:HH:mm}";
+    private static IReadOnlyList<DailyScheduleDisplayGroup> GroupDailySchedules(IReadOnlyList<DailyScheduleDto> dailySchedules)
+    {
+        var groups = new List<DailyScheduleDisplayGroup>();
+        var orderedSchedules = dailySchedules
+            .OrderBy(schedule => ((int)schedule.Weekday + 6) % 7)
+            .ToArray();
+        if (orderedSchedules.Length == 0)
+        {
+            return groups;
+        }
+
+        var firstWeekday = orderedSchedules[0].Weekday;
+        var lastWeekday = firstWeekday;
+        var currentSchedule = orderedSchedules[0];
+
+        foreach (var schedule in orderedSchedules.Skip(1))
+        {
+            if (HaveSameHours(schedule, currentSchedule) && IsNextDisplayWeekday(lastWeekday, schedule.Weekday))
+            {
+                lastWeekday = schedule.Weekday;
+                continue;
+            }
+
+            groups.Add(new DailyScheduleDisplayGroup(FormatWeekdayRange(firstWeekday, lastWeekday), currentSchedule));
+            firstWeekday = schedule.Weekday;
+            lastWeekday = schedule.Weekday;
+            currentSchedule = schedule;
+        }
+
+        groups.Add(new DailyScheduleDisplayGroup(FormatWeekdayRange(firstWeekday, lastWeekday), currentSchedule));
+        return groups;
+    }
+
+    private static bool IsNextDisplayWeekday(DayOfWeek previousWeekday, DayOfWeek weekday) =>
+        weekday == (previousWeekday == DayOfWeek.Saturday
+            ? DayOfWeek.Sunday
+            : (DayOfWeek)((int)previousWeekday + 1));
+
+    private static bool HaveSameHours(DailyScheduleDto first, DailyScheduleDto second) =>
+        first.EntryTime == second.EntryTime &&
+        first.ExitTime == second.ExitTime &&
+        first.LunchStartTime == second.LunchStartTime &&
+        first.LunchEndTime == second.LunchEndTime;
+
+    private static IEnumerable<DayOfWeek> GetWeekdaysInDisplayOrder() =>
+    [
+        DayOfWeek.Monday,
+        DayOfWeek.Tuesday,
+        DayOfWeek.Wednesday,
+        DayOfWeek.Thursday,
+        DayOfWeek.Friday,
+        DayOfWeek.Saturday,
+        DayOfWeek.Sunday
+    ];
+
+    private static string FormatWeekdayRange(DayOfWeek firstWeekday, DayOfWeek lastWeekday) =>
+        firstWeekday == lastWeekday
+            ? GetWeekdayLabel(firstWeekday)
+            : $"{GetWeekdayLabel(firstWeekday)} a {GetWeekdayLabel(lastWeekday)}";
+
+    private static string GetWeekdayLabel(DayOfWeek weekday) =>
+        weekday switch
+        {
+            DayOfWeek.Monday => "Segunda-feira",
+            DayOfWeek.Tuesday => "Terça-feira",
+            DayOfWeek.Wednesday => "Quarta-feira",
+            DayOfWeek.Thursday => "Quinta-feira",
+            DayOfWeek.Friday => "Sexta-feira",
+            DayOfWeek.Saturday => "Sábado",
+            DayOfWeek.Sunday => "Domingo",
+            _ => "Dia inválido"
+        };
+
+    private static string FormatDailySchedule(DailyScheduleDto schedule) =>
+        schedule.LunchStartTime is { } lunchStartTime && schedule.LunchEndTime is { } lunchEndTime
+            ? $"{schedule.EntryTime:HH:mm} às {lunchStartTime:HH:mm} e {lunchEndTime:HH:mm} às {schedule.ExitTime:HH:mm}"
+            : $"{schedule.EntryTime:HH:mm} às {schedule.ExitTime:HH:mm}";
 
     private static string FormatBlockPeriod(ScheduleBlockDto block)
     {
@@ -530,28 +645,19 @@ else
             _ => "Indisponibilidade"
         };
 
-    private sealed class WeeklyScheduleFormModel
+    private sealed class DailyScheduleFormModel
     {
-        public ProfessionalWorkDays WorkDays { get; set; }
+        public DayOfWeek Weekday { get; set; }
+        public string Label { get; set; } = string.Empty;
+        public bool IsEnabled { get; set; }
         public TimeSpan? EntryTime { get; set; }
+        public TimeSpan? ExitTime { get; set; }
+        public bool HasLunchBreak { get; set; }
         public TimeSpan? LunchStartTime { get; set; }
         public TimeSpan? LunchEndTime { get; set; }
-        public TimeSpan? ExitTime { get; set; }
-
-        public void Load(WeeklyScheduleDto? weeklySchedule)
-        {
-            WorkDays = weeklySchedule?.WorkDays ??
-                (ProfessionalWorkDays.Monday |
-                 ProfessionalWorkDays.Tuesday |
-                 ProfessionalWorkDays.Wednesday |
-                 ProfessionalWorkDays.Thursday |
-                 ProfessionalWorkDays.Friday);
-            EntryTime = weeklySchedule?.EntryTime.ToTimeSpan() ?? new TimeSpan(8, 0, 0);
-            LunchStartTime = weeklySchedule?.LunchStartTime.ToTimeSpan() ?? new TimeSpan(12, 0, 0);
-            LunchEndTime = weeklySchedule?.LunchEndTime.ToTimeSpan() ?? new TimeSpan(13, 0, 0);
-            ExitTime = weeklySchedule?.ExitTime.ToTimeSpan() ?? new TimeSpan(18, 0, 0);
-        }
     }
+
+    private sealed record DailyScheduleDisplayGroup(string Label, DailyScheduleDto Schedule);
 
     private sealed class ScheduleBlockFormModel
     {
