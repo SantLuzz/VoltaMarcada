@@ -10,12 +10,21 @@ using ServiceSync.Web.Components;
 using ServiceSync.Web.Authorization;
 using ServiceSync.Web.Endpoints;
 using ServiceSync.Web.Identity;
+using ServiceSync.Web.Configuration;
+using ServiceSync.Application.Scheduling;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddOptions<SchedulingOptions>()
+    .Bind(builder.Configuration.GetSection(SchedulingOptions.SectionName))
+    .Validate(options => options.SlotIntervalMinutes > 0 && 60 % options.SlotIntervalMinutes == 0, "Slot interval must divide one hour.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.DefaultTimeZoneId), "Default time zone is required.")
+    .Validate(options => options.AllowedTimeZoneIds.Count > 0 && options.AllowedTimeZoneIds.Contains(options.DefaultTimeZoneId, StringComparer.Ordinal), "Allowed time zones must contain the default time zone.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<ISchedulingConfiguration, SchedulingConfiguration>();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMudServices();
@@ -89,6 +98,8 @@ app.MapServiceEndpoints();
 app.MapProfessionalEndpoints();
 app.MapEmployeeInvitationEndpoints();
 app.MapWorkOrderEndpoints();
+app.MapAppointmentEndpoints();
+app.MapScheduleBlockRequestEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

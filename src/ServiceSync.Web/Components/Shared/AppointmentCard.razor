@@ -1,0 +1,16 @@
+@using ServiceSync.Application.Scheduling
+
+<MudButton Variant="Variant.Outlined" Color="Color.Default" Class="dashboard-appointment-card" OnClick="SelectAsync">
+    <span class="dashboard-appointment-time">@Appointment.StartAtUtc.ToLocalTime().ToString("HH:mm")</span>
+    <span class="dashboard-appointment-label">@(Appointment.WorkOrderId is null ? "Atendimento agendado" : "Atendimento vinculado à OS")</span>
+</MudButton>
+
+@code {
+    [Parameter, EditorRequired]
+    public AppointmentDto Appointment { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public EventCallback<Guid> OnSelected { get; set; }
+
+    private Task SelectAsync() => OnSelected.InvokeAsync(Appointment.Id);
+}

@@ -109,13 +109,13 @@ public static class ProfessionalEndpoints
 
     private static async Task<IResult> CreateAsync(ProfessionalRequest request, CreateProfessionalUseCase useCase, CancellationToken cancellationToken)
     {
-        var result = await useCase.ExecuteAsync(new CreateProfessionalCommand(request.CompanyUserId, request.ServiceIds), cancellationToken);
+        var result = await useCase.ExecuteAsync(new CreateProfessionalCommand(request.CompanyUserId, request.ServiceIds, request.TimeZoneId), cancellationToken);
         return ToResult(result, professionalId => Results.Created($"/professionals/{professionalId}", new { professionalId }));
     }
 
     private static async Task<IResult> UpdateAsync(Guid professionalId, ProfessionalRequest request, UpdateProfessionalUseCase useCase, CancellationToken cancellationToken)
     {
-        var result = await useCase.ExecuteAsync(professionalId, new UpdateProfessionalCommand(request.CompanyUserId, request.ServiceIds), cancellationToken);
+        var result = await useCase.ExecuteAsync(professionalId, new UpdateProfessionalCommand(request.CompanyUserId, request.ServiceIds, request.TimeZoneId), cancellationToken);
         return ToResult(result, _ => Results.Ok());
     }
 
@@ -150,7 +150,7 @@ public static class ProfessionalEndpoints
             _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError)
         };
 
-    public sealed record ProfessionalRequest(Guid CompanyUserId, IReadOnlyList<Guid> ServiceIds);
+    public sealed record ProfessionalRequest(Guid CompanyUserId, IReadOnlyList<Guid> ServiceIds, string? TimeZoneId);
 
     public sealed record ProfessionalStatusRequest(bool IsActive);
 

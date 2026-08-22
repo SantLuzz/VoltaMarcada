@@ -42,6 +42,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<ScheduleBlock> ScheduleBlocks => Set<ScheduleBlock>();
 
+    public DbSet<ScheduleBlockRequest> ScheduleBlockRequests => Set<ScheduleBlockRequest>();
+
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+
+    public DbSet<AppointmentRescheduleHistory> AppointmentRescheduleHistories => Set<AppointmentRescheduleHistory>();
+
     public DbSet<WorkOrder> WorkOrders => Set<WorkOrder>();
 
     public DbSet<WorkOrderItem> WorkOrderItems => Set<WorkOrderItem>();

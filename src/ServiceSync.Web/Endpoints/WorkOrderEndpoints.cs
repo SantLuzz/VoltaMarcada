@@ -56,7 +56,9 @@ public static class WorkOrderEndpoints
     {
         WorkOrderOperationResultCode.InvalidEquipmentCustomer => "O equipamento não pertence ao cliente selecionado.",
         WorkOrderOperationResultCode.ProfessionalProfileRequired => "É necessário possuir um perfil profissional ativo.",
+        WorkOrderOperationResultCode.ProfessionalRequired => "Selecione um profissional antes de agendar o atendimento.",
         WorkOrderOperationResultCode.ProfessionalNotQualified => "O profissional não está habilitado para o serviço.",
+        WorkOrderOperationResultCode.ProfessionalUnavailable => "O profissional não está disponível no horário selecionado.",
         WorkOrderOperationResultCode.ChecklistIncomplete => "Conclua os itens obrigatórios do checklist.",
         WorkOrderOperationResultCode.BeforePhotoRequired => "Inclua ao menos uma foto antes.",
         WorkOrderOperationResultCode.AfterPhotoRequired => "Inclua ao menos uma foto depois.",

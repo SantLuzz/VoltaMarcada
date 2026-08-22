@@ -46,6 +46,13 @@ else
                     }
                 </MudSelect>
 
+                <MudSelect T="string" @bind-Value="model.TimeZoneId" Label="Fuso horÃ¡rio" Variant="Variant.Outlined" FullWidth="true" Required="true" Class="mt-4" Disabled="@isSaving">
+                    @foreach (var timeZoneId in options.TimeZoneIds)
+                    {
+                        <MudSelectItem Value="@timeZoneId">@timeZoneId</MudSelectItem>
+                    }
+                </MudSelect>
+
                 @if (!isEditing)
                 {
                     <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
@@ -68,7 +75,7 @@ else
     public Guid? ProfessionalId { get; set; }
 
     private readonly ProfessionalFormModel model = new();
-    private ProfessionalRegistrationOptionsDto options = new([], []);
+    private ProfessionalRegistrationOptionsDto options = new([], [], [], "America/Sao_Paulo");
     private bool isLoading = true;
     private bool isSaving;
     private string? submitError;
@@ -89,9 +96,14 @@ else
 
                 model.CompanyUserId = professional.CompanyUserId;
                 model.ServiceIds = professional.ServiceIds.ToHashSet();
+                model.TimeZoneId = professional.TimeZoneId;
             }
 
             options = await GetProfessionalRegistrationOptionsUseCase.ExecuteAsync(ProfessionalId);
+            if (string.IsNullOrWhiteSpace(model.TimeZoneId))
+            {
+                model.TimeZoneId = options.DefaultTimeZoneId;
+            }
         }
         catch (Exception exception)
         {
@@ -118,8 +130,8 @@ else
             }
 
             var result = ProfessionalId is { } professionalId
-                ? await UpdateProfessionalUseCase.ExecuteAsync(professionalId, new UpdateProfessionalCommand(companyUserId, model.ServiceIds.ToArray()))
-                : await CreateProfessionalUseCase.ExecuteAsync(new CreateProfessionalCommand(companyUserId, model.ServiceIds.ToArray()));
+                ? await UpdateProfessionalUseCase.ExecuteAsync(professionalId, new UpdateProfessionalCommand(companyUserId, model.ServiceIds.ToArray(), model.TimeZoneId))
+                : await CreateProfessionalUseCase.ExecuteAsync(new CreateProfessionalCommand(companyUserId, model.ServiceIds.ToArray(), model.TimeZoneId));
             if (result.Code != ProfessionalOperationResultCode.Success)
             {
                 submitError = "Revise o funcionário e os serviços selecionados.";
@@ -162,5 +174,6 @@ else
     {
         public Guid? CompanyUserId { get; set; }
         public IReadOnlyCollection<Guid> ServiceIds { get; set; } = [];
+        public string? TimeZoneId { get; set; }
     }
 }

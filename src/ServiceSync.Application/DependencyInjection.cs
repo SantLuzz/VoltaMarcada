@@ -7,6 +7,7 @@ using ServiceSync.Application.Equipment;
 using ServiceSync.Application.Services;
 using ServiceSync.Application.Professionals;
 using ServiceSync.Application.WorkOrders;
+using ServiceSync.Application.Scheduling;
 
 namespace ServiceSync.Application;
 
@@ -45,6 +46,22 @@ public static class DependencyInjection
         services.AddScoped<AddWorkOrderPhotoUseCase>();
         services.AddScoped<GetWorkOrderPhotoContentUseCase>();
         services.AddScoped<RemoveWorkOrderPhotoUseCase>();
+        services.AddScoped<AppointmentAvailability>();
+        services.AddScoped<GetAvailableAppointmentSlotsUseCase>();
+        services.AddScoped<CreateAppointmentUseCase>();
+        services.AddScoped<GetAppointmentsUseCase>();
+        services.AddScoped<GetAppointmentDetailsUseCase>();
+        services.AddScoped<GetWorkOrderAppointmentsUseCase>();
+        services.AddScoped<StartAppointmentUseCase>();
+        services.AddScoped<CompleteAppointmentUseCase>();
+        services.AddScoped<CancelAppointmentUseCase>();
+        services.AddScoped<RescheduleAppointmentUseCase>();
+        services.AddScoped<ReassignAppointmentUseCase>();
+        services.AddScoped<AdjustAppointmentUseCase>();
+        services.AddScoped<CreateScheduleBlockRequestUseCase>();
+        services.AddScoped<GetScheduleBlockRequestsUseCase>();
+        services.AddScoped<ApproveScheduleBlockRequestUseCase>();
+        services.AddScoped<RejectScheduleBlockRequestUseCase>();
         services.AddScoped<ProfessionalOwnerAuthorization>();
         services.AddScoped<CreateProfessionalUseCase>();
         services.AddScoped<GetProfessionalsUseCase>();

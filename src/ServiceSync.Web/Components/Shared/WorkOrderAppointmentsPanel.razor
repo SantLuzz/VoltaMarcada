@@ -1,0 +1,102 @@
+@using ServiceSync.Application.Scheduling
+@using ServiceSync.Domain.Enums
+@inject GetWorkOrderAppointmentsUseCase GetWorkOrderAppointmentsUseCase
+@inject StartAppointmentUseCase StartAppointmentUseCase
+@inject CompleteAppointmentUseCase CompleteAppointmentUseCase
+@inject CancelAppointmentUseCase CancelAppointmentUseCase
+@inject ISnackbar Snackbar
+
+@if (isLoading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (appointments.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Filled.EventBusy" Title="Nenhum agendamento" Description="Esta OS ainda não possui compromissos vinculados." />
+}
+else
+{
+    <MudList T="AppointmentDto">
+        @foreach (var appointment in appointments)
+        {
+            <MudListItem T="AppointmentDto" Value="@appointment" Icon="@Icons.Material.Filled.Event">
+                <MudText>@appointment.StartAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</MudText>
+                <MudText Typo="Typo.caption">@GetStatusName(appointment.Status)</MudText>
+                @if (appointment.Status == AppointmentStatus.Scheduled)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => StartAsync(appointment.Id))">Iniciar atendimento</MudButton>
+                }
+                @if (appointment.Status == AppointmentStatus.InProgress)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Success" OnClick="@(() => CompleteAsync(appointment.Id))">Concluir atendimento</MudButton>
+                }
+                @if (IsOwner && (appointment.Status is AppointmentStatus.Scheduled or AppointmentStatus.InProgress))
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => CancelAsync(appointment.Id))">Cancelar agendamento</MudButton>
+                }
+            </MudListItem>
+        }
+    </MudList>
+}
+
+@code {
+    [Parameter, EditorRequired] public Guid WorkOrderId { get; set; }
+    [Parameter, EditorRequired] public bool IsOwner { get; set; }
+
+    private IReadOnlyList<AppointmentDto> appointments = [];
+    private bool isLoading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        appointments = await GetWorkOrderAppointmentsUseCase.ExecuteAsync(WorkOrderId);
+        isLoading = false;
+    }
+
+    private async Task CompleteAsync(Guid appointmentId)
+    {
+        var result = await CompleteAppointmentUseCase.ExecuteAsync(appointmentId);
+        if (result.Code != SchedulingOperationResultCode.Success)
+        {
+            Snackbar.Add("Não foi possível concluir o agendamento.", Severity.Error);
+            return;
+        }
+
+        appointments = await GetWorkOrderAppointmentsUseCase.ExecuteAsync(WorkOrderId);
+        Snackbar.Add("Atendimento concluído.", Severity.Success);
+    }
+
+    private async Task StartAsync(Guid appointmentId)
+    {
+        var result = await StartAppointmentUseCase.ExecuteAsync(appointmentId);
+        if (result.Code != SchedulingOperationResultCode.Success)
+        {
+            Snackbar.Add("Não foi possível iniciar o agendamento.", Severity.Error);
+            return;
+        }
+
+        appointments = await GetWorkOrderAppointmentsUseCase.ExecuteAsync(WorkOrderId);
+        Snackbar.Add("Atendimento iniciado.", Severity.Success);
+    }
+
+    private async Task CancelAsync(Guid appointmentId)
+    {
+        var result = await CancelAppointmentUseCase.ExecuteAsync(appointmentId);
+        if (result.Code != SchedulingOperationResultCode.Success)
+        {
+            Snackbar.Add("Não foi possível cancelar o agendamento.", Severity.Error);
+            return;
+        }
+
+        appointments = await GetWorkOrderAppointmentsUseCase.ExecuteAsync(WorkOrderId);
+        Snackbar.Add("Agendamento cancelado.", Severity.Success);
+    }
+
+    private static string GetStatusName(AppointmentStatus status) => status switch
+    {
+        AppointmentStatus.Completed => "Concluído",
+        AppointmentStatus.Cancelled => "Cancelado",
+        AppointmentStatus.InProgress => "Em andamento",
+        _ => "Agendado"
+    };
+}

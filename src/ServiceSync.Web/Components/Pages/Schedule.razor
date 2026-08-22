@@ -1,0 +1,708 @@
+@page "/agenda"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@using ServiceSync.Application.Scheduling
+@using ServiceSync.Application.WorkOrders
+@using ServiceSync.Application.Customers
+@using ServiceSync.Application.Equipment
+@using ServiceSync.Application.Professionals
+@using ServiceSync.Application.Services
+@inject GetAppointmentsUseCase GetAppointmentsUseCase
+@inject GetAvailableAppointmentSlotsUseCase GetAvailableAppointmentSlotsUseCase
+@inject CreateAppointmentUseCase CreateAppointmentUseCase
+@inject AdjustAppointmentUseCase AdjustAppointmentUseCase
+@inject StartAppointmentUseCase StartAppointmentUseCase
+@inject CompleteAppointmentUseCase CompleteAppointmentUseCase
+@inject CancelAppointmentUseCase CancelAppointmentUseCase
+@inject WorkOrderAuthorization WorkOrderAuthorization
+@inject GetCustomersUseCase GetCustomersUseCase
+@inject GetCustomerEquipmentUseCase GetCustomerEquipmentUseCase
+@inject GetServicesUseCase GetServicesUseCase
+@inject GetProfessionalsUseCase GetProfessionalsUseCase
+@inject GetWorkOrdersUseCase GetWorkOrdersUseCase
+@inject GetWorkOrderDetailsUseCase GetWorkOrderDetailsUseCase
+@inject ISnackbar Snackbar
+@inject TimeProvider TimeProvider
+
+<PageTitle>Agenda | ServiceSync</PageTitle>
+
+<PageHeader Title="Agenda" Description="Consulte os atendimentos no período selecionado.">
+    <Actions>
+        @if (isOwner || accessScope?.ProfessionalId is not null)
+        {
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OpenAppointmentDialogAsync">Novo agendamento</MudButton>
+        }
+        <MudButton Variant="Variant.Outlined" OnClick="ShowTodayAsync">Hoje</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="ShowWeekAsync">Esta semana</MudButton>
+    </Actions>
+</PageHeader>
+
+<MudPaper Outlined="true" Class="pa-4 mt-4">
+    <MudGrid>
+        <MudItem xs="12" sm="6"><MudDatePicker Label="Data inicial" @bind-Date="startDate" /></MudItem>
+        <MudItem xs="12" sm="6"><MudDatePicker Label="Data final" @bind-Date="endDate" /></MudItem>
+        <MudItem xs="12"><MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="LoadAsync">Aplicar período</MudButton></MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (isOwner)
+{
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">Visão administrativa: todos os profissionais da empresa no período selecionado.</MudAlert>
+}
+else
+{
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">Sua agenda pessoal: veja os atendimentos de hoje, da semana ou de outro período.</MudAlert>
+}
+
+@if (isLoading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mt-4" />
+}
+else if (appointments.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Filled.EventBusy" Title="Nenhum atendimento" Description="Não há agendamentos para este período." />
+}
+else
+{
+    <MudList T="AppointmentDto" Class="mt-4">
+        @foreach (var appointment in appointments)
+        {
+            <MudListItem T="AppointmentDto" Value="@appointment" Icon="@Icons.Material.Filled.Event">
+                <MudText>@appointment.StartAtUtc.ToLocalTime().ToString("dd/MM HH:mm") — @GetStatusName(appointment.Status)</MudText>
+                @if (appointment.WorkOrderId is { } workOrderId)
+                {
+                    <MudButton Href="@($"/ordens-servico/registro?id={workOrderId}")" Size="Size.Small" Variant="Variant.Text">Abrir OS</MudButton>
+                }
+                @if (appointment.Status == ServiceSync.Domain.Enums.AppointmentStatus.Scheduled)
+                {
+                    @if (isOwner)
+                    {
+                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => OpenAdjustmentDialogAsync(appointment))">Ajustar</MudButton>
+                    }
+                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => StartAppointmentAsync(appointment.Id))">Iniciar</MudButton>
+                }
+                else if (appointment.Status == ServiceSync.Domain.Enums.AppointmentStatus.InProgress)
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Success" OnClick="@(() => CompleteAppointmentAsync(appointment.Id))">Concluir</MudButton>
+                }
+                @if (isOwner && (appointment.Status is ServiceSync.Domain.Enums.AppointmentStatus.Scheduled or ServiceSync.Domain.Enums.AppointmentStatus.InProgress))
+                {
+                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => OpenCancelDialog(appointment))">Cancelar</MudButton>
+                }
+            </MudListItem>
+        }
+    </MudList>
+}
+
+@if (isInitialLoadComplete && accessScope is { } currentAccessScope)
+{
+    <ScheduleBlockRequestPanel AccessScope="@currentAccessScope" />
+}
+
+<MudDialog @bind-Visible="isAppointmentDialogOpen">
+    <TitleContent><MudText Typo="Typo.h6">Novo agendamento</MudText></TitleContent>
+    <DialogContent>
+        @if (isAppointmentOptionsLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <MudGrid>
+                @if (isOwner)
+                {
+                <MudItem xs="12">
+                    <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Opcional: vincule a uma OS" Clearable="true" @bind-Value="appointmentWorkOrderId" @bind-Value:after="OnAppointmentWorkOrderChangedAsync" Disabled="@isCreatingAppointment">
+                        @foreach (var workOrder in appointmentWorkOrders)
+                        {
+                            <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid?" Label="Cliente" Placeholder="Selecione um cliente" Clearable="true" @bind-Value="appointmentCustomerId" @bind-Value:after="LoadAppointmentEquipmentAsync" Disabled="@(isCreatingAppointment || appointmentWorkOrderId is not null)">
+                        @foreach (var customer in appointmentCustomers)
+                        {
+                            <MudSelectItem Value="@((Guid?)customer.Id)">@customer.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid?" Label="Equipamento" Placeholder="Selecione um equipamento" Clearable="true" @bind-Value="appointmentEquipmentId" Disabled="@(isCreatingAppointment || appointmentCustomerId is null || appointmentWorkOrderId is not null)">
+                        @foreach (var equipment in appointmentEquipment)
+                        {
+                            <MudSelectItem Value="@((Guid?)equipment.Id)">@GetEquipmentName(equipment)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid?" Label="Serviço" Placeholder="Selecione um serviço" @bind-Value="appointmentServiceId" @bind-Value:after="OnAppointmentServiceChangedAsync" Disabled="@(isCreatingAppointment || appointmentWorkOrderId is not null)">
+                        @foreach (var service in appointmentServices)
+                        {
+                            <MudSelectItem Value="@((Guid?)service.Id)">@service.Name (@service.DurationMinutes min)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid?" Label="Profissional" Placeholder="Selecione um profissional" @bind-Value="appointmentProfessionalId" @bind-Value:after="LoadAvailableAppointmentSlotsAsync" Disabled="@(isCreatingAppointment || appointmentServiceId is null || appointmentWorkOrderId is not null)">
+                        @foreach (var professional in availableAppointmentProfessionals)
+                        {
+                            <MudSelectItem Value="@((Guid?)professional.Id)">@professional.CompanyMemberName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12">
+                        <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Selecione uma ordem de serviço" @bind-Value="appointmentWorkOrderId" @bind-Value:after="OnAppointmentWorkOrderChangedAsync" Disabled="@isCreatingAppointment">
+                            @foreach (var workOrder in appointmentWorkOrders)
+                            {
+                                <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Data" @bind-Date="appointmentDate" @bind-Date:after="LoadAvailableAppointmentSlotsAsync" Disabled="@isCreatingAppointment" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="TimeOnly?" Label="Horário" Placeholder="Selecione um horário" @bind-Value="appointmentStartTime" Disabled="@(isCreatingAppointment || availableAppointmentSlots.Count == 0)">
+                        @foreach (var slot in availableAppointmentSlots)
+                        {
+                            <MudSelectItem Value="@((TimeOnly?)slot.StartTime)">@slot.StartTime.ToString("HH:mm")</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="Observações" Lines="3" @bind-Value="appointmentNotes" Disabled="@isCreatingAppointment" />
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseAppointmentDialog" Disabled="@isCreatingAppointment">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CreateAppointmentAsync" Disabled="@(isAppointmentOptionsLoading || isCreatingAppointment)">@(isCreatingAppointment ? "Agendando..." : "Agendar")</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="isAdjustmentDialogOpen">
+    <TitleContent><MudText Typo="Typo.h6">Ajustar agendamento</MudText></TitleContent>
+    <DialogContent>
+        @if (isAdjustmentOptionsLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid?" Label="Profissional" @bind-Value="adjustmentProfessionalId" @bind-Value:after="LoadAdjustmentSlotsAsync" Disabled="@isAdjusting">
+                        @foreach (var professional in adjustmentProfessionals)
+                        {
+                            <MudSelectItem Value="@((Guid?)professional.Id)">@professional.CompanyMemberName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Opcional" Clearable="true" @bind-Value="adjustmentWorkOrderId" @bind-Value:after="OnAdjustmentWorkOrderChangedAsync" Disabled="@isAdjusting">
+                        @foreach (var workOrder in adjustmentWorkOrders)
+                        {
+                            <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Data" @bind-Date="adjustmentDate" @bind-Date:after="LoadAdjustmentSlotsAsync" Disabled="@isAdjusting" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="TimeOnly?" Label="Horário" @bind-Value="adjustmentStartTime" Disabled="@(isAdjusting || adjustmentSlots.Count == 0)">
+                        @foreach (var slot in adjustmentSlots)
+                        {
+                            <MudSelectItem Value="@((TimeOnly?)slot.StartTime)">@slot.StartTime.ToString("HH:mm")</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="Motivo do ajuste" Lines="2" Required="true" @bind-Value="adjustmentReason" Disabled="@isAdjusting" />
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseAdjustmentDialog" Disabled="@isAdjusting">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="AdjustAppointmentAsync" Disabled="@(isAdjustmentOptionsLoading || isAdjusting)">@(isAdjusting ? "Salvando..." : "Salvar ajuste")</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="isCancelDialogOpen">
+    <TitleContent><MudText Typo="Typo.h6">Cancelar agendamento</MudText></TitleContent>
+    <DialogContent>
+        <MudText>Deseja cancelar este agendamento? Esta ação não poderá ser desfeita.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCancelDialog" Disabled="@isChangingStatus">Voltar</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="CancelAppointmentAsync" Disabled="@isChangingStatus">@(isChangingStatus ? "Cancelando..." : "Cancelar agendamento")</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [SupplyParameterFromQuery(Name = "new")]
+    public bool OpenNewAppointment { get; set; }
+
+    private DateTime? startDate;
+    private DateTime? endDate;
+    private IReadOnlyList<AppointmentDto> appointments = [];
+    private WorkOrderAccessScope? accessScope;
+    private bool isOwner;
+    private bool isInitialLoadComplete;
+    private bool isLoading;
+    private bool isAppointmentDialogOpen;
+    private bool isAppointmentOptionsLoading;
+    private bool isCreatingAppointment;
+    private bool isAdjustmentDialogOpen;
+    private bool isAdjustmentOptionsLoading;
+    private bool isAdjusting;
+    private bool isCancelDialogOpen;
+    private bool isChangingStatus;
+    private IReadOnlyList<CustomerDto> appointmentCustomers = [];
+    private IReadOnlyList<EquipmentDto> appointmentEquipment = [];
+    private IReadOnlyList<ServiceDto> appointmentServices = [];
+    private IReadOnlyList<ProfessionalDto> appointmentProfessionals = [];
+    private IReadOnlyList<WorkOrderListItem> appointmentWorkOrders = [];
+    private IReadOnlyList<AppointmentSlotDto> availableAppointmentSlots = [];
+    private Guid? appointmentCustomerId;
+    private Guid? appointmentEquipmentId;
+    private Guid? appointmentServiceId;
+    private Guid? appointmentProfessionalId;
+    private Guid? appointmentWorkOrderId;
+    private DateTime? appointmentDate;
+    private TimeOnly? appointmentStartTime;
+    private string? appointmentNotes;
+    private AppointmentDto? appointmentToAdjust;
+    private AppointmentDto? appointmentToCancel;
+    private IReadOnlyList<ProfessionalDto> adjustmentProfessionals = [];
+    private IReadOnlyList<WorkOrderListItem> adjustmentWorkOrders = [];
+    private IReadOnlyList<ServiceDto> adjustmentServices = [];
+    private IReadOnlyList<AppointmentSlotDto> adjustmentSlots = [];
+    private Guid? adjustmentProfessionalId;
+    private Guid? adjustmentWorkOrderId;
+    private DateTime? adjustmentDate;
+    private TimeOnly? adjustmentStartTime;
+    private string? adjustmentReason;
+    private int adjustmentDurationMinutes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var today = DateOnly.FromDateTime(TimeProvider.GetLocalNow().DateTime);
+        startDate = today.ToDateTime(TimeOnly.MinValue);
+        endDate = today.AddDays(6).ToDateTime(TimeOnly.MinValue);
+        accessScope = await WorkOrderAuthorization.GetAccessScopeAsync();
+        isOwner = accessScope.IsOwner;
+        await LoadAsync();
+        if (OpenNewAppointment && (isOwner || accessScope?.ProfessionalId is not null))
+        {
+            await OpenAppointmentDialogAsync();
+        }
+
+        isInitialLoadComplete = true;
+    }
+
+    private async Task ShowTodayAsync()
+    {
+        var today = DateOnly.FromDateTime(TimeProvider.GetLocalNow().DateTime);
+        startDate = today.ToDateTime(TimeOnly.MinValue);
+        endDate = startDate;
+        await LoadAsync();
+    }
+
+    private async Task ShowWeekAsync()
+    {
+        var today = DateOnly.FromDateTime(TimeProvider.GetLocalNow().DateTime);
+        var monday = today.AddDays(-((int)(today.DayOfWeek + 6) % 7));
+        startDate = monday.ToDateTime(TimeOnly.MinValue);
+        endDate = monday.AddDays(6).ToDateTime(TimeOnly.MinValue);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (startDate is null || endDate is null || endDate < startDate)
+        {
+            appointments = [];
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            var startAtUtc = new DateTimeOffset(DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc));
+            var endAtUtc = new DateTimeOffset(DateTime.SpecifyKind(endDate.Value.Date.AddDays(1), DateTimeKind.Utc));
+            appointments = accessScope is { } currentAccessScope
+                ? await GetAppointmentsUseCase.ExecuteAsync(currentAccessScope, startAtUtc, endAtUtc)
+                : [];
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OpenAppointmentDialogAsync()
+    {
+        isAppointmentDialogOpen = true;
+        isAppointmentOptionsLoading = true;
+        appointmentCustomerId = null;
+        appointmentEquipmentId = null;
+        appointmentServiceId = null;
+        appointmentProfessionalId = null;
+        appointmentWorkOrderId = null;
+        appointmentStartTime = null;
+        appointmentNotes = null;
+        appointmentEquipment = [];
+        appointmentProfessionals = [];
+        appointmentWorkOrders = [];
+        availableAppointmentSlots = [];
+        appointmentDate = TimeProvider.GetLocalNow().DateTime.Date;
+
+        try
+        {
+            if (isOwner)
+            {
+                appointmentCustomers = (await GetCustomersUseCase.ExecuteAsync()).Where(customer => customer.IsActive).ToArray();
+                appointmentServices = (await GetServicesUseCase.ExecuteAsync()).Where(service => service.IsActive).ToArray();
+                appointmentProfessionals = (await GetProfessionalsUseCase.ExecuteAsync()).Where(professional => professional.IsActive).ToArray();
+                appointmentWorkOrders = (await GetWorkOrdersUseCase.ExecuteAsync(new GetWorkOrdersQuery(null, null)))
+                    .Where(workOrder => workOrder.Status is ServiceSync.Domain.Enums.WorkOrderStatus.Pending or ServiceSync.Domain.Enums.WorkOrderStatus.InProgress)
+                    .ToArray();
+            }
+            else
+            {
+                appointmentServices = (await GetServicesUseCase.ExecuteAsync()).Where(service => service.IsActive).ToArray();
+                appointmentWorkOrders = (await GetWorkOrdersUseCase.ExecuteAsync(new GetWorkOrdersQuery(null, null)))
+                    .Where(workOrder => workOrder.Status is ServiceSync.Domain.Enums.WorkOrderStatus.Pending or ServiceSync.Domain.Enums.WorkOrderStatus.InProgress)
+                    .ToArray();
+            }
+        }
+        finally
+        {
+            isAppointmentOptionsLoading = false;
+        }
+    }
+
+    private void CloseAppointmentDialog()
+    {
+        if (!isCreatingAppointment)
+        {
+            isAppointmentDialogOpen = false;
+        }
+    }
+
+    private async Task LoadAppointmentEquipmentAsync()
+    {
+        appointmentEquipmentId = null;
+        appointmentEquipment = appointmentCustomerId is { } customerId
+            ? (await GetCustomerEquipmentUseCase.ExecuteAsync(customerId)).Where(equipment => equipment.IsActive).ToArray()
+            : [];
+    }
+
+    private async Task OnAppointmentServiceChangedAsync()
+    {
+        if (isOwner)
+        {
+            appointmentProfessionalId = null;
+        }
+
+        appointmentStartTime = null;
+        availableAppointmentSlots = [];
+        await Task.CompletedTask;
+    }
+
+    private async Task OnAppointmentWorkOrderChangedAsync()
+    {
+        appointmentStartTime = null;
+        availableAppointmentSlots = [];
+        appointmentCustomerId = null;
+        appointmentEquipmentId = null;
+        appointmentServiceId = null;
+        appointmentProfessionalId = isOwner ? null : accessScope?.ProfessionalId;
+
+        if (appointmentWorkOrderId is not { } workOrderId)
+        {
+            return;
+        }
+
+        var workOrder = await GetWorkOrderDetailsUseCase.ExecuteAsync(workOrderId);
+        if (workOrder is null || workOrder.ProfessionalId is null || !isOwner && workOrder.ProfessionalId != appointmentProfessionalId)
+        {
+            appointmentWorkOrderId = null;
+            appointmentProfessionalId = null;
+            Snackbar.Add("A ordem de serviço não está disponível para agendamento.", Severity.Warning);
+            return;
+        }
+
+        appointmentCustomerId = workOrder.CustomerId;
+        appointmentEquipmentId = workOrder.EquipmentId;
+        appointmentServiceId = workOrder.ServiceId;
+        appointmentProfessionalId = workOrder.ProfessionalId;
+        await LoadAvailableAppointmentSlotsAsync();
+    }
+
+    private async Task LoadAvailableAppointmentSlotsAsync()
+    {
+        appointmentStartTime = null;
+        availableAppointmentSlots = [];
+        if (appointmentProfessionalId is not { } professionalId || appointmentDate is null || GetSelectedAppointmentService() is not { } service)
+        {
+            return;
+        }
+
+        availableAppointmentSlots = await GetAvailableAppointmentSlotsUseCase.ExecuteAsync(
+            professionalId,
+            DateOnly.FromDateTime(appointmentDate.Value),
+            service.DurationMinutes);
+    }
+
+    private async Task CreateAppointmentAsync()
+    {
+        if (appointmentProfessionalId is not { } professionalId || appointmentDate is null || appointmentStartTime is null || GetSelectedAppointmentService() is not { } service || !isOwner && appointmentWorkOrderId is null)
+        {
+            Snackbar.Add("Selecione serviço, profissional, data e horário.", Severity.Warning);
+            return;
+        }
+
+        isCreatingAppointment = true;
+        try
+        {
+            var result = await CreateAppointmentUseCase.ExecuteAsync(new CreateAppointmentCommand(
+                professionalId,
+                DateOnly.FromDateTime(appointmentDate.Value),
+                appointmentStartTime.Value,
+                service.DurationMinutes,
+                appointmentCustomerId,
+                appointmentEquipmentId,
+                service.Id,
+                appointmentWorkOrderId,
+                appointmentNotes));
+
+            if (result.Code == SchedulingOperationResultCode.Success)
+            {
+                isAppointmentDialogOpen = false;
+                Snackbar.Add("Agendamento criado.", Severity.Success);
+                await LoadAsync();
+                return;
+            }
+
+            Snackbar.Add(GetAppointmentCreationError(result.Code), Severity.Error);
+            await LoadAvailableAppointmentSlotsAsync();
+        }
+        finally
+        {
+            isCreatingAppointment = false;
+        }
+    }
+
+    private async Task OpenAdjustmentDialogAsync(AppointmentDto appointment)
+    {
+        appointmentToAdjust = appointment;
+        adjustmentProfessionalId = appointment.ProfessionalId;
+        adjustmentWorkOrderId = appointment.WorkOrderId;
+        adjustmentDate = appointment.StartAtUtc.ToLocalTime().Date;
+        adjustmentDurationMinutes = (int)(appointment.EndAtUtc - appointment.StartAtUtc).TotalMinutes;
+        adjustmentStartTime = null;
+        adjustmentReason = null;
+        adjustmentSlots = [];
+        isAdjustmentDialogOpen = true;
+        isAdjustmentOptionsLoading = true;
+
+        try
+        {
+            adjustmentProfessionals = (await GetProfessionalsUseCase.ExecuteAsync()).Where(professional => professional.IsActive).ToArray();
+            adjustmentServices = (await GetServicesUseCase.ExecuteAsync()).Where(service => service.IsActive).ToArray();
+            adjustmentWorkOrders = (await GetWorkOrdersUseCase.ExecuteAsync(new GetWorkOrdersQuery(null, null)))
+                .Where(workOrder => workOrder.Status is ServiceSync.Domain.Enums.WorkOrderStatus.Pending or ServiceSync.Domain.Enums.WorkOrderStatus.InProgress)
+                .ToArray();
+            await LoadAdjustmentSlotsAsync();
+            var currentStartTime = TimeOnly.FromDateTime(appointment.StartAtUtc.ToLocalTime().DateTime);
+            adjustmentStartTime = adjustmentSlots.Any(slot => slot.StartTime == currentStartTime) ? currentStartTime : null;
+        }
+        finally
+        {
+            isAdjustmentOptionsLoading = false;
+        }
+    }
+
+    private void CloseAdjustmentDialog()
+    {
+        if (!isAdjusting)
+        {
+            isAdjustmentDialogOpen = false;
+            appointmentToAdjust = null;
+        }
+    }
+
+    private async Task LoadAdjustmentSlotsAsync()
+    {
+        adjustmentStartTime = null;
+        adjustmentSlots = [];
+        if (appointmentToAdjust is null || adjustmentProfessionalId is not { } professionalId || adjustmentDate is null)
+        {
+            return;
+        }
+
+        adjustmentSlots = await GetAvailableAppointmentSlotsUseCase.ExecuteAsync(
+            professionalId,
+            DateOnly.FromDateTime(adjustmentDate.Value),
+            adjustmentDurationMinutes,
+            appointmentToAdjust.Id);
+    }
+
+    private async Task OnAdjustmentWorkOrderChangedAsync()
+    {
+        adjustmentDurationMinutes = appointmentToAdjust is null ? 0 : (int)(appointmentToAdjust.EndAtUtc - appointmentToAdjust.StartAtUtc).TotalMinutes;
+        if (adjustmentWorkOrderId is { } workOrderId)
+        {
+            var workOrder = await GetWorkOrderDetailsUseCase.ExecuteAsync(workOrderId);
+            var service = workOrder is null ? null : adjustmentServices.SingleOrDefault(item => item.Id == workOrder.ServiceId);
+            if (service is not null)
+            {
+                adjustmentDurationMinutes = service.DurationMinutes;
+            }
+        }
+
+        await LoadAdjustmentSlotsAsync();
+    }
+
+    private async Task AdjustAppointmentAsync()
+    {
+        if (appointmentToAdjust is null || adjustmentProfessionalId is not { } professionalId || adjustmentDate is null || adjustmentStartTime is null || string.IsNullOrWhiteSpace(adjustmentReason))
+        {
+            Snackbar.Add("Informe profissional, data, horário e motivo do ajuste.", Severity.Warning);
+            return;
+        }
+
+        isAdjusting = true;
+        try
+        {
+            var result = await AdjustAppointmentUseCase.ExecuteAsync(
+                appointmentToAdjust.Id,
+                new AdjustAppointmentCommand(professionalId, DateOnly.FromDateTime(adjustmentDate.Value), adjustmentStartTime.Value, adjustmentReason, adjustmentWorkOrderId));
+            if (result.Code == SchedulingOperationResultCode.Success)
+            {
+                isAdjustmentDialogOpen = false;
+                appointmentToAdjust = null;
+                Snackbar.Add("Agendamento ajustado.", Severity.Success);
+                await LoadAsync();
+                return;
+            }
+
+            Snackbar.Add(GetAppointmentOperationError(result.Code), Severity.Error);
+            await LoadAdjustmentSlotsAsync();
+        }
+        finally
+        {
+            isAdjusting = false;
+        }
+    }
+
+    private async Task StartAppointmentAsync(Guid appointmentId)
+    {
+        await ChangeAppointmentStatusAsync(await StartAppointmentUseCase.ExecuteAsync(appointmentId), "Atendimento iniciado.");
+    }
+
+    private async Task CompleteAppointmentAsync(Guid appointmentId)
+    {
+        await ChangeAppointmentStatusAsync(await CompleteAppointmentUseCase.ExecuteAsync(appointmentId), "Atendimento concluído.");
+    }
+
+    private void OpenCancelDialog(AppointmentDto appointment)
+    {
+        appointmentToCancel = appointment;
+        isCancelDialogOpen = true;
+    }
+
+    private void CloseCancelDialog()
+    {
+        if (!isChangingStatus)
+        {
+            isCancelDialogOpen = false;
+            appointmentToCancel = null;
+        }
+    }
+
+    private async Task CancelAppointmentAsync()
+    {
+        if (appointmentToCancel is null)
+        {
+            return;
+        }
+
+        isChangingStatus = true;
+        try
+        {
+            var result = await CancelAppointmentUseCase.ExecuteAsync(appointmentToCancel.Id);
+            if (result.Code == SchedulingOperationResultCode.Success)
+            {
+                isCancelDialogOpen = false;
+                appointmentToCancel = null;
+                Snackbar.Add("Agendamento cancelado.", Severity.Success);
+                await LoadAsync();
+                return;
+            }
+
+            Snackbar.Add(GetAppointmentOperationError(result.Code), Severity.Error);
+        }
+        finally
+        {
+            isChangingStatus = false;
+        }
+    }
+
+    private async Task ChangeAppointmentStatusAsync(SchedulingOperationResult result, string successMessage)
+    {
+        if (result.Code != SchedulingOperationResultCode.Success)
+        {
+            Snackbar.Add(GetAppointmentOperationError(result.Code), Severity.Error);
+            return;
+        }
+
+        Snackbar.Add(successMessage, Severity.Success);
+        await LoadAsync();
+    }
+
+    private IReadOnlyList<ProfessionalDto> availableAppointmentProfessionals => appointmentServiceId is { } serviceId
+        ? appointmentProfessionals.Where(professional => professional.ServiceIds.Contains(serviceId)).ToArray()
+        : [];
+
+    private ServiceDto? GetSelectedAppointmentService() => appointmentServiceId is { } serviceId
+        ? appointmentServices.SingleOrDefault(service => service.Id == serviceId)
+        : null;
+
+    private static string GetEquipmentName(EquipmentDto equipment) => string.Join(
+        " ",
+        new[] { equipment.Type, equipment.Manufacturer, equipment.Model }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+    private static string GetAppointmentCreationError(SchedulingOperationResultCode code) => code switch
+    {
+        SchedulingOperationResultCode.ProfessionalUnavailable or SchedulingOperationResultCode.AppointmentConflict => "O profissional não está disponível nesse horário.",
+        SchedulingOperationResultCode.NotFound => "Um dos dados selecionados não está mais disponível.",
+        SchedulingOperationResultCode.Forbidden => "Você não tem permissão para criar este agendamento.",
+        _ => "Não foi possível criar o agendamento. Revise os dados informados."
+    };
+
+    private static string GetAppointmentOperationError(SchedulingOperationResultCode code) => code switch
+    {
+        SchedulingOperationResultCode.ProfessionalUnavailable or SchedulingOperationResultCode.AppointmentConflict => "O profissional não está disponível nesse horário.",
+        SchedulingOperationResultCode.InvalidStatus => "Este agendamento não permite essa ação.",
+        SchedulingOperationResultCode.Forbidden => "Você não tem permissão para esta ação.",
+        SchedulingOperationResultCode.NotFound => "O agendamento não está mais disponível.",
+        _ => "Não foi possível atualizar o agendamento."
+    };
+
+    private static string GetStatusName(ServiceSync.Domain.Enums.AppointmentStatus status) => status switch
+    {
+        ServiceSync.Domain.Enums.AppointmentStatus.Completed => "Concluído",
+        ServiceSync.Domain.Enums.AppointmentStatus.Cancelled => "Cancelado",
+        ServiceSync.Domain.Enums.AppointmentStatus.InProgress => "Em andamento",
+        _ => "Agendado"
+    };
+}

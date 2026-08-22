@@ -19,6 +19,8 @@ public sealed class Professional : ICompanyScopedEntity
 
     public bool IsActive { get; private set; }
 
+    public string TimeZoneId { get; private set; } = null!;
+
     public IReadOnlyCollection<ProfessionalService> ProfessionalServices => _professionalServices;
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
@@ -29,6 +31,7 @@ public sealed class Professional : ICompanyScopedEntity
         Guid companyId,
         Guid companyUserId,
         IEnumerable<Guid> serviceIds,
+        string timeZoneId,
         DateTimeOffset now)
     {
         EnsureCompanyAndMember(companyId, companyUserId);
@@ -40,6 +43,7 @@ public sealed class Professional : ICompanyScopedEntity
             CompanyId = companyId,
             CompanyUserId = companyUserId,
             IsActive = true,
+            TimeZoneId = NormalizeTimeZoneId(timeZoneId),
             CreatedAtUtc = utcNow,
             UpdatedAtUtc = utcNow
         };
@@ -48,7 +52,7 @@ public sealed class Professional : ICompanyScopedEntity
         return professional;
     }
 
-    public void Update(Guid companyUserId, IEnumerable<Guid> serviceIds, DateTimeOffset now)
+    public void Update(Guid companyUserId, IEnumerable<Guid> serviceIds, string timeZoneId, DateTimeOffset now)
     {
         if (companyUserId == Guid.Empty)
         {
@@ -56,6 +60,7 @@ public sealed class Professional : ICompanyScopedEntity
         }
 
         CompanyUserId = companyUserId;
+        TimeZoneId = NormalizeTimeZoneId(timeZoneId);
         ReplaceServices(NormalizeServiceIds(serviceIds));
         UpdatedAtUtc = now.ToUniversalTime();
     }
@@ -108,5 +113,16 @@ public sealed class Professional : ICompanyScopedEntity
         }
 
         return normalizedServiceIds;
+    }
+
+    private static string NormalizeTimeZoneId(string timeZoneId)
+    {
+        var normalized = timeZoneId?.Trim();
+        if (string.IsNullOrWhiteSpace(normalized) || normalized.Length > 100)
+        {
+            throw new DomainException("Time zone ID is required and cannot exceed 100 characters.");
+        }
+
+        return normalized;
     }
 }

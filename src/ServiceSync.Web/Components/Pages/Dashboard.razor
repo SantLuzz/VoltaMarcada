@@ -1,10 +1,272 @@
 @page "/"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@using ServiceSync.Application.Scheduling
+@using ServiceSync.Application.WorkOrders
+@inject WorkOrderAuthorization WorkOrderAuthorization
+@inject GetAppointmentsUseCase GetAppointmentsUseCase
+@inject GetAppointmentDetailsUseCase GetAppointmentDetailsUseCase
+@inject GetScheduleBlockRequestsUseCase GetScheduleBlockRequestsUseCase
+@inject TimeProvider TimeProvider
 
 <PageTitle>Painel | ServiceSync</PageTitle>
 
-<PageHeader Title="Painel" Description="Acompanhe os próximos compromissos e oportunidades da sua operação." />
+<PageHeader Title="@(isOwner ? "Painel operacional" : "Minha agenda")" Description="@(isOwner ? "Acompanhe o que precisa de ação na sua operação." : "Veja onde precisa ir e o que precisa fazer.")">
+    <Actions>
+        @if (isOwner || accessScope?.ProfessionalId is not null)
+        {
+            <MudButton Href="/agenda?new=true" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add">Novo agendamento</MudButton>
+        }
+    </Actions>
+</PageHeader>
 
-<EmptyState Icon="@Icons.Material.Filled.SpaceDashboard"
-            Title="Seu painel operacional será exibido aqui"
-            Description="À medida que clientes, serviços e atendimentos forem cadastrados, você terá uma visão clara das próximas ações." />
+<MudPaper Outlined="true" Class="dashboard-agenda mt-4">
+    <div class="dashboard-agenda-toolbar">
+        <div>
+            <MudText Typo="Typo.h6">@(isOwner ? "Agenda semanal" : "Minha agenda diária")</MudText>
+            <MudText Color="Color.Secondary">@GetPeriodDescription()</MudText>
+        </div>
+        <MudStack Row="true" Spacing="1">
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" AriaLabel="Período anterior" OnClick="ShowPreviousPeriodAsync" Disabled="@isLoading" />
+            <MudButton Variant="Variant.Outlined" OnClick="ShowTodayAsync" Disabled="@isLoading">Hoje</MudButton>
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" AriaLabel="Próximo período" OnClick="ShowNextPeriodAsync" Disabled="@isLoading" />
+        </MudStack>
+    </div>
+
+    @if (isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Class="mt-4" />
+    }
+    else if (isOwner)
+    {
+        <div class="dashboard-week-calendar">
+            @foreach (var day in GetVisibleDays())
+            {
+                var dayAppointments = GetAppointmentsForDay(day);
+                <section class="dashboard-calendar-day @(day == today ? "dashboard-calendar-day-current" : null)">
+                    <header class="dashboard-calendar-day-header">
+                        <MudText Typo="Typo.subtitle2">@day.ToString("ddd", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))</MudText>
+                        <MudText Typo="Typo.caption">@day.ToString("dd/MM")</MudText>
+                        @if (day == today)
+                        {
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Class="dashboard-calendar-today-chip">Hoje</MudChip>
+                        }
+                    </header>
+                    @if (dayAppointments.Count == 0)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="dashboard-calendar-empty">Sem compromissos</MudText>
+                    }
+                    else
+                    {
+                        <div class="dashboard-calendar-appointments">
+                            @foreach (var appointment in dayAppointments)
+                            {
+                                <AppointmentCard Appointment="appointment" OnSelected="OpenAppointmentDetailsAsync" />
+                            }
+                        </div>
+                    }
+                </section>
+            }
+        </div>
+    }
+    else
+    {
+        var dayAppointments = GetAppointmentsForDay(visibleStartDate);
+        <section class="dashboard-day-calendar">
+            @if (dayAppointments.Count == 0)
+            {
+                <EmptyState Icon="@Icons.Material.Filled.EventBusy" Title="Nenhum atendimento" Description="Você não tem compromissos neste dia." />
+            }
+            else
+            {
+                <div class="dashboard-calendar-appointments">
+                    @foreach (var appointment in dayAppointments)
+                    {
+                        <AppointmentCard Appointment="appointment" OnSelected="OpenAppointmentDetailsAsync" />
+                    }
+                </div>
+            }
+        </section>
+    }
+</MudPaper>
+
+@if (isOwner && pendingBlockRequests > 0)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-4">@pendingBlockRequests solicitação(ões) de bloqueio aguardam sua análise.</MudAlert>
+}
+
+<MudDialog @bind-Visible="isAppointmentDetailsDialogOpen">
+    <TitleContent><MudText Typo="Typo.h6">Detalhes do atendimento</MudText></TitleContent>
+    <DialogContent>
+        @if (isLoadingAppointmentDetails)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (appointmentDetails is not null)
+        {
+            <MudStack Spacing="2">
+                <div>
+                    <MudText Typo="Typo.overline">Horário</MudText>
+                    <MudText>@appointmentDetails.StartAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm") às @appointmentDetails.EndAtUtc.ToLocalTime().ToString("HH:mm")</MudText>
+                </div>
+                <div>
+                    <MudText Typo="Typo.overline">Status</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="@GetAppointmentStatusColor(appointmentDetails.Status)">@GetAppointmentStatusName(appointmentDetails.Status)</MudChip>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(appointmentDetails.Notes))
+                {
+                    <div>
+                        <MudText Typo="Typo.overline">Observações</MudText>
+                        <MudText>@appointmentDetails.Notes</MudText>
+                    </div>
+                }
+                @if (appointmentDetails.Customer is { } customer)
+                {
+                    <MudDivider />
+                    <div>
+                        <MudText Typo="Typo.h6">Cliente</MudText>
+                        <MudText>@customer.Name</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@customer.WhatsApp</MudText>
+                        @if (!string.IsNullOrWhiteSpace(customer.Email))
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@customer.Email</MudText>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(customer.PrimaryAddress))
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@customer.PrimaryAddress</MudText>
+                        }
+                    </div>
+                }
+            </MudStack>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Warning">Atendimento não encontrado ou indisponível.</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (appointmentDetails?.WorkOrderId is { } workOrderId)
+        {
+            <MudButton Href="@($"/ordens-servico/registro?id={workOrderId}")" Color="Color.Primary" Variant="Variant.Filled">Abrir OS</MudButton>
+        }
+        <MudButton OnClick="CloseAppointmentDetailsDialog">Fechar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private IReadOnlyList<AppointmentDto> appointments = [];
+    private WorkOrderAccessScope? accessScope;
+    private DateOnly currentDate;
+    private DateOnly today;
+    private DateOnly visibleStartDate;
+    private bool isLoading = true;
+    private bool isAppointmentDetailsDialogOpen;
+    private bool isLoadingAppointmentDetails;
+    private bool isOwner;
+    private int pendingBlockRequests;
+    private AppointmentDetailsDto? appointmentDetails;
+
+    protected override async Task OnInitializedAsync()
+    {
+        today = DateOnly.FromDateTime(TimeProvider.GetLocalNow().DateTime);
+        currentDate = today;
+        accessScope = await WorkOrderAuthorization.GetAccessScopeAsync();
+        isOwner = accessScope.IsOwner;
+        await LoadAsync();
+    }
+
+    private async Task ShowPreviousPeriodAsync()
+    {
+        currentDate = currentDate.AddDays(isOwner ? -7 : -1);
+        await LoadAsync();
+    }
+
+    private async Task ShowNextPeriodAsync()
+    {
+        currentDate = currentDate.AddDays(isOwner ? 7 : 1);
+        await LoadAsync();
+    }
+
+    private async Task ShowTodayAsync()
+    {
+        currentDate = today;
+        await LoadAsync();
+    }
+
+    private async Task OpenAppointmentDetailsAsync(Guid appointmentId)
+    {
+        isAppointmentDetailsDialogOpen = true;
+        isLoadingAppointmentDetails = true;
+        appointmentDetails = null;
+        try
+        {
+            appointmentDetails = await GetAppointmentDetailsUseCase.ExecuteAsync(appointmentId);
+        }
+        finally
+        {
+            isLoadingAppointmentDetails = false;
+        }
+    }
+
+    private void CloseAppointmentDetailsDialog()
+    {
+        isAppointmentDetailsDialogOpen = false;
+        appointmentDetails = null;
+    }
+
+    private async Task LoadAsync()
+    {
+        if (accessScope is not { } currentAccessScope)
+        {
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            visibleStartDate = isOwner
+                ? currentDate.AddDays(-((int)(currentDate.DayOfWeek + 6) % 7))
+                : currentDate;
+            var endDate = isOwner ? visibleStartDate.AddDays(7) : visibleStartDate.AddDays(1);
+            var startAtUtc = new DateTimeOffset(DateTime.SpecifyKind(visibleStartDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc));
+            var endAtUtc = new DateTimeOffset(DateTime.SpecifyKind(endDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc));
+            appointments = await GetAppointmentsUseCase.ExecuteAsync(currentAccessScope, startAtUtc, endAtUtc);
+
+            if (isOwner)
+            {
+                pendingBlockRequests = (await GetScheduleBlockRequestsUseCase.ExecuteAsync(currentAccessScope))
+                    .Count(request => request.Status is ServiceSync.Domain.Enums.ScheduleBlockRequestStatus.Pending or ServiceSync.Domain.Enums.ScheduleBlockRequestStatus.RequiresAppointmentResolution);
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private IReadOnlyList<DateOnly> GetVisibleDays() => Enumerable.Range(0, 7).Select(offset => visibleStartDate.AddDays(offset)).ToArray();
+
+    private IReadOnlyList<AppointmentDto> GetAppointmentsForDay(DateOnly day) => appointments
+        .Where(appointment => DateOnly.FromDateTime(appointment.StartAtUtc.ToLocalTime().DateTime) == day)
+        .OrderBy(appointment => appointment.StartAtUtc)
+        .ToArray();
+
+    private string GetPeriodDescription() => isOwner
+        ? $"{visibleStartDate:dd/MM} a {visibleStartDate.AddDays(6):dd/MM}"
+        : visibleStartDate.ToString("dddd, dd 'de' MMMM", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+
+    private static Color GetAppointmentStatusColor(ServiceSync.Domain.Enums.AppointmentStatus status) => status switch
+    {
+        ServiceSync.Domain.Enums.AppointmentStatus.Completed => Color.Success,
+        ServiceSync.Domain.Enums.AppointmentStatus.Cancelled => Color.Error,
+        ServiceSync.Domain.Enums.AppointmentStatus.InProgress => Color.Info,
+        _ => Color.Primary
+    };
+
+    private static string GetAppointmentStatusName(ServiceSync.Domain.Enums.AppointmentStatus status) => status switch
+    {
+        ServiceSync.Domain.Enums.AppointmentStatus.Completed => "Concluído",
+        ServiceSync.Domain.Enums.AppointmentStatus.Cancelled => "Cancelado",
+        ServiceSync.Domain.Enums.AppointmentStatus.InProgress => "Em andamento",
+        _ => "Agendado"
+    };
+}
