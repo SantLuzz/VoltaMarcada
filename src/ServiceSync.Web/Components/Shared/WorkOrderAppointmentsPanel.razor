@@ -20,7 +20,7 @@ else
         @foreach (var appointment in appointments)
         {
             <MudListItem T="AppointmentDto" Value="@appointment" Icon="@Icons.Material.Filled.Event">
-                <MudText>@appointment.StartAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</MudText>
+                <MudText>@AppointmentCalendarTime.ToLocalDateTime(appointment.StartAtUtc, appointment.ProfessionalTimeZoneId).ToString("dd/MM HH:mm")</MudText>
                 <MudText Typo="Typo.caption">@GetStatusName(appointment.Status)</MudText>
                 @if (appointment.Status == AppointmentStatus.Scheduled)
                 {

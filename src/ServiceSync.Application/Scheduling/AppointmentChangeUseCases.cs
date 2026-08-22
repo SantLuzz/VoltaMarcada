@@ -19,7 +19,7 @@ public sealed class RescheduleAppointmentUseCase(WorkOrderAuthorization authoriz
         if (!await availability.IsAvailableAsync(professional, command.Date, command.StartTime, duration, appointment.Id, cancellationToken) || !AppointmentAvailability.TryGetUtcInterval(professional.TimeZoneId, command.Date, command.StartTime, duration, out var startAtUtc, out var endAtUtc)) return SchedulingOperationResult.Failure(SchedulingOperationResultCode.ProfessionalUnavailable);
         if (string.IsNullOrWhiteSpace(command.Reason)) return SchedulingOperationResult.Failure(SchedulingOperationResultCode.InvalidInput);
         appointment.Reschedule(startAtUtc, endAtUtc, command.Reason, currentUser.UserId == Guid.Empty ? null : currentUser.UserId, timeProvider.GetUtcNow());
-        await repository.SaveChangesAsync(cancellationToken);
+        if (await repository.TrySaveAppointmentChangesAsync(cancellationToken) == AppointmentPersistenceOutcome.Conflict) return SchedulingOperationResult.Failure(SchedulingOperationResultCode.AppointmentConflict);
         return SchedulingOperationResult.Success(appointment.Id);
     }
 }
@@ -33,11 +33,12 @@ public sealed class ReassignAppointmentUseCase(WorkOrderAuthorization authorizat
         var appointment = await repository.GetForAccessAsync(appointmentId, scope.CompanyId, null, cancellationToken);
         var professional = await professionalRepository.GetForCompanyAsync(professionalId, scope.CompanyId, cancellationToken);
         if (appointment is null || professional is null || !professional.IsActive) return SchedulingOperationResult.Failure(SchedulingOperationResultCode.NotFound);
+        if (appointment.ServiceId is { } serviceId && professional.ProfessionalServices.All(item => item.ServiceId != serviceId)) return SchedulingOperationResult.Failure(SchedulingOperationResultCode.ProfessionalNotQualified);
         var localStart = TimeZoneInfo.ConvertTime(appointment.StartAtUtc, TimeZoneInfo.FindSystemTimeZoneById(professional.TimeZoneId));
         var duration = (int)(appointment.EndAtUtc - appointment.StartAtUtc).TotalMinutes;
         if (!await availability.IsAvailableAsync(professional, DateOnly.FromDateTime(localStart.Date), TimeOnly.FromDateTime(localStart.DateTime), duration, appointment.Id, cancellationToken)) return SchedulingOperationResult.Failure(SchedulingOperationResultCode.ProfessionalUnavailable);
         appointment.Reassign(professionalId, timeProvider.GetUtcNow());
-        await repository.SaveChangesAsync(cancellationToken);
+        if (await repository.TrySaveAppointmentChangesAsync(cancellationToken) == AppointmentPersistenceOutcome.Conflict) return SchedulingOperationResult.Failure(SchedulingOperationResultCode.AppointmentConflict);
         return SchedulingOperationResult.Success(appointment.Id);
     }
 }
@@ -95,7 +96,7 @@ public sealed class AdjustAppointmentUseCase(WorkOrderAuthorization authorizatio
                 now);
         }
 
-        await appointmentRepository.SaveChangesAsync(cancellationToken);
+        if (await appointmentRepository.TrySaveAppointmentChangesAsync(cancellationToken) == AppointmentPersistenceOutcome.Conflict) return SchedulingOperationResult.Failure(SchedulingOperationResultCode.AppointmentConflict);
         return SchedulingOperationResult.Success(appointment.Id);
     }
 }

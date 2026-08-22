@@ -110,6 +110,12 @@ public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorizatio
             }
         }
 
+        if (normalized.ServiceId is { } selectedServiceId &&
+            professional.ProfessionalServices.All(item => item.ServiceId != selectedServiceId))
+        {
+            return SchedulingOperationResult.Failure(SchedulingOperationResultCode.ProfessionalNotQualified);
+        }
+
         if (!await availability.IsAvailableAsync(professional, normalized.Date, normalized.StartTime, normalized.DurationMinutes, cancellationToken: cancellationToken) || !AppointmentAvailability.TryGetUtcInterval(professional.TimeZoneId, normalized.Date, normalized.StartTime, normalized.DurationMinutes, out var startAtUtc, out var endAtUtc))
         {
             return SchedulingOperationResult.Failure(SchedulingOperationResultCode.ProfessionalUnavailable);
@@ -117,12 +123,16 @@ public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorizatio
 
         var appointment = Appointment.Create(scope.CompanyId, professional.Id, normalized.CustomerId, normalized.EquipmentId, normalized.ServiceId, normalized.WorkOrderId, startAtUtc, endAtUtc, normalized.Notes, timeProvider.GetUtcNow());
         await appointmentRepository.AddAsync(appointment, cancellationToken);
-        await appointmentRepository.SaveChangesAsync(cancellationToken);
+        if (await appointmentRepository.TrySaveAppointmentChangesAsync(cancellationToken) == AppointmentPersistenceOutcome.Conflict)
+        {
+            return SchedulingOperationResult.Failure(SchedulingOperationResultCode.AppointmentConflict);
+        }
+
         return SchedulingOperationResult.Success(appointment.Id);
     }
 }
 
-public sealed class GetAppointmentsUseCase(WorkOrderAuthorization authorization, IAppointmentRepository repository)
+public sealed class GetAppointmentsUseCase(WorkOrderAuthorization authorization, IAppointmentRepository repository, IProfessionalRepository professionalRepository)
 {
     public async Task<IReadOnlyList<AppointmentDto>> ExecuteAsync(DateTimeOffset startAtUtc, DateTimeOffset endAtUtc, CancellationToken cancellationToken = default)
     {
@@ -133,11 +143,12 @@ public sealed class GetAppointmentsUseCase(WorkOrderAuthorization authorization,
     public async Task<IReadOnlyList<AppointmentDto>> ExecuteAsync(WorkOrderAccessScope scope, DateTimeOffset startAtUtc, DateTimeOffset endAtUtc, CancellationToken cancellationToken = default)
     {
         var items = await repository.GetRangeForAccessAsync(scope.CompanyId, scope.IsOwner ? null : scope.ProfessionalId ?? Guid.Empty, startAtUtc, endAtUtc, cancellationToken);
-        return items.Select(item => new AppointmentDto(item.Id, item.ProfessionalId, item.CustomerId, item.EquipmentId, item.ServiceId, item.WorkOrderId, item.StartAtUtc, item.EndAtUtc, item.Status, item.Notes)).ToArray();
+        var timeZoneIds = await professionalRepository.GetTimeZoneIdsAsync(scope.CompanyId, items.Select(item => item.ProfessionalId).Distinct().ToArray(), cancellationToken);
+        return items.Select(item => new AppointmentDto(item.Id, item.ProfessionalId, item.CustomerId, item.EquipmentId, item.ServiceId, item.WorkOrderId, item.StartAtUtc, item.EndAtUtc, item.Status, item.Notes, timeZoneIds[item.ProfessionalId])).ToArray();
     }
 }
 
-public sealed class GetAppointmentDetailsUseCase(WorkOrderAuthorization authorization, IAppointmentRepository appointmentRepository, ICustomerRepository customerRepository)
+public sealed class GetAppointmentDetailsUseCase(WorkOrderAuthorization authorization, IAppointmentRepository appointmentRepository, ICustomerRepository customerRepository, IProfessionalRepository professionalRepository)
 {
     public async Task<AppointmentDetailsDto?> ExecuteAsync(Guid appointmentId, CancellationToken cancellationToken = default)
     {
@@ -148,6 +159,12 @@ public sealed class GetAppointmentDetailsUseCase(WorkOrderAuthorization authoriz
             scope.IsOwner ? null : scope.ProfessionalId ?? Guid.Empty,
             cancellationToken);
         if (appointment is null)
+        {
+            return null;
+        }
+
+        var professional = await professionalRepository.GetForCompanyAsync(appointment.ProfessionalId, scope.CompanyId, cancellationToken);
+        if (professional is null)
         {
             return null;
         }
@@ -178,7 +195,8 @@ public sealed class GetAppointmentDetailsUseCase(WorkOrderAuthorization authoriz
             appointment.EndAtUtc,
             appointment.Status,
             appointment.Notes,
-            customer);
+            customer,
+            professional.TimeZoneId);
     }
 }
 

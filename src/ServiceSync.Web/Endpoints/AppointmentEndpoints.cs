@@ -37,6 +37,7 @@ public static class AppointmentEndpoints
         SchedulingOperationResultCode.NotFound => Results.NotFound(),
         SchedulingOperationResultCode.Forbidden => Results.Forbid(),
         SchedulingOperationResultCode.ProfessionalUnavailable or SchedulingOperationResultCode.AppointmentConflict => Results.Conflict(new { error = "O profissional não está disponível nesse horário." }),
+        SchedulingOperationResultCode.ProfessionalNotQualified => Results.BadRequest(new { error = "O profissional não está habilitado para este serviço." }),
         SchedulingOperationResultCode.InvalidStatus => Results.BadRequest(new { error = "O agendamento não permite essa ação." }),
         SchedulingOperationResultCode.BlockRequestRequiresAppointmentResolution => Results.Conflict(new { error = "Existem agendamentos que precisam ser ajustados antes da aprovação." }),
         _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError)

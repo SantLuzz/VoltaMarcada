@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Domain.Entities;
 using ServiceSync.Domain.Enums;
@@ -31,6 +32,22 @@ public sealed class AppointmentRepository(AppDbContext dbContext) : IAppointment
 
     public Task<bool> HasOpenAppointmentsAsync(Guid companyId, Guid workOrderId, CancellationToken cancellationToken = default) =>
         dbContext.Appointments.AsNoTracking().AnyAsync(appointment => appointment.CompanyId == companyId && appointment.WorkOrderId == workOrderId && (appointment.Status == AppointmentStatus.Scheduled || appointment.Status == AppointmentStatus.InProgress), cancellationToken);
+
+    public async Task<AppointmentPersistenceOutcome> TrySaveAppointmentChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return AppointmentPersistenceOutcome.Saved;
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException postgresException &&
+                                                 postgresException.SqlState == PostgresErrorCodes.ExclusionViolation &&
+                                                 postgresException.ConstraintName == "EX_Appointments_OpenProfessionalInterval")
+        {
+            dbContext.ChangeTracker.Clear();
+            return AppointmentPersistenceOutcome.Conflict;
+        }
+    }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);
 }

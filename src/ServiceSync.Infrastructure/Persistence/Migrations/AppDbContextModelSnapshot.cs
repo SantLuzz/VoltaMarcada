@@ -1148,10 +1148,6 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Document")
-                        .IsUnique()
-                        .HasDatabaseName("UX_AspNetUsers_Document");
-
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 

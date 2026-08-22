@@ -36,7 +36,8 @@ public sealed record AppointmentDto(
     DateTimeOffset StartAtUtc,
     DateTimeOffset EndAtUtc,
     AppointmentStatus Status,
-    string? Notes);
+    string? Notes,
+    string ProfessionalTimeZoneId);
 
 public sealed record AppointmentCustomerDetailsDto(
     Guid Id,
@@ -53,7 +54,8 @@ public sealed record AppointmentDetailsDto(
     DateTimeOffset EndAtUtc,
     AppointmentStatus Status,
     string? Notes,
-    AppointmentCustomerDetailsDto? Customer);
+    AppointmentCustomerDetailsDto? Customer,
+    string ProfessionalTimeZoneId);
 
 public sealed record AppointmentSlotDto(TimeOnly StartTime);
 
@@ -83,6 +85,7 @@ public enum SchedulingOperationResultCode
     NotFound,
     Forbidden,
     ProfessionalUnavailable,
+    ProfessionalNotQualified,
     AppointmentConflict,
     InvalidStatus,
     BlockRequestRequiresAppointmentResolution

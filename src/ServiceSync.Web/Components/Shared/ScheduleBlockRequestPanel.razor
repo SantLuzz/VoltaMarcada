@@ -31,7 +31,7 @@
             {
                 <MudListItem T="ScheduleBlockRequestDto" Value="@request" Icon="@Icons.Material.Filled.Block">
                     <MudText>@request.StartDate.ToString("dd/MM") a @request.EndDate.ToString("dd/MM") — @GetStatusName(request.Status)</MudText>
-                    @if (isOwner && request.Status == ScheduleBlockRequestStatus.Pending)
+                    @if (isOwner && (request.Status == ScheduleBlockRequestStatus.Pending || request.Status == ScheduleBlockRequestStatus.RequiresAppointmentResolution))
                     {
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Success" OnClick="@(() => ApproveAsync(request.Id))">Aprovar</MudButton>
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => RejectAsync(request.Id))">Recusar</MudButton>

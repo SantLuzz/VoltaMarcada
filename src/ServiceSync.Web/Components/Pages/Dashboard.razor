@@ -6,6 +6,7 @@
 @inject GetAppointmentsUseCase GetAppointmentsUseCase
 @inject GetAppointmentDetailsUseCase GetAppointmentDetailsUseCase
 @inject GetScheduleBlockRequestsUseCase GetScheduleBlockRequestsUseCase
+@inject ISchedulingConfiguration SchedulingConfiguration
 @inject TimeProvider TimeProvider
 
 <PageTitle>Painel | ServiceSync</PageTitle>
@@ -91,7 +92,11 @@
 
 @if (isOwner && pendingBlockRequests > 0)
 {
-    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-4">@pendingBlockRequests solicitação(ões) de bloqueio aguardam sua análise.</MudAlert>
+    <a class="dashboard-block-request-alert" href="/agenda" aria-label="Ver solicitações de bloqueio na agenda">
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-4">
+            @pendingBlockRequests solicitação(ões) de bloqueio aguardam sua análise. Ver na agenda.
+        </MudAlert>
+    </a>
 }
 
 <MudDialog @bind-Visible="isAppointmentDetailsDialogOpen">
@@ -106,7 +111,7 @@
             <MudStack Spacing="2">
                 <div>
                     <MudText Typo="Typo.overline">Horário</MudText>
-                    <MudText>@appointmentDetails.StartAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm") às @appointmentDetails.EndAtUtc.ToLocalTime().ToString("HH:mm")</MudText>
+                    <MudText>@AppointmentCalendarTime.ToLocalDateTime(appointmentDetails.StartAtUtc, appointmentDetails.ProfessionalTimeZoneId).ToString("dd/MM/yyyy HH:mm") às @AppointmentCalendarTime.ToLocalDateTime(appointmentDetails.EndAtUtc, appointmentDetails.ProfessionalTimeZoneId).ToString("HH:mm")</MudText>
                 </div>
                 <div>
                     <MudText Typo="Typo.overline">Status</MudText>
@@ -167,7 +172,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        today = DateOnly.FromDateTime(TimeProvider.GetLocalNow().DateTime);
+        today = DateOnly.FromDateTime(AppointmentCalendarTime.ToLocalDateTime(TimeProvider.GetUtcNow(), SchedulingConfiguration.DefaultTimeZoneId));
         currentDate = today;
         accessScope = await WorkOrderAuthorization.GetAccessScopeAsync();
         isOwner = accessScope.IsOwner;
@@ -227,9 +232,8 @@
                 ? currentDate.AddDays(-((int)(currentDate.DayOfWeek + 6) % 7))
                 : currentDate;
             var endDate = isOwner ? visibleStartDate.AddDays(7) : visibleStartDate.AddDays(1);
-            var startAtUtc = new DateTimeOffset(DateTime.SpecifyKind(visibleStartDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc));
-            var endAtUtc = new DateTimeOffset(DateTime.SpecifyKind(endDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc));
-            appointments = await GetAppointmentsUseCase.ExecuteAsync(currentAccessScope, startAtUtc, endAtUtc);
+            var range = AppointmentCalendarTime.GetUtcRange(visibleStartDate, endDate, SchedulingConfiguration.AllowedTimeZoneIds);
+            appointments = await GetAppointmentsUseCase.ExecuteAsync(currentAccessScope, range.StartAtUtc, range.EndAtUtc);
 
             if (isOwner)
             {
@@ -246,7 +250,7 @@
     private IReadOnlyList<DateOnly> GetVisibleDays() => Enumerable.Range(0, 7).Select(offset => visibleStartDate.AddDays(offset)).ToArray();
 
     private IReadOnlyList<AppointmentDto> GetAppointmentsForDay(DateOnly day) => appointments
-        .Where(appointment => DateOnly.FromDateTime(appointment.StartAtUtc.ToLocalTime().DateTime) == day)
+        .Where(appointment => DateOnly.FromDateTime(AppointmentCalendarTime.ToLocalDateTime(appointment.StartAtUtc, appointment.ProfessionalTimeZoneId)) == day)
         .OrderBy(appointment => appointment.StartAtUtc)
         .ToArray();
 

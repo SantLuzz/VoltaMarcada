@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using ServiceSync.Application.Abstractions.Identity;
 using ServiceSync.Domain.Entities;
 using ServiceSync.Domain.Enums;
@@ -77,28 +76,11 @@ public sealed class EmployeeInvitationAccountService(
             return EmployeeProfileUpdateOutcome.UserNotFound;
         }
 
-        var documentAlreadyUsed = await dbContext.Users.AsNoTracking().AnyAsync(
-            item => item.Id != userId && item.Document == document,
-            cancellationToken);
-        if (documentAlreadyUsed)
-        {
-            return EmployeeProfileUpdateOutcome.DuplicateDocument;
-        }
-
         user.FullName = fullName.Trim();
         user.Document = document;
         user.Phone = phone.Trim();
         user.Address = address.Trim();
-
-        try
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-            return EmployeeProfileUpdateOutcome.Success;
-        }
-        catch (DbUpdateException exception) when (exception.InnerException is PostgresException
-            { ConstraintName: "UX_AspNetUsers_Document" })
-        {
-            return EmployeeProfileUpdateOutcome.DuplicateDocument;
-        }
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return EmployeeProfileUpdateOutcome.Success;
     }
 }

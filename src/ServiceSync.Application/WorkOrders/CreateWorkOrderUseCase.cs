@@ -36,7 +36,18 @@ public sealed class CreateWorkOrderUseCase(IWorkOrderRepository workOrderReposit
             await appointmentRepository.AddAsync(appointment, cancellationToken);
         }
 
-        await workOrderRepository.SaveChangesAsync(cancellationToken);
+        if (command.Appointment is not null)
+        {
+            if (await appointmentRepository.TrySaveAppointmentChangesAsync(cancellationToken) == AppointmentPersistenceOutcome.Conflict)
+            {
+                return WorkOrderOperationResult.Failure(WorkOrderOperationResultCode.ProfessionalUnavailable);
+            }
+        }
+        else
+        {
+            await workOrderRepository.SaveChangesAsync(cancellationToken);
+        }
+
         return WorkOrderOperationResult.Success(workOrder.Id);
     }
 }

@@ -21,6 +21,7 @@
 @inject GetWorkOrdersUseCase GetWorkOrdersUseCase
 @inject GetWorkOrderDetailsUseCase GetWorkOrderDetailsUseCase
 @inject ISnackbar Snackbar
+@inject ISchedulingConfiguration SchedulingConfiguration
 @inject TimeProvider TimeProvider
 
 <PageTitle>Agenda | ServiceSync</PageTitle>
@@ -67,7 +68,7 @@ else
         @foreach (var appointment in appointments)
         {
             <MudListItem T="AppointmentDto" Value="@appointment" Icon="@Icons.Material.Filled.Event">
-                <MudText>@appointment.StartAtUtc.ToLocalTime().ToString("dd/MM HH:mm") — @GetStatusName(appointment.Status)</MudText>
+                <MudText>@AppointmentCalendarTime.ToLocalDateTime(appointment.StartAtUtc, appointment.ProfessionalTimeZoneId).ToString("dd/MM HH:mm") — @GetStatusName(appointment.Status)</MudText>
                 @if (appointment.WorkOrderId is { } workOrderId)
                 {
                     <MudButton Href="@($"/ordens-servico/registro?id={workOrderId}")" Size="Size.Small" Variant="Variant.Text">Abrir OS</MudButton>
@@ -293,7 +294,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var today = DateOnly.FromDateTime(TimeProvider.GetLocalNow().DateTime);
+        var today = GetCurrentDate();
         startDate = today.ToDateTime(TimeOnly.MinValue);
         endDate = today.AddDays(6).ToDateTime(TimeOnly.MinValue);
         accessScope = await WorkOrderAuthorization.GetAccessScopeAsync();
@@ -309,7 +310,7 @@ else
 
     private async Task ShowTodayAsync()
     {
-        var today = DateOnly.FromDateTime(TimeProvider.GetLocalNow().DateTime);
+        var today = GetCurrentDate();
         startDate = today.ToDateTime(TimeOnly.MinValue);
         endDate = startDate;
         await LoadAsync();
@@ -317,7 +318,7 @@ else
 
     private async Task ShowWeekAsync()
     {
-        var today = DateOnly.FromDateTime(TimeProvider.GetLocalNow().DateTime);
+        var today = GetCurrentDate();
         var monday = today.AddDays(-((int)(today.DayOfWeek + 6) % 7));
         startDate = monday.ToDateTime(TimeOnly.MinValue);
         endDate = monday.AddDays(6).ToDateTime(TimeOnly.MinValue);
@@ -335,10 +336,12 @@ else
         isLoading = true;
         try
         {
-            var startAtUtc = new DateTimeOffset(DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Utc));
-            var endAtUtc = new DateTimeOffset(DateTime.SpecifyKind(endDate.Value.Date.AddDays(1), DateTimeKind.Utc));
+            var range = AppointmentCalendarTime.GetUtcRange(
+                DateOnly.FromDateTime(startDate.Value),
+                DateOnly.FromDateTime(endDate.Value.AddDays(1)),
+                SchedulingConfiguration.AllowedTimeZoneIds);
             appointments = accessScope is { } currentAccessScope
-                ? await GetAppointmentsUseCase.ExecuteAsync(currentAccessScope, startAtUtc, endAtUtc)
+                ? await GetAppointmentsUseCase.ExecuteAsync(currentAccessScope, range.StartAtUtc, range.EndAtUtc)
                 : [];
         }
         finally
@@ -362,7 +365,7 @@ else
         appointmentProfessionals = [];
         appointmentWorkOrders = [];
         availableAppointmentSlots = [];
-        appointmentDate = TimeProvider.GetLocalNow().DateTime.Date;
+        appointmentDate = GetCurrentDate().ToDateTime(TimeOnly.MinValue);
 
         try
         {
@@ -506,7 +509,7 @@ else
         appointmentToAdjust = appointment;
         adjustmentProfessionalId = appointment.ProfessionalId;
         adjustmentWorkOrderId = appointment.WorkOrderId;
-        adjustmentDate = appointment.StartAtUtc.ToLocalTime().Date;
+        adjustmentDate = AppointmentCalendarTime.ToLocalDateTime(appointment.StartAtUtc, appointment.ProfessionalTimeZoneId).Date;
         adjustmentDurationMinutes = (int)(appointment.EndAtUtc - appointment.StartAtUtc).TotalMinutes;
         adjustmentStartTime = null;
         adjustmentReason = null;
@@ -522,7 +525,7 @@ else
                 .Where(workOrder => workOrder.Status is ServiceSync.Domain.Enums.WorkOrderStatus.Pending or ServiceSync.Domain.Enums.WorkOrderStatus.InProgress)
                 .ToArray();
             await LoadAdjustmentSlotsAsync();
-            var currentStartTime = TimeOnly.FromDateTime(appointment.StartAtUtc.ToLocalTime().DateTime);
+            var currentStartTime = TimeOnly.FromDateTime(AppointmentCalendarTime.ToLocalDateTime(appointment.StartAtUtc, appointment.ProfessionalTimeZoneId));
             adjustmentStartTime = adjustmentSlots.Any(slot => slot.StartTime == currentStartTime) ? currentStartTime : null;
         }
         finally
@@ -681,9 +684,13 @@ else
         " ",
         new[] { equipment.Type, equipment.Manufacturer, equipment.Model }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
+    private DateOnly GetCurrentDate() => DateOnly.FromDateTime(
+        AppointmentCalendarTime.ToLocalDateTime(TimeProvider.GetUtcNow(), SchedulingConfiguration.DefaultTimeZoneId));
+
     private static string GetAppointmentCreationError(SchedulingOperationResultCode code) => code switch
     {
         SchedulingOperationResultCode.ProfessionalUnavailable or SchedulingOperationResultCode.AppointmentConflict => "O profissional não está disponível nesse horário.",
+        SchedulingOperationResultCode.ProfessionalNotQualified => "O profissional não está habilitado para este serviço.",
         SchedulingOperationResultCode.NotFound => "Um dos dados selecionados não está mais disponível.",
         SchedulingOperationResultCode.Forbidden => "Você não tem permissão para criar este agendamento.",
         _ => "Não foi possível criar o agendamento. Revise os dados informados."
@@ -692,6 +699,7 @@ else
     private static string GetAppointmentOperationError(SchedulingOperationResultCode code) => code switch
     {
         SchedulingOperationResultCode.ProfessionalUnavailable or SchedulingOperationResultCode.AppointmentConflict => "O profissional não está disponível nesse horário.",
+        SchedulingOperationResultCode.ProfessionalNotQualified => "O profissional não está habilitado para este serviço.",
         SchedulingOperationResultCode.InvalidStatus => "Este agendamento não permite essa ação.",
         SchedulingOperationResultCode.Forbidden => "Você não tem permissão para esta ação.",
         SchedulingOperationResultCode.NotFound => "O agendamento não está mais disponível.",

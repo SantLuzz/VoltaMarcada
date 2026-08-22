@@ -45,6 +45,8 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 .page-header-actions { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 8px; }
 .dashboard-agenda { padding: 24px; }
 .dashboard-agenda-toolbar { align-items: center; display: flex; gap: 16px; justify-content: space-between; margin-bottom: 20px; }
+.dashboard-block-request-alert { display: block; text-decoration: none; }
+.dashboard-block-request-alert .mud-alert { cursor: pointer; }
 .dashboard-week-calendar { display: grid; grid-template-columns: repeat(7, minmax(160px, 1fr)); overflow-x: auto; }
 .dashboard-calendar-day { border-left: 1px solid var(--servicesync-border); min-height: 240px; padding: 12px; }
 .dashboard-calendar-day:first-child { border-left: 0; }
