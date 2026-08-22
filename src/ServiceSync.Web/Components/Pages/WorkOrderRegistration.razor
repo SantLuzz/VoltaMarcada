@@ -37,7 +37,7 @@ else
 {
     <PageHeader Title="@(WorkOrderId is null ? "Nova ordem de serviço" : "Ordem de serviço")" Description="Registre os dados, itens e a execução do atendimento.">
         <Actions>
-            <MudButton Href="/ordens-servico" Variant="Variant.Outlined" Color="Color.Default">Voltar</MudButton>
+            <MudButton OnClick="ReturnToListAsync" Variant="Variant.Outlined" Color="Color.Default" Disabled="@(isExecutionSaving || isPhotoUploading || isReturningToList)">@ReturnButtonText</MudButton>
         </Actions>
     </PageHeader>
 
@@ -138,7 +138,7 @@ else
         @if (detail is not null)
         {
             <MudTabPanel Text="Execução">
-                <WorkOrderExecutionPanel WorkOrder="detail" OnChanged="LoadAsync" />
+                <WorkOrderExecutionPanel @ref="executionPanel" WorkOrder="detail" OnChanged="LoadAsync" OnSavingChanged="SetExecutionSavingAsync" OnPhotoUploadChanged="SetPhotoUploadStateAsync" />
             </MudTabPanel>
         }
     </MudTabs>
@@ -206,6 +206,10 @@ else
     private string reportedProblem = string.Empty;
     private bool isOwner;
     private bool isLoading = true;
+    private bool isExecutionSaving;
+    private bool isPhotoUploading;
+    private bool isReturningToList;
+    private WorkOrderExecutionPanel? executionPanel;
     private bool customerDialogOpen;
     private bool equipmentDialogOpen;
     private string newCustomerName = string.Empty;
@@ -225,6 +229,11 @@ else
     private bool CanEdit => WorkOrderId is null || detail?.Capabilities.CanEdit == true;
     private bool CanAssignProfessional => WorkOrderId is null ? isOwner : detail?.Capabilities.CanAssignProfessional == true;
     private bool IsServicePriceFixed => GetSelectedService()?.PriceType == ServicePriceType.Fixed;
+    private string ReturnButtonText => isPhotoUploading
+        ? "Enviando foto..."
+        : isExecutionSaving || isReturningToList
+            ? "Salvando progresso..."
+            : "Voltar";
 
     protected override async Task OnInitializedAsync()
     {
@@ -301,6 +310,41 @@ else
             ? selectedService.BasePrice
             : null;
         await LoadProfessionalOptions();
+    }
+
+    private async Task ReturnToListAsync()
+    {
+        if (isExecutionSaving || isPhotoUploading || isReturningToList)
+        {
+            return;
+        }
+
+        isReturningToList = true;
+        try
+        {
+            if (executionPanel is not null && !await executionPanel.SavePendingChangesAsync())
+            {
+                return;
+            }
+
+            NavigationManager.NavigateTo("/ordens-servico");
+        }
+        finally
+        {
+            isReturningToList = false;
+        }
+    }
+
+    private Task SetExecutionSavingAsync(bool value)
+    {
+        isExecutionSaving = value;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task SetPhotoUploadStateAsync(bool value)
+    {
+        isPhotoUploading = value;
+        return InvokeAsync(StateHasChanged);
     }
 
     private async Task CreateCustomerAsync()
