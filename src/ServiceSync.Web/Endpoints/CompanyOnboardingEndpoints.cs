@@ -95,6 +95,6 @@ public static class CompanyOnboardingEndpoints
         string Address,
         Guid StateId,
         Guid CityId,
-        IFormFile? Logo,
-        string? ReturnUrl);
+        IFormFile? Logo = null,
+        string? ReturnUrl = null);
 }

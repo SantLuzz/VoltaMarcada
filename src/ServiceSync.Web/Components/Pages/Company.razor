@@ -50,10 +50,10 @@ else if (overview is not null)
             <MudGrid Spacing="2">
                 <MudItem xs="12" sm="6"><CompanyDetail Label="Razão social" Value="@overview.LegalName" /></MudItem>
                 <MudItem xs="12" sm="6"><CompanyDetail Label="Nome fantasia" Value="@overview.TradeName" /></MudItem>
-                <MudItem xs="12" sm="6"><CompanyDetail Label="CPF/CNPJ" Value="@overview.Document" /></MudItem>
+                <MudItem xs="12" sm="6"><CompanyDetail Label="CPF/CNPJ" Value="@FormatDocument(overview.Document)" /></MudItem>
                 <MudItem xs="12" sm="6"><CompanyDetail Label="WhatsApp" Value="@overview.WhatsApp" /></MudItem>
                 <MudItem xs="12"><CompanyDetail Label="Endereço" Value="@overview.Address" /></MudItem>
-                <MudItem xs="12" sm="4"><CompanyDetail Label="CEP" Value="@overview.PostalCode" /></MudItem>
+                <MudItem xs="12" sm="4"><CompanyDetail Label="CEP" Value="@FormatPostalCode(overview.PostalCode)" /></MudItem>
                 <MudItem xs="12" sm="4"><CompanyDetail Label="Cidade" Value="@overview.CityName" /></MudItem>
                 <MudItem xs="12" sm="4"><CompanyDetail Label="Estado" Value="@overview.StateName" /></MudItem>
             </MudGrid>
@@ -442,6 +442,17 @@ else if (overview is not null)
         CompanyUserRole.Employee => Color.Default,
         _ => Color.Default
     };
+
+    private static string FormatDocument(string document) => document.Length switch
+    {
+        11 => $"{document[..3]}.{document[3..6]}.{document[6..9]}-{document[9..]}",
+        14 => $"{document[..2]}.{document[2..5]}.{document[5..8]}/{document[8..12]}-{document[12..]}",
+        _ => document
+    };
+
+    private static string FormatPostalCode(string postalCode) => postalCode.Length == 8
+        ? $"{postalCode[..5]}-{postalCode[5..]}"
+        : postalCode;
 
     private sealed class EmployeeFormModel
     {
