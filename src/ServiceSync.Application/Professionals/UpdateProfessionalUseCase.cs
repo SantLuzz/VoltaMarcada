@@ -1,6 +1,7 @@
 using FluentValidation;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
+using ServiceSync.Application.Scheduling;
 
 namespace ServiceSync.Application.Professionals;
 
@@ -8,6 +9,7 @@ public sealed class UpdateProfessionalUseCase(
     ICurrentCompany currentCompany,
     IProfessionalRepository repository,
     ProfessionalOwnerAuthorization ownerAuthorization,
+    ISchedulingConfiguration schedulingConfiguration,
     IValidator<UpdateProfessionalCommand> validator,
     TimeProvider timeProvider)
 {
@@ -40,8 +42,20 @@ public sealed class UpdateProfessionalUseCase(
             return ProfessionalOperationResult.InvalidService();
         }
 
-        professional.Update(command.CompanyUserId, command.ServiceIds, timeProvider.GetUtcNow());
+        var timeZoneId = NormalizeTimeZoneId(command.TimeZoneId, schedulingConfiguration);
+        if (timeZoneId is null)
+        {
+            return ProfessionalOperationResult.InvalidInput();
+        }
+
+        professional.Update(command.CompanyUserId, command.ServiceIds, timeZoneId, timeProvider.GetUtcNow());
         await repository.SaveChangesAsync(cancellationToken);
         return ProfessionalOperationResult.Success(professional.Id);
+    }
+
+    private static string? NormalizeTimeZoneId(string? value, ISchedulingConfiguration configuration)
+    {
+        var timeZoneId = string.IsNullOrWhiteSpace(value) ? configuration.DefaultTimeZoneId : value.Trim();
+        return configuration.AllowedTimeZoneIds.Contains(timeZoneId) ? timeZoneId : null;
     }
 }

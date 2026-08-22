@@ -1,6 +1,7 @@
 using ServiceSync.Application.Abstractions.Identity;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
+using ServiceSync.Application.Scheduling;
 
 namespace ServiceSync.Application.Professionals;
 
@@ -39,13 +40,13 @@ public sealed class GetCurrentEmployeeProfessionalUseCase(ICurrentUser currentUs
     }
 }
 
-public sealed class GetProfessionalRegistrationOptionsUseCase(ICurrentCompany currentCompany, IProfessionalRepository repository)
+public sealed class GetProfessionalRegistrationOptionsUseCase(ICurrentCompany currentCompany, IProfessionalRepository repository, ISchedulingConfiguration schedulingConfiguration)
 {
     public async Task<ProfessionalRegistrationOptionsDto> ExecuteAsync(Guid? professionalId = null, CancellationToken cancellationToken = default)
     {
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         var members = await repository.GetAvailableCompanyMembersAsync(companyId, professionalId, cancellationToken);
         var services = await repository.GetActiveServicesAsync(companyId, cancellationToken);
-        return new ProfessionalRegistrationOptionsDto(members, services);
+        return new ProfessionalRegistrationOptionsDto(members, services, schedulingConfiguration.AllowedTimeZoneIds.OrderBy(timeZoneId => timeZoneId).ToArray(), schedulingConfiguration.DefaultTimeZoneId);
     }
 }

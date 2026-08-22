@@ -30,7 +30,7 @@ else
         <MudText Typo="Typo.h6">Fotos antes @(WorkOrder.RequireBeforePhotos ? "(obrigatória)" : string.Empty)</MudText>
         @if (CanExecute)
         {
-            <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.Before))" accept="image/*" capture="environment" />
+            <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.Before))" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
         }
         <div class="work-order-photo-grid">
             @foreach (var photo in WorkOrder.Photos.Where(photo => photo.Type == WorkOrderPhotoType.Before))
@@ -39,7 +39,7 @@ else
                     <MudImage Src="@($"/work-orders/{WorkOrder.Id}/photos/{photo.Id}/content")" Alt="Foto antes" Width="160" Height="120" ObjectFit="ObjectFit.Cover" />
                     @if (CanExecute)
                     {
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover foto" OnClick="@(() => RemovePhotoAsync(photo.Id))" Disabled="@IsRemovingPhoto" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover foto" OnClick="@(() => RemovePhotoAsync(photo.Id))" Disabled="@(IsRemovingPhoto || isSaving || isUploadingPhoto)" />
                     }
                 </div>
             }
@@ -63,7 +63,7 @@ else
         <MudText Typo="Typo.h6">Fotos depois @(WorkOrder.RequireAfterPhotos ? "(obrigatória)" : string.Empty)</MudText>
         @if (CanExecute)
         {
-            <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.After))" accept="image/*" capture="environment" />
+            <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.After))" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
         }
         <div class="work-order-photo-grid">
             @foreach (var photo in WorkOrder.Photos.Where(photo => photo.Type == WorkOrderPhotoType.After))
@@ -72,7 +72,7 @@ else
                     <MudImage Src="@($"/work-orders/{WorkOrder.Id}/photos/{photo.Id}/content")" Alt="Foto depois" Width="160" Height="120" ObjectFit="ObjectFit.Cover" />
                     @if (CanExecute)
                     {
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover foto" OnClick="@(() => RemovePhotoAsync(photo.Id))" Disabled="@IsRemovingPhoto" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover foto" OnClick="@(() => RemovePhotoAsync(photo.Id))" Disabled="@(IsRemovingPhoto || isSaving || isUploadingPhoto)" />
                     }
                 </div>
             }
@@ -81,7 +81,7 @@ else
         <MudText Typo="Typo.h6">Outras fotos</MudText>
         @if (CanExecute)
         {
-            <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.Other))" accept="image/*" capture="environment" />
+            <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.Other))" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
         }
         <div class="work-order-photo-grid">
             @foreach (var photo in WorkOrder.Photos.Where(photo => photo.Type == WorkOrderPhotoType.Other))
@@ -90,18 +90,18 @@ else
                     <MudImage Src="@($"/work-orders/{WorkOrder.Id}/photos/{photo.Id}/content")" Alt="Outra foto" Width="160" Height="120" ObjectFit="ObjectFit.Cover" />
                     @if (CanExecute)
                     {
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover foto" OnClick="@(() => RemovePhotoAsync(photo.Id))" Disabled="@IsRemovingPhoto" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover foto" OnClick="@(() => RemovePhotoAsync(photo.Id))" Disabled="@(IsRemovingPhoto || isSaving || isUploadingPhoto)" />
                     }
                 </div>
             }
         </div>
 
-        <MudTextField @bind-Value="executionNotes" @bind-Value:after="ScheduleAutoSave" Label="Observações da execução" Lines="4" Variant="Variant.Outlined" Disabled="@(!CanExecute)" />
+        <MudTextField @bind-Value="executionNotes" @bind-Value:after="OnExecutionNotesChanged" Label="Observações da execução" Lines="4" Variant="Variant.Outlined" Disabled="@(!CanExecute || isUploadingPhoto)" />
 
         @if (CanExecute)
         {
             <MudStack Row="true">
-                <MudButton OnClick="SaveAsync" Variant="Variant.Outlined" Disabled="isSaving">Salvar progresso</MudButton>
+                <MudButton OnClick="SaveAsync" Variant="Variant.Outlined" Disabled="@(isSaving || isUploadingPhoto)">Salvar progresso</MudButton>
                 <MudButton OnClick="CompleteAsync" Color="Color.Success" Variant="Variant.Filled" Disabled="@(!CanComplete)">Concluir serviço</MudButton>
             </MudStack>
         }
@@ -115,16 +115,28 @@ else
     [Parameter]
     public EventCallback OnChanged { get; set; }
 
+    [Parameter]
+    public EventCallback<bool> OnSavingChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnPhotoUploadChanged { get; set; }
+
     private readonly Dictionary<Guid, bool> progress = [];
+    private readonly SemaphoreSlim operationLock = new(1, 1);
     private CancellationTokenSource? autosaveCancellation;
-    private Guid loadedWorkOrderId;
+    private WorkOrderDetailDto? loadedWorkOrder;
     private string? executionNotes;
+    private string? observedExecutionNotes;
     private bool isSaving;
+    private bool isUploadingPhoto;
+    private bool isDisposed;
     private Guid? photoPendingRemoval;
+    private long changeVersion;
+    private long savedChangeVersion;
 
     private bool CanExecute => WorkOrder.Status == WorkOrderStatus.InProgress && WorkOrder.Capabilities.CanExecute;
     private bool IsRemovingPhoto => photoPendingRemoval is not null;
-    private bool CanComplete => CanExecute && !isSaving && !HasMissingRequiredPhotos && !IsCompletionBlockedByPhotoRemoval;
+    private bool CanComplete => CanExecute && !isSaving && !isUploadingPhoto && !HasMissingRequiredPhotos && !IsCompletionBlockedByPhotoRemoval;
     private bool HasMissingRequiredPhotos =>
         (WorkOrder.RequireBeforePhotos && !HasPhotoOfType(WorkOrderPhotoType.Before)) ||
         (WorkOrder.RequireAfterPhotos && !HasPhotoOfType(WorkOrderPhotoType.After));
@@ -150,12 +162,12 @@ else
 
     protected override void OnParametersSet()
     {
-        if (loadedWorkOrderId == WorkOrder.Id && isSaving)
+        if (ReferenceEquals(loadedWorkOrder, WorkOrder))
         {
             return;
         }
 
-        loadedWorkOrderId = WorkOrder.Id;
+        loadedWorkOrder = WorkOrder;
         progress.Clear();
         foreach (var item in WorkOrder.ChecklistItems)
         {
@@ -163,6 +175,9 @@ else
         }
 
         executionNotes = WorkOrder.ExecutionNotes;
+        observedExecutionNotes = executionNotes;
+        changeVersion = 0;
+        savedChangeVersion = 0;
     }
 
     private async Task StartAsync()
@@ -179,13 +194,35 @@ else
 
     private void SetProgress(Guid id, bool value)
     {
+        if (progress.GetValueOrDefault(id) == value)
+        {
+            return;
+        }
+
         progress[id] = value;
+        RegisterChange();
+    }
+
+    private void OnExecutionNotesChanged()
+    {
+        if (string.Equals(executionNotes, observedExecutionNotes, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        observedExecutionNotes = executionNotes;
+        RegisterChange();
+    }
+
+    private void RegisterChange()
+    {
+        changeVersion++;
         ScheduleAutoSave();
     }
 
     private void ScheduleAutoSave()
     {
-        if (!CanExecute)
+        if (!CanExecute || isDisposed)
         {
             return;
         }
@@ -201,6 +238,12 @@ else
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(1.5), cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (isDisposed)
+            {
+                return;
+            }
+
             await FlushProgressAsync(false);
         }
         catch (OperationCanceledException)
@@ -210,17 +253,31 @@ else
 
     private async Task SaveAsync() => await FlushProgressAsync(true);
 
+    public async Task<bool> SavePendingChangesAsync()
+    {
+        autosaveCancellation?.Cancel();
+        return await FlushProgressAsync(false);
+    }
+
     private async Task<bool> FlushProgressAsync(bool showSuccess)
     {
-        if (!CanExecute)
+        if (!CanExecute || changeVersion == savedChangeVersion)
         {
             return true;
         }
 
-        autosaveCancellation?.Cancel();
-        isSaving = true;
+        await operationLock.WaitAsync();
         try
         {
+            if (!CanExecute || changeVersion == savedChangeVersion)
+            {
+                return true;
+            }
+
+            autosaveCancellation?.Cancel();
+            isSaving = true;
+            await OnSavingChanged.InvokeAsync(true);
+            var versionBeingSaved = changeVersion;
             var command = new SaveWorkOrderChecklistProgressCommand(
                 progress.Select(item => new ChecklistProgressInput(item.Key, item.Value)).ToArray(),
                 executionNotes);
@@ -231,6 +288,7 @@ else
                 return false;
             }
 
+            savedChangeVersion = versionBeingSaved;
             if (showSuccess)
             {
                 Snackbar.Add("Progresso salvo.", Severity.Success);
@@ -242,6 +300,8 @@ else
         finally
         {
             isSaving = false;
+            await OnSavingChanged.InvokeAsync(false);
+            operationLock.Release();
         }
     }
 
@@ -265,6 +325,11 @@ else
 
     private async Task UploadAsync(InputFileChangeEventArgs args, WorkOrderPhotoType type)
     {
+        if (isSaving || isUploadingPhoto)
+        {
+            return;
+        }
+
         var file = args.File;
         if (file.Size > 10 * 1024 * 1024)
         {
@@ -272,23 +337,35 @@ else
             return;
         }
 
-        await using var stream = file.OpenReadStream(10 * 1024 * 1024 + 1);
-        var result = await AddWorkOrderPhotoUseCase.ExecuteAsync(
-            WorkOrder.Id,
-            new WorkOrderPhotoUpload(stream, file.Name, file.ContentType, file.Size, type, null));
-        if (result.Code == WorkOrderOperationResultCode.Success)
+        await operationLock.WaitAsync();
+        isUploadingPhoto = true;
+        await OnPhotoUploadChanged.InvokeAsync(true);
+        try
         {
-            Snackbar.Add("Foto enviada.", Severity.Success);
-            await OnChanged.InvokeAsync();
-            return;
-        }
+            await using var stream = file.OpenReadStream(10 * 1024 * 1024 + 1);
+            var result = await AddWorkOrderPhotoUseCase.ExecuteAsync(
+                WorkOrder.Id,
+                new WorkOrderPhotoUpload(stream, file.Name, file.ContentType, file.Size, type, null));
+            if (result.Code == WorkOrderOperationResultCode.Success)
+            {
+                Snackbar.Add("Foto enviada.", Severity.Success);
+                await OnChanged.InvokeAsync();
+                return;
+            }
 
-        ShowOperationError(result.Code);
+            ShowOperationError(result.Code);
+        }
+        finally
+        {
+            isUploadingPhoto = false;
+            await OnPhotoUploadChanged.InvokeAsync(false);
+            operationLock.Release();
+        }
     }
 
     private async Task RemovePhotoAsync(Guid photoId)
     {
-        if (IsRemovingPhoto)
+        if (IsRemovingPhoto || isSaving || isUploadingPhoto)
         {
             return;
         }
@@ -339,14 +416,11 @@ else
         Snackbar.Add(message, Severity.Warning);
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
+        isDisposed = true;
         autosaveCancellation?.Cancel();
-        if (CanExecute && !isSaving)
-        {
-            await FlushProgressAsync(false);
-        }
-
         autosaveCancellation?.Dispose();
+        return ValueTask.CompletedTask;
     }
 }

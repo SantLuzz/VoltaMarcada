@@ -5,6 +5,7 @@
 @using ServiceSync.Application.Equipment
 @using ServiceSync.Application.Professionals
 @using ServiceSync.Application.Services
+@using ServiceSync.Application.Scheduling
 @using ServiceSync.Application.WorkOrders
 @using ServiceSync.Domain.Enums
 @using ServiceSync.Infrastructure.Persistence
@@ -19,6 +20,7 @@
 @inject CancelWorkOrderUseCase CancelWorkOrderUseCase
 @inject CreateCustomerUseCase CreateCustomerUseCase
 @inject CreateEquipmentUseCase CreateEquipmentUseCase
+@inject GetAvailableAppointmentSlotsUseCase GetAvailableAppointmentSlotsUseCase
 @inject IDbContextFactory<AppDbContext> DbContextFactory
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -37,7 +39,7 @@ else
 {
     <PageHeader Title="@(WorkOrderId is null ? "Nova ordem de serviço" : "Ordem de serviço")" Description="Registre os dados, itens e a execução do atendimento.">
         <Actions>
-            <MudButton Href="/ordens-servico" Variant="Variant.Outlined" Color="Color.Default">Voltar</MudButton>
+            <MudButton OnClick="ReturnToListAsync" Variant="Variant.Outlined" Color="Color.Default" Disabled="@(isExecutionSaving || isPhotoUploading || isReturningToList)">@ReturnButtonText</MudButton>
         </Actions>
     </PageHeader>
 
@@ -96,7 +98,7 @@ else
                     @if (isOwner)
                     {
                         <MudItem xs="12" md="3">
-                            <MudSelect T="Guid?" Label="Profissional" Placeholder="Selecione um profissional" @bind-Value="professionalId" Clearable="true" Disabled="@(!CanAssignProfessional)">
+                            <MudSelect T="Guid?" Label="Profissional" Placeholder="Selecione um profissional" @bind-Value="professionalId" @bind-Value:after="LoadNewWorkOrderAppointmentSlotsAsync" Clearable="true" Disabled="@(!CanAssignProfessional)">
                                 @foreach (var professional in professionals)
                                 {
                                     <MudSelectItem Value="@((Guid?)professional.Id)">@professional.CompanyMemberName</MudSelectItem>
@@ -107,6 +109,26 @@ else
                     <MudItem xs="12">
                         <MudTextField @bind-Value="reportedProblem" Label="Problema relatado" Lines="3" Disabled="@(!CanEdit)" />
                     </MudItem>
+                    @if (WorkOrderId is null)
+                    {
+                        <MudItem xs="12">
+                            <MudSwitch T="bool" @bind-Value="createAppointment" @bind-Value:after="LoadNewWorkOrderAppointmentSlotsAsync" Color="Color.Primary" Disabled="@(!CanEdit)">Agendar atendimento para esta OS</MudSwitch>
+                        </MudItem>
+                        @if (createAppointment)
+                        {
+                            <MudItem xs="12" sm="6">
+                                <MudDatePicker Label="Data do atendimento" @bind-Date="newAppointmentDate" @bind-Date:after="LoadNewWorkOrderAppointmentSlotsAsync" Disabled="@(!CanEdit)" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudSelect T="TimeOnly?" Label="Horário" Placeholder="Selecione um horário" @bind-Value="newAppointmentStartTime" Disabled="@(!CanEdit || newAppointmentSlots.Count == 0)">
+                                    @foreach (var slot in newAppointmentSlots)
+                                    {
+                                        <MudSelectItem Value="@((TimeOnly?)slot.StartTime)">@slot.StartTime.ToString("HH:mm")</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                        }
+                    }
                     <MudItem xs="12">
                         <WorkOrderItemsEditor @bind-Items="items"
                                               ServiceName="@GetSelectedServiceName()"
@@ -138,7 +160,10 @@ else
         @if (detail is not null)
         {
             <MudTabPanel Text="Execução">
-                <WorkOrderExecutionPanel WorkOrder="detail" OnChanged="LoadAsync" />
+                <WorkOrderExecutionPanel @ref="executionPanel" WorkOrder="detail" OnChanged="LoadAsync" OnSavingChanged="SetExecutionSavingAsync" OnPhotoUploadChanged="SetPhotoUploadStateAsync" />
+            </MudTabPanel>
+            <MudTabPanel Text="Agendamentos">
+                <WorkOrderAppointmentsPanel WorkOrderId="@detail.Id" IsOwner="@isOwner" />
             </MudTabPanel>
         }
     </MudTabs>
@@ -201,11 +226,20 @@ else
     private Guid? equipmentId;
     private Guid? serviceId;
     private Guid? professionalId;
+    private Guid? currentProfessionalId;
     private decimal? serviceUnitPrice;
     private WorkOrderPriority priority = WorkOrderPriority.Normal;
     private string reportedProblem = string.Empty;
+    private bool createAppointment;
+    private DateTime? newAppointmentDate;
+    private TimeOnly? newAppointmentStartTime;
+    private IReadOnlyList<AppointmentSlotDto> newAppointmentSlots = [];
     private bool isOwner;
     private bool isLoading = true;
+    private bool isExecutionSaving;
+    private bool isPhotoUploading;
+    private bool isReturningToList;
+    private WorkOrderExecutionPanel? executionPanel;
     private bool customerDialogOpen;
     private bool equipmentDialogOpen;
     private string newCustomerName = string.Empty;
@@ -225,11 +259,17 @@ else
     private bool CanEdit => WorkOrderId is null || detail?.Capabilities.CanEdit == true;
     private bool CanAssignProfessional => WorkOrderId is null ? isOwner : detail?.Capabilities.CanAssignProfessional == true;
     private bool IsServicePriceFixed => GetSelectedService()?.PriceType == ServicePriceType.Fixed;
+    private string ReturnButtonText => isPhotoUploading
+        ? "Enviando foto..."
+        : isExecutionSaving || isReturningToList
+            ? "Salvando progresso..."
+            : "Voltar";
 
     protected override async Task OnInitializedAsync()
     {
         var scope = await WorkOrderAuthorization.GetAccessScopeAsync();
         isOwner = scope.IsOwner;
+        currentProfessionalId = scope.ProfessionalId;
         customers = await GetCustomersUseCase.ExecuteAsync();
         services = (await GetServicesUseCase.ExecuteAsync()).Where(x => x.IsActive).ToArray();
         await using (var dbContext = await DbContextFactory.CreateDbContextAsync())
@@ -262,6 +302,7 @@ else
         items = detail.Items.Where(item => item.Type == WorkOrderItemType.Additional).Select(item => new WorkOrderItemInput(item.Description, item.Quantity, item.UnitPrice)).ToList();
         await LoadEquipmentAsync(false);
         await LoadProfessionalOptions();
+        await LoadNewWorkOrderAppointmentSlotsAsync();
     }
 
     private async Task LoadEquipmentAsync() => await LoadEquipmentAsync(true);
@@ -301,6 +342,57 @@ else
             ? selectedService.BasePrice
             : null;
         await LoadProfessionalOptions();
+        await LoadNewWorkOrderAppointmentSlotsAsync();
+    }
+
+    private async Task LoadNewWorkOrderAppointmentSlotsAsync()
+    {
+        newAppointmentStartTime = null;
+        newAppointmentSlots = [];
+        if (!createAppointment || newAppointmentDate is null || GetSelectedService() is not { } service || (isOwner ? professionalId : currentProfessionalId) is not { } appointmentProfessionalId)
+        {
+            return;
+        }
+
+        newAppointmentSlots = await GetAvailableAppointmentSlotsUseCase.ExecuteAsync(
+            appointmentProfessionalId,
+            DateOnly.FromDateTime(newAppointmentDate.Value),
+            service.DurationMinutes);
+    }
+
+    private async Task ReturnToListAsync()
+    {
+        if (isExecutionSaving || isPhotoUploading || isReturningToList)
+        {
+            return;
+        }
+
+        isReturningToList = true;
+        try
+        {
+            if (executionPanel is not null && !await executionPanel.SavePendingChangesAsync())
+            {
+                return;
+            }
+
+            NavigationManager.NavigateTo("/ordens-servico");
+        }
+        finally
+        {
+            isReturningToList = false;
+        }
+    }
+
+    private Task SetExecutionSavingAsync(bool value)
+    {
+        isExecutionSaving = value;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task SetPhotoUploadStateAsync(bool value)
+    {
+        isPhotoUploading = value;
+        return InvokeAsync(StateHasChanged);
     }
 
     private async Task CreateCustomerAsync()
@@ -385,7 +477,16 @@ else
 
         if (WorkOrderId is null)
         {
-            var result = await CreateWorkOrderUseCase.ExecuteAsync(new CreateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items));
+            if (createAppointment && (newAppointmentDate is null || newAppointmentStartTime is null))
+            {
+                Snackbar.Add("Selecione a data e o horário do atendimento.", Severity.Warning);
+                return;
+            }
+
+            var appointment = createAppointment
+                ? new WorkOrderAppointmentInput(DateOnly.FromDateTime(newAppointmentDate!.Value), newAppointmentStartTime!.Value)
+                : null;
+            var result = await CreateWorkOrderUseCase.ExecuteAsync(new CreateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items, appointment));
             if (result.Code == WorkOrderOperationResultCode.Success && result.WorkOrderId is { } createdId)
             {
                 NavigationManager.NavigateTo($"/ordens-servico/registro?id={createdId}");
@@ -430,7 +531,10 @@ else
         var message = code switch
         {
             WorkOrderOperationResultCode.ProfessionalProfileRequired => "Seu usuário precisa de um perfil profissional ativo para criar esta OS.",
+            WorkOrderOperationResultCode.ProfessionalRequired => "Selecione um profissional para agendar o atendimento.",
             WorkOrderOperationResultCode.ProfessionalNotQualified => "O profissional selecionado não está habilitado para este serviço.",
+            WorkOrderOperationResultCode.ProfessionalUnavailable => "O profissional não está disponível no horário selecionado.",
+            WorkOrderOperationResultCode.OpenAppointments => "Conclua ou cancele todos os agendamentos desta OS antes de concluir o serviço.",
             WorkOrderOperationResultCode.InvalidEquipmentCustomer => "O equipamento não pertence ao cliente selecionado.",
             _ => "Não foi possível salvar a ordem de serviço. Revise os dados informados."
         };

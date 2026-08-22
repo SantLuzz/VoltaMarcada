@@ -562,6 +562,11 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -578,6 +583,69 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("IX_Professionals_CompanyId_IsActive");
 
                     b.ToTable("Professionals", (string)null);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.Appointment", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uuid");
+                    b.Property<Guid>("CompanyId").HasColumnType("uuid");
+                    b.Property<Guid?>("CustomerId").HasColumnType("uuid");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset>("EndAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<Guid?>("EquipmentId").HasColumnType("uuid");
+                    b.Property<string>("Notes").HasMaxLength(1000).HasColumnType("character varying(1000)");
+                    b.Property<Guid>("ProfessionalId").HasColumnType("uuid");
+                    b.Property<Guid?>("ServiceId").HasColumnType("uuid");
+                    b.Property<DateTimeOffset>("StartAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<int>("Status").HasColumnType("integer");
+                    b.Property<DateTimeOffset>("UpdatedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<Guid?>("WorkOrderId").HasColumnType("uuid");
+                    b.HasKey("Id");
+                    b.HasAlternateKey("CompanyId", "Id").HasName("AK_Appointments_CompanyId_Id");
+                    b.HasIndex("CompanyId", "ProfessionalId", "StartAtUtc").HasDatabaseName("IX_Appointments_CompanyId_ProfessionalId_StartAtUtc");
+                    b.HasIndex("CompanyId", "WorkOrderId", "StartAtUtc").HasDatabaseName("IX_Appointments_CompanyId_WorkOrderId_StartAtUtc");
+                    b.ToTable("Appointments", (string)null);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.AppointmentRescheduleHistory", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uuid");
+                    b.Property<Guid>("AppointmentId").HasColumnType("uuid");
+                    b.Property<Guid?>("ChangedByUserId").HasColumnType("uuid");
+                    b.Property<Guid>("CompanyId").HasColumnType("uuid");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset>("NewEndAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset>("NewStartAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset>("PreviousEndAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset>("PreviousStartAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<string>("Reason").IsRequired().HasMaxLength(1000).HasColumnType("character varying(1000)");
+                    b.HasKey("Id");
+                    b.HasIndex("CompanyId", "AppointmentId", "CreatedAtUtc").HasDatabaseName("IX_AppointmentRescheduleHistories_CompanyId_AppointmentId_CreatedAtUtc");
+                    b.ToTable("AppointmentRescheduleHistories", (string)null);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.ScheduleBlockRequest", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uuid");
+                    b.Property<Guid>("CompanyId").HasColumnType("uuid");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset?>("DecidedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<Guid?>("DecidedByUserId").HasColumnType("uuid");
+                    b.Property<DateOnly>("EndDate").HasColumnType("date");
+                    b.Property<TimeOnly?>("EndTime").HasColumnType("time without time zone");
+                    b.Property<bool>("IsFullDay").HasColumnType("boolean");
+                    b.Property<string>("Notes").HasMaxLength(1000).HasColumnType("character varying(1000)");
+                    b.Property<Guid>("ProfessionalId").HasColumnType("uuid");
+                    b.Property<string>("RejectionReason").HasMaxLength(1000).HasColumnType("character varying(1000)");
+                    b.Property<DateOnly>("StartDate").HasColumnType("date");
+                    b.Property<TimeOnly?>("StartTime").HasColumnType("time without time zone");
+                    b.Property<int>("Status").HasColumnType("integer");
+                    b.Property<int>("Type").HasColumnType("integer");
+                    b.HasKey("Id");
+                    b.HasAlternateKey("CompanyId", "Id").HasName("AK_ScheduleBlockRequests_CompanyId_Id");
+                    b.HasIndex("CompanyId", "ProfessionalId", "StartDate", "EndDate").HasDatabaseName("IX_ScheduleBlockRequests_CompanyId_ProfessionalId_StartDate_EndDate");
+                    b.HasIndex("CompanyId", "Status", "CreatedAtUtc").HasDatabaseName("IX_ScheduleBlockRequests_CompanyId_Status_CreatedAtUtc");
+                    b.ToTable("ScheduleBlockRequests", (string)null);
                 });
 
             modelBuilder.Entity("ServiceSync.Domain.Entities.ProfessionalAvailability", b =>
@@ -1080,10 +1148,6 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Document")
-                        .IsUnique()
-                        .HasDatabaseName("UX_AspNetUsers_Document");
-
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -1249,6 +1313,42 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ServiceSync.Domain.Entities.Appointment", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.Professional", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "ProfessionalId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ServiceSync.Domain.Entities.WorkOrder", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "WorkOrderId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.AppointmentRescheduleHistory", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.Appointment", null)
+                        .WithMany("RescheduleHistory")
+                        .HasForeignKey("CompanyId", "AppointmentId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.ScheduleBlockRequest", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.Professional", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "ProfessionalId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ServiceSync.Domain.Entities.Professional", b =>
                 {
                     b.HasOne("ServiceSync.Domain.Entities.Company", null)
@@ -1403,9 +1503,14 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("ServiceSync.Domain.Entities.Professional", b =>
-                {
-                    b.Navigation("ProfessionalServices");
-                });
+            {
+                b.Navigation("ProfessionalServices");
+            });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.Appointment", b =>
+            {
+                b.Navigation("RescheduleHistory");
+            });
 
             modelBuilder.Entity("ServiceSync.Domain.Entities.ProfessionalAvailability", b =>
                 {

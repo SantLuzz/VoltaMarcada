@@ -170,6 +170,14 @@ public sealed class ProfessionalRepository(AppDbContext dbContext) : IProfession
         await dbContext.Services.AsNoTracking()
             .CountAsync(service => service.CompanyId == companyId && service.IsActive && serviceIds.Contains(service.Id), cancellationToken) == serviceIds.Distinct().Count();
 
+    public async Task<IReadOnlyDictionary<Guid, string>> GetTimeZoneIdsAsync(
+        Guid companyId,
+        IReadOnlyCollection<Guid> professionalIds,
+        CancellationToken cancellationToken = default) =>
+        await dbContext.Professionals.AsNoTracking()
+            .Where(professional => professional.CompanyId == companyId && professionalIds.Contains(professional.Id))
+            .ToDictionaryAsync(professional => professional.Id, professional => professional.TimeZoneId, cancellationToken);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);
 
 }

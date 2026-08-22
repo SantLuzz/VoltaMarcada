@@ -8,5 +8,5 @@ public sealed record WorkOrderOperationResult(WorkOrderOperationResultCode Code,
 
 public enum WorkOrderOperationResultCode
 {
-    Success, InvalidInput, NotFound, Forbidden, CustomerNotFound, EquipmentNotFound, InvalidEquipmentCustomer, ServiceNotFound, ProfessionalNotFound, ProfessionalNotQualified, ProfessionalProfileRequired, InvalidStatus, ChecklistIncomplete, BeforePhotoRequired, AfterPhotoRequired, PhotoLimitReached, InvalidPhoto
+    Success, InvalidInput, NotFound, Forbidden, CustomerNotFound, EquipmentNotFound, InvalidEquipmentCustomer, ServiceNotFound, ProfessionalNotFound, ProfessionalNotQualified, ProfessionalProfileRequired, ProfessionalRequired, ProfessionalUnavailable, InvalidStatus, ChecklistIncomplete, BeforePhotoRequired, AfterPhotoRequired, OpenAppointments, PhotoLimitReached, InvalidPhoto
 }

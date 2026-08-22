@@ -8,6 +8,7 @@ public sealed record ProfessionalDto(
     string CompanyMemberName,
     string CompanyMemberEmail,
     bool IsActive,
+    string TimeZoneId,
     IReadOnlyList<Guid> ServiceIds,
     IReadOnlyList<string> ServiceNames)
 {
@@ -18,10 +19,13 @@ public sealed record ProfessionalDto(
             item.CompanyMemberName,
             item.CompanyMemberEmail,
             item.Professional.IsActive,
+            item.Professional.TimeZoneId,
             item.ServiceIds,
             item.ServiceNames);
 }
 
 public sealed record ProfessionalRegistrationOptionsDto(
     IReadOnlyList<CompanyMemberOption> CompanyMembers,
-    IReadOnlyList<ProfessionalServiceOption> Services);
+    IReadOnlyList<ProfessionalServiceOption> Services,
+    IReadOnlyList<string> TimeZoneIds,
+    string DefaultTimeZoneId);

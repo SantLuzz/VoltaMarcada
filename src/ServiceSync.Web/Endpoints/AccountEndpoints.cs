@@ -26,13 +26,39 @@ public static class AccountEndpoints
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager)
     {
-        if (string.IsNullOrWhiteSpace(request.FullName) || request.FullName.Trim().Length > 200 ||
-            !BrazilianDocument.TryNormalize(request.Document, out var document) || document.Length != 11 ||
-            string.IsNullOrWhiteSpace(request.Phone) || request.Phone.Trim().Length > 20 ||
-            string.IsNullOrWhiteSpace(request.Address) || request.Address.Trim().Length > 300 ||
-            !IsValidEmail(request.Email) || string.IsNullOrWhiteSpace(request.Password) || request.Password != request.ConfirmPassword)
+        if (string.IsNullOrWhiteSpace(request.FullName) || request.FullName.Trim().Length > 200)
         {
-            return RedirectWithError("/account/register", "Informe um e-mail válido e senhas iguais.", request.ReturnUrl);
+            return RedirectWithFieldError("fullName", "Informe seu nome completo.", request.ReturnUrl);
+        }
+
+        if (!BrazilianDocument.TryNormalize(request.Document, out var document) || document.Length != 11)
+        {
+            return RedirectWithFieldError("document", "Informe um CPF válido.", request.ReturnUrl);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Phone) || request.Phone.Trim().Length > 20)
+        {
+            return RedirectWithFieldError("phone", "Informe um telefone válido.", request.ReturnUrl);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Address) || request.Address.Trim().Length > 300)
+        {
+            return RedirectWithFieldError("address", "Informe seu endereço.", request.ReturnUrl);
+        }
+
+        if (!IsValidEmail(request.Email))
+        {
+            return RedirectWithFieldError("email", "Informe um e-mail válido.", request.ReturnUrl);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 6)
+        {
+            return RedirectWithFieldError("password", "A senha precisa ter pelo menos 6 caracteres.", request.ReturnUrl);
+        }
+
+        if (request.Password != request.ConfirmPassword)
+        {
+            return RedirectWithFieldError("confirmPassword", "As senhas não coincidem.", request.ReturnUrl);
         }
 
         var user = new ApplicationUser
@@ -48,7 +74,17 @@ public static class AccountEndpoints
         var result = await userManager.CreateAsync(user, request.Password);
         if (!result.Succeeded)
         {
-            return RedirectWithError("/account/register", "Não foi possível criar a conta. Verifique os dados informados.", request.ReturnUrl);
+            if (result.Errors.Any(error => error.Code is "DuplicateUserName" or "DuplicateEmail"))
+            {
+                return RedirectWithFieldError("email", "Já existe uma conta cadastrada com este e-mail.", request.ReturnUrl);
+            }
+
+            if (result.Errors.Any(error => error.Code.StartsWith("Password", StringComparison.Ordinal)))
+            {
+                return RedirectWithFieldError("password", "A senha não atende aos requisitos de segurança.", request.ReturnUrl);
+            }
+
+            return RedirectWithError("/account/register", "Não foi possível criar a conta. Tente novamente.", request.ReturnUrl);
         }
 
         await signInManager.SignInAsync(user, isPersistent: false);
@@ -109,6 +145,11 @@ public static class AccountEndpoints
 
     private static IResult RedirectWithError(string path, string error, string? returnUrl) =>
         Results.Redirect(path + QueryString.Create("error", error)
+            .Add("returnUrl", LocalReturnUrl.Normalize(returnUrl, "/")));
+
+    private static IResult RedirectWithFieldError(string field, string error, string? returnUrl) =>
+        Results.Redirect("/account/register" + QueryString.Create("field", field)
+            .Add("fieldError", error)
             .Add("returnUrl", LocalReturnUrl.Normalize(returnUrl, "/")));
 
     private static IResult RedirectToOnboarding(string? returnUrl) =>

@@ -14,6 +14,7 @@ public sealed class ProfessionalConfiguration : IEntityTypeConfiguration<Profess
         builder.Property(professional => professional.CompanyId).IsRequired();
         builder.Property(professional => professional.CompanyUserId).IsRequired();
         builder.Property(professional => professional.IsActive).IsRequired();
+        builder.Property(professional => professional.TimeZoneId).HasMaxLength(100).IsRequired();
         builder.Property(professional => professional.CreatedAtUtc).IsRequired();
         builder.Property(professional => professional.UpdatedAtUtc).IsRequired();
 
