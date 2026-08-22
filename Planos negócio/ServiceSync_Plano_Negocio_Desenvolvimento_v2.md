@@ -428,7 +428,7 @@ começar a trabalhar.
 
 ------------------------------------------------------------------------
 
-# Fase 3 --- Ordem de Serviço e execução
+# Fase 3 --- Ordem de Serviço e execução (Concluída)
 
 A OS deve nascer preparada para representar a execução real do serviço.
 
