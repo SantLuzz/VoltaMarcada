@@ -1077,6 +1077,31 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                     b.ToTable("WorkOrderPhotos", (string)null);
                 });
 
+            modelBuilder.Entity("ServiceSync.Domain.Entities.MaintenanceOpportunity", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uuid");
+                    b.Property<DateTimeOffset?>("BookedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset?>("BookingRequestedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<Guid>("CompanyId").HasColumnType("uuid");
+                    b.Property<DateTimeOffset?>("CompletedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset?>("ContactedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateOnly>("DueDate").HasColumnType("date");
+                    b.Property<DateTimeOffset?>("DismissedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<Guid>("CustomerId").HasColumnType("uuid");
+                    b.Property<Guid>("EquipmentId").HasColumnType("uuid");
+                    b.Property<string>("Notes").IsRequired().HasMaxLength(2000).HasColumnType("character varying(2000)");
+                    b.Property<Guid>("PreviousWorkOrderId").HasColumnType("uuid");
+                    b.Property<Guid>("RecommendedServiceId").HasColumnType("uuid");
+                    b.Property<int>("Status").HasColumnType("integer");
+                    b.Property<DateTimeOffset>("UpdatedAtUtc").HasColumnType("timestamp with time zone");
+                    b.HasKey("Id");
+                    b.HasAlternateKey("CompanyId", "Id").HasName("AK_MaintenanceOpportunities_CompanyId_Id");
+                    b.HasIndex("CompanyId", "CustomerId").HasDatabaseName("IX_MaintenanceOpportunities_CompanyId_CustomerId");
+                    b.HasIndex("CompanyId", "Status", "DueDate").HasDatabaseName("IX_MaintenanceOpportunities_CompanyId_Status_DueDate");
+                    b.ToTable("MaintenanceOpportunities", (string)null);
+                });
+
             modelBuilder.Entity("ServiceSync.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1495,6 +1520,15 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("CompanyId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.MaintenanceOpportunity", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.Company", null).WithMany().HasForeignKey("CompanyId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("ServiceSync.Domain.Entities.Customer", null).WithMany().HasForeignKey("CompanyId", "CustomerId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("ServiceSync.Domain.Entities.Equipment", null).WithMany().HasForeignKey("CompanyId", "EquipmentId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("ServiceSync.Domain.Entities.WorkOrder", null).WithMany().HasForeignKey("CompanyId", "PreviousWorkOrderId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("ServiceSync.Domain.Entities.Service", null).WithMany().HasForeignKey("CompanyId", "RecommendedServiceId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict).IsRequired();
                 });
 
             modelBuilder.Entity("ServiceSync.Domain.Entities.Customer", b =>
