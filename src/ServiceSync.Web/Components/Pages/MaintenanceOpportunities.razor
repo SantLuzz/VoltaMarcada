@@ -14,8 +14,8 @@
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
 
-<PageTitle>Manutencoes | ServiceSync</PageTitle>
-<PageHeader Title="Manutencoes" Description="Acompanhe clientes que podem gerar novos atendimentos." />
+<PageTitle>@($"{MaintenanceTitle} | ServiceSync")</PageTitle>
+<PageHeader Title="@MaintenanceTitle" Description="@MaintenanceDescription" />
 
 @if (isLoading)
 {
@@ -132,6 +132,8 @@ else
 }
 
 @code {
+    private const string MaintenanceTitle = "Manuten\u00E7\u00F5es";
+    private const string MaintenanceDescription = "Acompanhe os clientes que podem gerar novos atendimentos.";
     private MaintenanceOpportunitySummary summary = new(0, 0, 0);
     private IReadOnlyList<MaintenanceOpportunityListItem> items = [];
     private readonly HashSet<Guid> contactActionIds = [];
