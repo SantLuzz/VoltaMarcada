@@ -17,6 +17,34 @@ public sealed class MaintenanceOpportunityRepository(AppDbContext dbContext) : I
             opportunity => opportunity.Id == opportunityId && opportunity.CompanyId == companyId,
             cancellationToken);
 
+    public Task<MaintenanceOpportunityContactContext?> GetContactContextAsync(
+        Guid opportunityId,
+        Guid companyId,
+        CancellationToken cancellationToken = default) =>
+        (
+            from opportunity in dbContext.MaintenanceOpportunities.AsNoTracking()
+            join customer in dbContext.Customers.AsNoTracking()
+                on opportunity.CustomerId equals customer.Id
+            join equipment in dbContext.Equipment.AsNoTracking()
+                on opportunity.EquipmentId equals equipment.Id
+            join service in dbContext.Services.AsNoTracking()
+                on opportunity.RecommendedServiceId equals service.Id
+            where opportunity.Id == opportunityId &&
+                  opportunity.CompanyId == companyId &&
+                  customer.CompanyId == companyId &&
+                  equipment.CompanyId == companyId &&
+                  service.CompanyId == companyId
+            select new MaintenanceOpportunityContactContext(
+                opportunity.Id,
+                opportunity.CustomerId,
+                customer.Name,
+                customer.WhatsApp,
+                FormatEquipment(equipment.Type, equipment.Manufacturer, equipment.Model),
+                service.Name,
+                opportunity.DueDate,
+                opportunity.Status)
+        ).SingleOrDefaultAsync(cancellationToken);
+
     public async Task<IReadOnlyList<MaintenanceOpportunityListItem>> GetListAsync(
         Guid companyId,
         GetMaintenanceOpportunitiesQuery query,
@@ -59,6 +87,26 @@ public sealed class MaintenanceOpportunityRepository(AppDbContext dbContext) : I
                 workOrder.CompletedAtUtc
             }).ToArrayAsync(cancellationToken);
 
+        var opportunityIds = items.Select(item => item.Opportunity.Id).ToArray();
+        var contacts = await dbContext.CustomerContacts.AsNoTracking()
+            .Where(contact => contact.CompanyId == companyId && opportunityIds.Contains(contact.OpportunityId))
+            .OrderByDescending(contact => contact.CreatedAtUtc)
+            .Select(contact => new
+            {
+                contact.OpportunityId,
+                Contact = new CustomerContactHistoryItem(
+                    contact.Id,
+                    contact.Channel,
+                    contact.Status,
+                    contact.Message,
+                    contact.CreatedAtUtc,
+                    contact.SentAtUtc)
+            })
+            .ToArrayAsync(cancellationToken);
+        var contactsByOpportunity = contacts
+            .GroupBy(item => item.OpportunityId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<CustomerContactHistoryItem>)group.Select(item => item.Contact).ToArray());
+
         return items.Select(item => new MaintenanceOpportunityListItem(
             item.Opportunity.Id,
             item.CustomerName,
@@ -69,7 +117,8 @@ public sealed class MaintenanceOpportunityRepository(AppDbContext dbContext) : I
             item.Opportunity.DueDate,
             item.Opportunity.Notes,
             item.Opportunity.Status,
-            GetUrgency(item.Opportunity.DueDate, today))).ToArray();
+            GetUrgency(item.Opportunity.DueDate, today),
+            contactsByOpportunity.GetValueOrDefault(item.Opportunity.Id, []))).ToArray();
     }
 
     public async Task<MaintenanceOpportunitySummary> GetSummaryAsync(Guid companyId, DateOnly today, CancellationToken cancellationToken = default)

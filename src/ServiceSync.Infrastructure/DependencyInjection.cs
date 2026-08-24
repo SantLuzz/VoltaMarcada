@@ -13,6 +13,8 @@ using ServiceSync.Infrastructure.Persistence;
 using ServiceSync.Infrastructure.Persistence.Repositories;
 using ServiceSync.Infrastructure.Storage;
 using ServiceSync.Application.Abstractions.Storage;
+using ServiceSync.Application.Abstractions.Communication;
+using ServiceSync.Infrastructure.Communication;
 
 namespace ServiceSync.Infrastructure;
 
@@ -45,6 +47,8 @@ public static class DependencyInjection
         services.AddScoped<IProfessionalAvailabilityRepository, ProfessionalAvailabilityRepository>();
         services.AddScoped<IAppointmentRepository, AppointmentRepository>();
         services.AddScoped<IMaintenanceOpportunityRepository, MaintenanceOpportunityRepository>();
+        services.AddScoped<ICustomerContactRepository, CustomerContactRepository>();
+        services.AddScoped<IWhatsAppLinkBuilder, WhatsAppLinkBuilder>();
         services.AddScoped<IEmployeeInvitationRepository, EmployeeInvitationRepository>();
         services.AddScoped<IEmployeeInvitationAccountService, EmployeeInvitationAccountService>();
         services.AddOptions<CloudinaryOptions>()
