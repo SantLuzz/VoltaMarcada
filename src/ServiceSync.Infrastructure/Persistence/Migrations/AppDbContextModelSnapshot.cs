@@ -1102,6 +1102,23 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                     b.ToTable("MaintenanceOpportunities", (string)null);
                 });
 
+            modelBuilder.Entity("ServiceSync.Domain.Entities.CustomerContact", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uuid");
+                    b.Property<int>("Channel").HasColumnType("integer");
+                    b.Property<Guid>("CompanyId").HasColumnType("uuid");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<Guid>("CustomerId").HasColumnType("uuid");
+                    b.Property<string>("Message").IsRequired().HasMaxLength(2000).HasColumnType("character varying(2000)");
+                    b.Property<Guid>("OpportunityId").HasColumnType("uuid");
+                    b.Property<DateTimeOffset?>("SentAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<int>("Status").HasColumnType("integer");
+                    b.HasKey("Id");
+                    b.HasIndex("CompanyId", "CustomerId", "CreatedAtUtc").HasDatabaseName("IX_CustomerContacts_CompanyId_CustomerId_CreatedAtUtc");
+                    b.HasIndex("CompanyId", "OpportunityId", "CreatedAtUtc").HasDatabaseName("IX_CustomerContacts_CompanyId_OpportunityId_CreatedAtUtc");
+                    b.ToTable("CustomerContacts", (string)null);
+                });
+
             modelBuilder.Entity("ServiceSync.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1529,6 +1546,13 @@ namespace ServiceSync.Infrastructure.Persistence.Migrations
                     b.HasOne("ServiceSync.Domain.Entities.Equipment", null).WithMany().HasForeignKey("CompanyId", "EquipmentId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict).IsRequired();
                     b.HasOne("ServiceSync.Domain.Entities.WorkOrder", null).WithMany().HasForeignKey("CompanyId", "PreviousWorkOrderId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict).IsRequired();
                     b.HasOne("ServiceSync.Domain.Entities.Service", null).WithMany().HasForeignKey("CompanyId", "RecommendedServiceId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                });
+
+            modelBuilder.Entity("ServiceSync.Domain.Entities.CustomerContact", b =>
+                {
+                    b.HasOne("ServiceSync.Domain.Entities.Company", null).WithMany().HasForeignKey("CompanyId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("ServiceSync.Domain.Entities.Customer", null).WithMany().HasForeignKey("CompanyId", "CustomerId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("ServiceSync.Domain.Entities.MaintenanceOpportunity", null).WithMany().HasForeignKey("CompanyId", "OpportunityId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict).IsRequired();
                 });
 
             modelBuilder.Entity("ServiceSync.Domain.Entities.Customer", b =>

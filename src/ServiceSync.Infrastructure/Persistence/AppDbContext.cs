@@ -58,6 +58,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<MaintenanceOpportunity> MaintenanceOpportunities => Set<MaintenanceOpportunity>();
 
+    public DbSet<CustomerContact> CustomerContacts => Set<CustomerContact>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
