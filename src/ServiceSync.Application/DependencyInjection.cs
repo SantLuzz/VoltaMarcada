@@ -41,7 +41,8 @@ public static class DependencyInjection
         services.AddScoped<GetMaintenanceOpportunitySummaryUseCase>();
         services.AddScoped<GetMaintenanceOpportunityForSchedulingUseCase>();
         services.AddScoped<MaintenanceOpportunityActionExecutor>();
-        services.AddScoped<MarkMaintenanceOpportunityAsContactedUseCase>();
+        services.AddScoped<PrepareMaintenanceOpportunityWhatsAppContactUseCase>();
+        services.AddScoped<ConfirmMaintenanceOpportunityContactSentUseCase>();
         services.AddScoped<MarkMaintenanceOpportunityAsBookingRequestedUseCase>();
         services.AddScoped<MarkMaintenanceOpportunityAsBookedUseCase>();
         services.AddScoped<CompleteMaintenanceOpportunityUseCase>();

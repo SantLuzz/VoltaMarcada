@@ -5,12 +5,6 @@ using ServiceSync.Domain.Enums;
 
 namespace ServiceSync.Application.MaintenanceOpportunities;
 
-public sealed class MarkMaintenanceOpportunityAsContactedUseCase(MaintenanceOpportunityActionExecutor executor)
-{
-    public Task<OperationResult> ExecuteAsync(Guid opportunityId, CancellationToken cancellationToken = default) =>
-        executor.ExecuteAsync(opportunityId, status => status is MaintenanceOpportunityStatus.Pending or MaintenanceOpportunityStatus.Contacted, (opportunity, now) => opportunity.MarkAsContacted(now), cancellationToken);
-}
-
 public sealed class MarkMaintenanceOpportunityAsBookingRequestedUseCase(MaintenanceOpportunityActionExecutor executor)
 {
     public Task<OperationResult> ExecuteAsync(Guid opportunityId, CancellationToken cancellationToken = default) =>

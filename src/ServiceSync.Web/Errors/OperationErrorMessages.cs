@@ -71,7 +71,12 @@ public static class OperationErrorMessages
             ["MaintenanceOpportunity.InvalidInput"] = "Revise os dados da manuten\u00E7\u00E3o e tente novamente.",
             ["MaintenanceOpportunity.NotFound"] = "Oportunidade de manuten\u00E7\u00E3o n\u00E3o encontrada.",
             ["MaintenanceOpportunity.InvalidStatus"] = "A oportunidade de manuten\u00E7ão n\u00E3o permite esta a\u00E7\u00E3o agora.",
-            ["MaintenanceOpportunity.Forbidden"] = "Voc\u00EA n\u00E3o tem permiss\u00E3o para gerenciar manuten\u00E7\u00F5es."
+            ["MaintenanceOpportunity.Forbidden"] = "Voc\u00EA n\u00E3o tem permiss\u00E3o para gerenciar manuten\u00E7\u00F5es.",
+            ["CustomerContact.InvalidInput"] = "Revise os dados do contato e tente novamente.",
+            ["CustomerContact.NotFound"] = "Contato n\u00E3o encontrado.",
+            ["CustomerContact.InvalidStatus"] = "Este contato n\u00E3o permite esta a\u00E7\u00E3o agora.",
+            ["CustomerContact.WhatsAppUnavailable"] = "O cliente n\u00E3o possui um WhatsApp v\u00E1lido para contato.",
+            ["CustomerContact.Forbidden"] = "Voc\u00EA n\u00E3o tem permiss\u00E3o para gerenciar contatos."
         };
 
     public static string GetMessage(string? code) =>
