@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using FluentValidation;
 using ServiceSync.Application.Abstractions.Identity;
 using ServiceSync.Application.Abstractions.Persistence;
@@ -13,40 +14,35 @@ public sealed class UpdateCompanyMemberProfileUseCase(
     IEmployeeInvitationAccountService accountService,
     IValidator<UpdateCompanyMemberProfileCommand> validator)
 {
-    public async Task<EmployeeInvitationResult> ExecuteAsync(
+    public async Task<OperationResult<EmployeeInvitationOutcome>> ExecuteAsync(
         UpdateCompanyMemberProfileCommand command,
         CancellationToken cancellationToken = default)
     {
         if (!currentUser.IsAuthenticated || currentUser.UserId == Guid.Empty)
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.Unauthenticated);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.Unauthenticated);
         }
 
         var validationResult = await validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid || !BrazilianDocument.TryNormalize(command.Document, out var document))
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.InvalidInput);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.InvalidInput);
         }
 
-        Guid companyId;
-        try
+        if (await currentCompany.FindCompanyIdAsync(cancellationToken) is not { } companyId)
         {
-            companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
-        }
-        catch (CurrentCompanyNotFoundException)
-        {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.Unauthorized);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.Unauthorized);
         }
 
         if (!await repository.IsCurrentUserOwnerAsync(currentUser.UserId, companyId, cancellationToken))
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.Unauthorized);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.Unauthorized);
         }
 
         var userId = await repository.GetUserIdByMembershipIdAsync(command.MembershipId, companyId, cancellationToken);
         if (userId is null)
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.InvitationNotFound);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.InvitationNotFound);
         }
 
         var outcome = await accountService.UpdateProfileAsync(
@@ -58,9 +54,9 @@ public sealed class UpdateCompanyMemberProfileUseCase(
             cancellationToken);
         return outcome switch
         {
-            EmployeeProfileUpdateOutcome.Success => EmployeeInvitationResult.Success(),
-            EmployeeProfileUpdateOutcome.UserNotFound => new EmployeeInvitationResult(EmployeeInvitationResultCode.InvitationNotFound),
-            EmployeeProfileUpdateOutcome.DuplicateDocument => new EmployeeInvitationResult(EmployeeInvitationResultCode.DuplicateDocument),
+            EmployeeProfileUpdateOutcome.Success => OperationResult<EmployeeInvitationOutcome>.Success(new EmployeeInvitationOutcome()),
+            EmployeeProfileUpdateOutcome.UserNotFound => OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.InvitationNotFound),
+            EmployeeProfileUpdateOutcome.DuplicateDocument => OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.DuplicateDocument),
             _ => throw new InvalidOperationException($"Unsupported employee profile update outcome: {outcome}.")
         };
     }

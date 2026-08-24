@@ -183,7 +183,7 @@
         try
         {
             var result = await DeleteServiceUseCase.ExecuteAsync(service.Id);
-            if (result.Code == ServiceOperationResultCode.Success)
+            if (result.IsSuccess)
             {
                 services = services.Where(item => item.Id != service.Id).ToArray();
                 Snackbar.Add("Serviço inativado com sucesso.", Severity.Success);
@@ -191,7 +191,7 @@
                 return;
             }
 
-            Snackbar.Add("O serviço não foi encontrado. Atualize a lista e tente novamente.", Severity.Warning);
+            Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
             CloseDeleteDialog();
             await LoadServicesAsync();
         }

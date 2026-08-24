@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using FluentValidation;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
@@ -13,25 +14,25 @@ public sealed class SaveProfessionalAvailabilityUseCase(
     IValidator<SaveProfessionalAvailabilityCommand> validator,
     TimeProvider timeProvider)
 {
-    public async Task<ProfessionalAvailabilityOperationResult> ExecuteAsync(
+    public async Task<OperationResult<Guid?>> ExecuteAsync(
         Guid professionalId,
         SaveProfessionalAvailabilityCommand command,
         CancellationToken cancellationToken = default)
     {
         if (professionalId == Guid.Empty || !(await validator.ValidateAsync(command, cancellationToken)).IsValid)
         {
-            return ProfessionalAvailabilityOperationResult.InvalidInput();
+            return OperationResult<Guid?>.Failure(ProfessionalErrors.AvailabilityInvalidInput);
         }
 
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         if (!await ownerAuthorization.IsOwnerAsync(companyId, cancellationToken))
         {
-            return ProfessionalAvailabilityOperationResult.Forbidden();
+            return OperationResult<Guid?>.Failure(ProfessionalErrors.AvailabilityForbidden);
         }
 
         if (!await repository.ProfessionalExistsAsync(professionalId, companyId, cancellationToken))
         {
-            return ProfessionalAvailabilityOperationResult.ProfessionalNotFound();
+            return OperationResult<Guid?>.Failure(ProfessionalErrors.AvailabilityProfessionalNotFound);
         }
 
         var now = timeProvider.GetUtcNow();
@@ -65,6 +66,6 @@ public sealed class SaveProfessionalAvailabilityUseCase(
         }
 
         await repository.SaveChangesAsync(cancellationToken);
-        return ProfessionalAvailabilityOperationResult.Success();
+        return OperationResult<Guid?>.Success(null);
     }
 }

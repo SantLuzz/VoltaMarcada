@@ -195,7 +195,7 @@
         try
         {
             var result = await DeleteCustomerUseCase.ExecuteAsync(customer.Id);
-            if (result.Code == CustomerOperationResultCode.Success)
+            if (result.IsSuccess)
             {
                 customers = customers.Where(item => item.Id != customer.Id).ToArray();
                 Snackbar.Add("Cliente inativado com sucesso.", Severity.Success);
@@ -203,7 +203,7 @@
                 return;
             }
 
-            Snackbar.Add("O cliente não foi encontrado. Atualize a lista e tente novamente.", Severity.Warning);
+            Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
             CloseDeleteDialog();
             await LoadCustomersAsync();
         }

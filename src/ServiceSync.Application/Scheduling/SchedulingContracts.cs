@@ -17,6 +17,8 @@ public sealed record RescheduleAppointmentCommand(DateOnly Date, TimeOnly StartT
 
 public sealed record AdjustAppointmentCommand(Guid ProfessionalId, DateOnly Date, TimeOnly StartTime, string Reason, Guid? WorkOrderId);
 
+public sealed record UpdateAppointmentNotesCommand(string? Notes);
+
 public sealed record CreateScheduleBlockRequestCommand(
     ScheduleBlockType Type,
     DateOnly StartDate,
@@ -37,7 +39,20 @@ public sealed record AppointmentDto(
     DateTimeOffset EndAtUtc,
     AppointmentStatus Status,
     string? Notes,
-    string ProfessionalTimeZoneId);
+    string ProfessionalTimeZoneId,
+    string ProfessionalName,
+    string? CustomerName,
+    string? EquipmentName,
+    string? ServiceName,
+    IReadOnlyList<AppointmentRescheduleHistoryDto> RescheduleHistory);
+
+public sealed record AppointmentRescheduleHistoryDto(
+    DateTimeOffset PreviousStartAtUtc,
+    DateTimeOffset PreviousEndAtUtc,
+    DateTimeOffset NewStartAtUtc,
+    DateTimeOffset NewEndAtUtc,
+    string Reason,
+    DateTimeOffset CreatedAtUtc);
 
 public sealed record AppointmentCustomerDetailsDto(
     Guid Id,
@@ -62,6 +77,7 @@ public sealed record AppointmentSlotDto(TimeOnly StartTime);
 public sealed record ScheduleBlockRequestDto(
     Guid Id,
     Guid ProfessionalId,
+    string ProfessionalName,
     ScheduleBlockType Type,
     DateOnly StartDate,
     DateOnly EndDate,
@@ -70,23 +86,5 @@ public sealed record ScheduleBlockRequestDto(
     TimeOnly? EndTime,
     string? Notes,
     ScheduleBlockRequestStatus Status,
-    DateTimeOffset CreatedAtUtc);
-
-public sealed record SchedulingOperationResult(SchedulingOperationResultCode Code, Guid? Id = null)
-{
-    public static SchedulingOperationResult Success(Guid? id = null) => new(SchedulingOperationResultCode.Success, id);
-    public static SchedulingOperationResult Failure(SchedulingOperationResultCode code) => new(code);
-}
-
-public enum SchedulingOperationResultCode
-{
-    Success,
-    InvalidInput,
-    NotFound,
-    Forbidden,
-    ProfessionalUnavailable,
-    ProfessionalNotQualified,
-    AppointmentConflict,
-    InvalidStatus,
-    BlockRequestRequiresAppointmentResolution
-}
+    DateTimeOffset CreatedAtUtc,
+    IReadOnlyList<string> AffectedAppointments);

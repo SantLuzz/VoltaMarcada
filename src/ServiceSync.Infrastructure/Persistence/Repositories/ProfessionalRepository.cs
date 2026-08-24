@@ -178,6 +178,24 @@ public sealed class ProfessionalRepository(AppDbContext dbContext) : IProfession
             .Where(professional => professional.CompanyId == companyId && professionalIds.Contains(professional.Id))
             .ToDictionaryAsync(professional => professional.Id, professional => professional.TimeZoneId, cancellationToken);
 
+    public async Task<IReadOnlyDictionary<Guid, string>> GetDisplayNamesAsync(
+        Guid companyId,
+        IReadOnlyCollection<Guid> professionalIds,
+        CancellationToken cancellationToken = default) =>
+        await dbContext.Professionals.AsNoTracking()
+            .Where(professional => professional.CompanyId == companyId && professionalIds.Contains(professional.Id))
+            .Join(
+                dbContext.CompanyUsers.AsNoTracking().Where(member => member.CompanyId == companyId),
+                professional => professional.CompanyUserId,
+                member => member.Id,
+                (professional, member) => new { professional.Id, member.UserId })
+            .Join(
+                dbContext.Users.AsNoTracking(),
+                item => item.UserId,
+                user => user.Id,
+                (item, user) => new { item.Id, Name = user.FullName ?? user.Email ?? string.Empty })
+            .ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);
 
 }

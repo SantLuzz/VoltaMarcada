@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using FluentValidation;
 using ServiceSync.Application.Abstractions.Identity;
 using ServiceSync.Application.Abstractions.Persistence;
@@ -15,51 +16,46 @@ public sealed class CreateEmployeeInvitationUseCase(
     IValidator<CreateEmployeeInvitationCommand> validator,
     TimeProvider timeProvider)
 {
-    public async Task<EmployeeInvitationResult> ExecuteAsync(
+    public async Task<OperationResult<EmployeeInvitationOutcome>> ExecuteAsync(
         CreateEmployeeInvitationCommand command,
         CancellationToken cancellationToken = default)
     {
         if (!currentUser.IsAuthenticated || currentUser.UserId == Guid.Empty)
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.Unauthenticated);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.Unauthenticated);
         }
 
         var validationResult = await validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid || !BrazilianDocument.TryNormalize(command.Document, out var document))
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.InvalidInput);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.InvalidInput);
         }
 
-        Guid companyId;
-        try
+        if (await currentCompany.FindCompanyIdAsync(cancellationToken) is not { } companyId)
         {
-            companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
-        }
-        catch (CurrentCompanyNotFoundException)
-        {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.Unauthorized);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.Unauthorized);
         }
 
         if (!await repository.IsCurrentUserOwnerAsync(currentUser.UserId, companyId, cancellationToken))
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.Unauthorized);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.Unauthorized);
         }
 
         var email = command.Email.Trim().ToLowerInvariant();
         var now = timeProvider.GetUtcNow();
         if (await accountService.EmailExistsAsync(email, cancellationToken))
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.EmailAlreadyRegistered);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.EmailAlreadyRegistered);
         }
 
         if (await repository.HasPendingEmailAsync(companyId, email, now, cancellationToken))
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.DuplicateEmail);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.DuplicateEmail);
         }
 
         if (await repository.HasPendingOrAcceptedDocumentAsync(companyId, document, now, cancellationToken))
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.DuplicateDocument);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.DuplicateDocument);
         }
 
         var token = EmployeeInvitationToken.Create();
@@ -77,6 +73,6 @@ public sealed class CreateEmployeeInvitationUseCase(
 
         await repository.AddAsync(invitation, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
-        return EmployeeInvitationResult.Success(token.Value);
+        return OperationResult<EmployeeInvitationOutcome>.Success(new EmployeeInvitationOutcome(Token: token.Value));
     }
 }

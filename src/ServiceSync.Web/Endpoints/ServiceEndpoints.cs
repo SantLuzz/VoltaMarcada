@@ -1,6 +1,7 @@
 using ServiceSync.Application.Services;
 using ServiceSync.Domain.Enums;
 using ServiceSync.Web.Authorization;
+using ServiceSync.Web.Errors;
 
 namespace ServiceSync.Web.Endpoints;
 
@@ -31,7 +32,8 @@ public static class ServiceEndpoints
         }
 
         var result = await useCase.ExecuteAsync(ToCreateCommand(request!), cancellationToken);
-        return ToResult(result, serviceId => Results.Created($"/services/{serviceId}/edit", new { serviceId }));
+        return result.ToHttpResult(serviceId =>
+            Results.Created($"/services/{serviceId}/edit", new { serviceId }));
     }
 
     private static async Task<IResult> GetAllAsync(
@@ -61,7 +63,7 @@ public static class ServiceEndpoints
         }
 
         var result = await useCase.ExecuteAsync(serviceId, ToUpdateCommand(request!), cancellationToken);
-        return ToResult(result, _ => Results.Ok());
+        return result.ToHttpResult(_ => Results.Ok());
     }
 
     private static async Task<IResult> DeleteAsync(
@@ -70,26 +72,13 @@ public static class ServiceEndpoints
         CancellationToken cancellationToken)
     {
         var result = await useCase.ExecuteAsync(serviceId, cancellationToken);
-        return result.Code switch
-        {
-            ServiceOperationResultCode.Success => Results.NoContent(),
-            ServiceOperationResultCode.NotFound => Results.NotFound(),
-            _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError)
-        };
+        return result.ToHttpResult(_ => Results.NoContent());
     }
 
-    private static IResult ToResult(ServiceOperationResult result, Func<Guid, IResult> success) =>
-        result.Code switch
-        {
-            ServiceOperationResultCode.Success when result.ServiceId is { } serviceId => success(serviceId),
-            ServiceOperationResultCode.InvalidInput => Results.BadRequest(
-                new { error = "Revise os dados do serviço e tente novamente." }),
-            ServiceOperationResultCode.NotFound => Results.NotFound(),
-            _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError)
-        };
-
     private static IResult InvalidInput() =>
-        Results.BadRequest(new { error = "Revise os dados do serviço e tente novamente." });
+        OperationResultHttpExtensions.ValidationProblem(
+            ServiceErrors.InvalidInput.Code,
+            OperationErrorMessages.GetMessage(ServiceErrors.InvalidInput.Code));
 
     private static bool HasValidChecklistItems(ServiceRequest? request) =>
         request?.ChecklistItems is not null && request.ChecklistItems.All(item => item is not null);

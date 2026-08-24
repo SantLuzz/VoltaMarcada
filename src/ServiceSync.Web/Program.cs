@@ -9,6 +9,7 @@ using ServiceSync.Infrastructure.Identity;
 using ServiceSync.Web.Components;
 using ServiceSync.Web.Authorization;
 using ServiceSync.Web.Endpoints;
+using ServiceSync.Web.Errors;
 using ServiceSync.Web.Identity;
 using ServiceSync.Web.Configuration;
 using ServiceSync.Application.Scheduling;
@@ -17,6 +18,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddExceptionHandler<UnexpectedExceptionHandler>();
+builder.Services.AddProblemDetails();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddOptions<SchedulingOptions>()
     .Bind(builder.Configuration.GetSection(SchedulingOptions.SectionName))
@@ -53,7 +56,7 @@ await PlatformAdministratorInitializer.InitializeAsync(app.Services, builder.Con
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/error", createScopeForErrors: true);
+    app.UseExceptionHandler();
     app.UseHsts();
 }
 

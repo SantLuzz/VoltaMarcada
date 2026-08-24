@@ -4,8 +4,8 @@
 @using ServiceSync.Application.WorkOrders
 @inject WorkOrderAuthorization WorkOrderAuthorization
 @inject GetAppointmentsUseCase GetAppointmentsUseCase
-@inject GetAppointmentDetailsUseCase GetAppointmentDetailsUseCase
 @inject GetScheduleBlockRequestsUseCase GetScheduleBlockRequestsUseCase
+@inject GetWorkOrdersUseCase GetWorkOrdersUseCase
 @inject ISchedulingConfiguration SchedulingConfiguration
 @inject TimeProvider TimeProvider
 
@@ -19,6 +19,15 @@
         }
     </Actions>
 </PageHeader>
+
+@if (isOwner)
+{
+    <MudGrid Class="mt-4">
+        <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">Agendamentos no período</MudText><MudText Typo="Typo.h5">@appointments.Count</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">OS abertas</MudText><MudText Typo="Typo.h5">@openWorkOrders</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">Bloqueios aguardando ação</MudText><MudText Typo="Typo.h5">@pendingBlockRequests</MudText></MudPaper></MudItem>
+    </MudGrid>
+}
 
 <MudPaper Outlined="true" Class="dashboard-agenda mt-4">
     <div class="dashboard-agenda-toolbar">
@@ -99,63 +108,7 @@
     </a>
 }
 
-<MudDialog @bind-Visible="isAppointmentDetailsDialogOpen">
-    <TitleContent><MudText Typo="Typo.h6">Detalhes do atendimento</MudText></TitleContent>
-    <DialogContent>
-        @if (isLoadingAppointmentDetails)
-        {
-            <MudProgressLinear Indeterminate="true" />
-        }
-        else if (appointmentDetails is not null)
-        {
-            <MudStack Spacing="2">
-                <div>
-                    <MudText Typo="Typo.overline">Horário</MudText>
-                    <MudText>@AppointmentCalendarTime.ToLocalDateTime(appointmentDetails.StartAtUtc, appointmentDetails.ProfessionalTimeZoneId).ToString("dd/MM/yyyy HH:mm") às @AppointmentCalendarTime.ToLocalDateTime(appointmentDetails.EndAtUtc, appointmentDetails.ProfessionalTimeZoneId).ToString("HH:mm")</MudText>
-                </div>
-                <div>
-                    <MudText Typo="Typo.overline">Status</MudText>
-                    <MudChip T="string" Size="Size.Small" Color="@GetAppointmentStatusColor(appointmentDetails.Status)">@GetAppointmentStatusName(appointmentDetails.Status)</MudChip>
-                </div>
-                @if (!string.IsNullOrWhiteSpace(appointmentDetails.Notes))
-                {
-                    <div>
-                        <MudText Typo="Typo.overline">Observações</MudText>
-                        <MudText>@appointmentDetails.Notes</MudText>
-                    </div>
-                }
-                @if (appointmentDetails.Customer is { } customer)
-                {
-                    <MudDivider />
-                    <div>
-                        <MudText Typo="Typo.h6">Cliente</MudText>
-                        <MudText>@customer.Name</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@customer.WhatsApp</MudText>
-                        @if (!string.IsNullOrWhiteSpace(customer.Email))
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@customer.Email</MudText>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(customer.PrimaryAddress))
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@customer.PrimaryAddress</MudText>
-                        }
-                    </div>
-                }
-            </MudStack>
-        }
-        else
-        {
-            <MudAlert Severity="Severity.Warning">Atendimento não encontrado ou indisponível.</MudAlert>
-        }
-    </DialogContent>
-    <DialogActions>
-        @if (appointmentDetails?.WorkOrderId is { } workOrderId)
-        {
-            <MudButton Href="@($"/ordens-servico/registro?id={workOrderId}")" Color="Color.Primary" Variant="Variant.Filled">Abrir OS</MudButton>
-        }
-        <MudButton OnClick="CloseAppointmentDetailsDialog">Fechar</MudButton>
-    </DialogActions>
-</MudDialog>
+<AppointmentDetailsDialog AppointmentId="@selectedAppointmentId" @bind-Visible="isAppointmentDetailsDialogOpen" />
 
 @code {
     private IReadOnlyList<AppointmentDto> appointments = [];
@@ -165,10 +118,10 @@
     private DateOnly visibleStartDate;
     private bool isLoading = true;
     private bool isAppointmentDetailsDialogOpen;
-    private bool isLoadingAppointmentDetails;
     private bool isOwner;
     private int pendingBlockRequests;
-    private AppointmentDetailsDto? appointmentDetails;
+    private int openWorkOrders;
+    private Guid? selectedAppointmentId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -197,25 +150,10 @@
         await LoadAsync();
     }
 
-    private async Task OpenAppointmentDetailsAsync(Guid appointmentId)
+    private void OpenAppointmentDetailsAsync(Guid appointmentId)
     {
+        selectedAppointmentId = appointmentId;
         isAppointmentDetailsDialogOpen = true;
-        isLoadingAppointmentDetails = true;
-        appointmentDetails = null;
-        try
-        {
-            appointmentDetails = await GetAppointmentDetailsUseCase.ExecuteAsync(appointmentId);
-        }
-        finally
-        {
-            isLoadingAppointmentDetails = false;
-        }
-    }
-
-    private void CloseAppointmentDetailsDialog()
-    {
-        isAppointmentDetailsDialogOpen = false;
-        appointmentDetails = null;
     }
 
     private async Task LoadAsync()
@@ -239,6 +177,8 @@
             {
                 pendingBlockRequests = (await GetScheduleBlockRequestsUseCase.ExecuteAsync(currentAccessScope))
                     .Count(request => request.Status is ServiceSync.Domain.Enums.ScheduleBlockRequestStatus.Pending or ServiceSync.Domain.Enums.ScheduleBlockRequestStatus.RequiresAppointmentResolution);
+                openWorkOrders = (await GetWorkOrdersUseCase.ExecuteAsync(new GetWorkOrdersQuery(null, null)))
+                    .Count(workOrder => workOrder.Status is ServiceSync.Domain.Enums.WorkOrderStatus.Pending or ServiceSync.Domain.Enums.WorkOrderStatus.InProgress);
             }
         }
         finally
@@ -258,19 +198,4 @@
         ? $"{visibleStartDate:dd/MM} a {visibleStartDate.AddDays(6):dd/MM}"
         : visibleStartDate.ToString("dddd, dd 'de' MMMM", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
 
-    private static Color GetAppointmentStatusColor(ServiceSync.Domain.Enums.AppointmentStatus status) => status switch
-    {
-        ServiceSync.Domain.Enums.AppointmentStatus.Completed => Color.Success,
-        ServiceSync.Domain.Enums.AppointmentStatus.Cancelled => Color.Error,
-        ServiceSync.Domain.Enums.AppointmentStatus.InProgress => Color.Info,
-        _ => Color.Primary
-    };
-
-    private static string GetAppointmentStatusName(ServiceSync.Domain.Enums.AppointmentStatus status) => status switch
-    {
-        ServiceSync.Domain.Enums.AppointmentStatus.Completed => "Concluído",
-        ServiceSync.Domain.Enums.AppointmentStatus.Cancelled => "Cancelado",
-        ServiceSync.Domain.Enums.AppointmentStatus.InProgress => "Em andamento",
-        _ => "Agendado"
-    };
 }

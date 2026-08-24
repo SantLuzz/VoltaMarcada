@@ -1190,7 +1190,89 @@ comerciais.
 
 ------------------------------------------------------------------------
 
-# Fase 10 --- SaaS comercial e lançamento
+# Fase 10 --- Licença, PIX e baixa manual
+
+## Licença da empresa
+
+Cada empresa possui uma licença própria, independente dos usuários.
+
+Fluxo inicial:
+
+``` text
+Criar empresa
+↓
+Trial de 14 dias
+↓
+Opção de aderir nos últimos 3 dias
+↓
+Tolerância de 3 dias após o trial
+↓
+Pagamento PIX
+↓
+Envio obrigatório do comprovante
+↓
+Análise manual pelo administrador ServiceSync
+↓
+Renovação da licença por um mês
+```
+
+O plano inicial é único:
+
+``` text
+R$ 49,90/mês
+```
+
+O owner deve visualizar no dashboard quantos dias faltam para o vencimento.
+Quando faltarem até 7 dias, o sistema apresenta a ação **Renovar licença**.
+Nos três últimos dias do trial, apresenta a ação **Aderir**.
+
+## PIX e comprovante
+
+A tela de renovação deve apresentar:
+
+- QR Code PIX;
+- PIX copia e cola;
+- valor mensal;
+- envio obrigatório do comprovante;
+- status do comprovante enviado.
+
+O recebimento utiliza a chave PIX configurada pelo ServiceSync. Os comprovantes podem ser imagens ou PDF e devem ser armazenados na nuvem com a estrutura:
+
+``` text
+pagamentos/{guidEmpresa}/{dataPagamento}.{formato}
+```
+
+## Bloqueio e acesso
+
+Após o trial de 14 dias, a empresa possui 3 dias de tolerância.
+Depois desse período, o owner continua com visualização e acesso à renovação, mas não pode executar ações de escrita. Funcionários veem uma tela de conta bloqueada com a orientação para contatar o administrador da própria empresa.
+
+No décimo dia após o encerramento do trial, o acesso operacional é encerrado: o owner é direcionado à regularização e o funcionário permanece na tela bloqueada.
+
+Para licenças pagas vencidas, o sistema mostra aviso no produto e envia e-mail diário ao owner. Após 7 dias de inadimplência, o owner entra em modo somente visualização; após 20 dias, o acesso operacional é encerrado.
+
+## Administração ServiceSync
+
+O administrador da plataforma possui um dashboard próprio para licenças e pagamentos. O painel mensal deve permitir acompanhar:
+
+- empresa;
+- owner e e-mail;
+- vencimento atual;
+- data e valor do pagamento;
+- status do comprovante;
+- visualização segura do comprovante;
+- aprovação ou rejeição manual;
+- responsável e data da análise.
+
+Somente a aprovação manual renova a licença. A renovação antecipada preserva os dias já contratados e estende o vencimento até o mesmo dia do mês seguinte.
+
+## Objetivo
+
+Permitir a comercialização inicial do ServiceSync sem gateway de pagamento, mantendo cobrança simples, auditável e segura até que a base de clientes justifique automação.
+
+------------------------------------------------------------------------
+
+# Fase 11 --- SaaS comercial e lançamento
 
 ## Cadastro autônomo
 

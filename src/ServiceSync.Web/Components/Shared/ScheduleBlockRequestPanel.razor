@@ -31,7 +31,23 @@
             {
                 <MudListItem T="ScheduleBlockRequestDto" Value="@request" Icon="@Icons.Material.Filled.Block">
                     <MudText>@request.StartDate.ToString("dd/MM") a @request.EndDate.ToString("dd/MM") — @GetStatusName(request.Status)</MudText>
-                    @if (isOwner && (request.Status == ScheduleBlockRequestStatus.Pending || request.Status == ScheduleBlockRequestStatus.RequiresAppointmentResolution))
+                    @if (isOwner)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Solicitado por: @request.ProfessionalName</MudText>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(request.Notes))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@request.Notes</MudText>
+                    }
+                    @if (request.AffectedAppointments.Count > 0)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Warning">Ajuste os atendimentos antes de aprovar:</MudText>
+                        @foreach (var appointment in request.AffectedAppointments)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment</MudText>
+                        }
+                    }
+                    @if (isOwner && (request.Status == ScheduleBlockRequestStatus.Pending || request.Status == ScheduleBlockRequestStatus.RequiresAppointmentResolution && request.AffectedAppointments.Count == 0))
                     {
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Success" OnClick="@(() => ApproveAsync(request.Id))">Aprovar</MudButton>
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => RejectAsync(request.Id))">Recusar</MudButton>
@@ -65,27 +81,35 @@
     {
         if (startDate is null || endDate is null) return;
         var result = await CreateScheduleBlockRequestUseCase.ExecuteAsync(new CreateScheduleBlockRequestCommand(ScheduleBlockType.TimeOff, DateOnly.FromDateTime(startDate.Value), DateOnly.FromDateTime(endDate.Value), true, null, null, notes));
-        if (result.Code == SchedulingOperationResultCode.Success)
+        if (result.IsSuccess)
         {
             Snackbar.Add("Solicitação enviada para aprovação.", Severity.Success);
             await LoadAsync();
             return;
         }
 
-        Snackbar.Add("Não foi possível enviar a solicitação.", Severity.Error);
+        Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
     }
 
     private async Task ApproveAsync(Guid id)
     {
         var result = await ApproveScheduleBlockRequestUseCase.ExecuteAsync(id);
-        Snackbar.Add(result.Code == SchedulingOperationResultCode.Success ? "Bloqueio aprovado." : "Existem atendimentos a ajustar antes da aprovação.", result.Code == SchedulingOperationResultCode.Success ? Severity.Success : Severity.Warning);
+        Snackbar.Add(
+            result.IsSuccess
+                ? "Bloqueio aprovado."
+                : OperationErrorMessages.GetMessage(result.Error?.Code),
+            result.IsSuccess ? Severity.Success : Severity.Error);
         await LoadAsync();
     }
 
     private async Task RejectAsync(Guid id)
     {
         var result = await RejectScheduleBlockRequestUseCase.ExecuteAsync(id, null);
-        if (result.Code == SchedulingOperationResultCode.Success) Snackbar.Add("Solicitação recusada.", Severity.Info);
+        Snackbar.Add(
+            result.IsSuccess
+                ? "Solicitação recusada."
+                : OperationErrorMessages.GetMessage(result.Error?.Code),
+            result.IsSuccess ? Severity.Info : Severity.Error);
         await LoadAsync();
     }
 

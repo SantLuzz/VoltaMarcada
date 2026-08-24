@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
 
@@ -8,17 +9,17 @@ public sealed class DeleteEquipmentUseCase(
     IEquipmentRepository repository,
     TimeProvider timeProvider)
 {
-    public async Task<EquipmentOperationResult> ExecuteAsync(Guid equipmentId, CancellationToken cancellationToken = default)
+    public async Task<OperationResult<Guid?>> ExecuteAsync(Guid equipmentId, CancellationToken cancellationToken = default)
     {
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         var equipment = await repository.GetForCompanyAsync(equipmentId, companyId, cancellationToken);
         if (equipment is null)
         {
-            return EquipmentOperationResult.NotFound();
+            return OperationResult<Guid?>.Failure(EquipmentErrors.NotFound);
         }
 
         equipment.Deactivate(timeProvider.GetUtcNow());
         await repository.SaveChangesAsync(cancellationToken);
-        return EquipmentOperationResult.Success(equipment.Id);
+        return OperationResult<Guid?>.Success(equipment.Id);
     }
 }

@@ -9,11 +9,11 @@ public sealed class CurrentCompany(
     IDbContextFactory<AppDbContext> dbContextFactory,
     ICurrentUser currentUser) : ICurrentCompany
 {
-    public async Task<Guid> GetCompanyIdAsync(CancellationToken cancellationToken = default)
+    public async Task<Guid?> FindCompanyIdAsync(CancellationToken cancellationToken = default)
     {
         if (!currentUser.IsAuthenticated || currentUser.UserId == Guid.Empty)
         {
-            throw new InvalidOperationException("A current company can only be resolved for an authenticated user.");
+            return null;
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -24,11 +24,16 @@ public sealed class CurrentCompany(
             .Select(companyUser => companyUser.CompanyId)
             .SingleOrDefaultAsync(cancellationToken);
 
-        if (companyId == Guid.Empty)
+        return companyId == Guid.Empty ? null : companyId;
+    }
+
+    public async Task<Guid> GetCompanyIdAsync(CancellationToken cancellationToken = default)
+    {
+        if (!currentUser.IsAuthenticated || currentUser.UserId == Guid.Empty)
         {
-            throw new CurrentCompanyNotFoundException();
+            throw new InvalidOperationException("A current company can only be resolved for an authenticated user.");
         }
 
-        return companyId;
+        return await FindCompanyIdAsync(cancellationToken) ?? throw new CurrentCompanyNotFoundException();
     }
 }

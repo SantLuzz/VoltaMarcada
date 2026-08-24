@@ -116,9 +116,9 @@ else
     private async Task ChangeStatusAsync(ProfessionalDto professional)
     {
         var result = await ChangeProfessionalStatusUseCase.ExecuteAsync(professional.Id, !professional.IsActive);
-        if (result.Code != ProfessionalOperationResultCode.Success)
+        if (!result.IsSuccess)
         {
-            Snackbar.Add("Não foi possível atualizar o status do profissional.", Severity.Error);
+            Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
             return;
         }
 

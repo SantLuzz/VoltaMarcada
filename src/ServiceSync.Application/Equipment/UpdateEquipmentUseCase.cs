@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using FluentValidation;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
@@ -11,7 +12,7 @@ public sealed class UpdateEquipmentUseCase(
     IValidator<UpdateEquipmentCommand> validator,
     TimeProvider timeProvider)
 {
-    public async Task<EquipmentOperationResult> ExecuteAsync(
+    public async Task<OperationResult<Guid?>> ExecuteAsync(
         Guid equipmentId,
         UpdateEquipmentCommand command,
         CancellationToken cancellationToken = default)
@@ -19,20 +20,20 @@ public sealed class UpdateEquipmentUseCase(
         var validationResult = await validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid)
         {
-            return EquipmentOperationResult.InvalidInput();
+            return OperationResult<Guid?>.Failure(EquipmentErrors.InvalidInput);
         }
 
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         var equipment = await equipmentRepository.GetForCompanyAsync(equipmentId, companyId, cancellationToken);
         if (equipment is null)
         {
-            return EquipmentOperationResult.NotFound();
+            return OperationResult<Guid?>.Failure(EquipmentErrors.NotFound);
         }
 
         var customer = await customerRepository.GetForCompanyAsync(command.CustomerId, companyId, cancellationToken);
         if (customer is null)
         {
-            return EquipmentOperationResult.CustomerNotFound();
+            return OperationResult<Guid?>.Failure(EquipmentErrors.CustomerNotFound);
         }
 
         equipment.Update(
@@ -48,6 +49,6 @@ public sealed class UpdateEquipmentUseCase(
             timeProvider.GetUtcNow());
 
         await equipmentRepository.SaveChangesAsync(cancellationToken);
-        return EquipmentOperationResult.Success(equipment.Id);
+        return OperationResult<Guid?>.Success(equipment.Id);
     }
 }

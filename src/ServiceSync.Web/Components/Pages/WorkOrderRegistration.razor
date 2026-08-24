@@ -163,7 +163,9 @@ else
                 <WorkOrderExecutionPanel @ref="executionPanel" WorkOrder="detail" OnChanged="LoadAsync" OnSavingChanged="SetExecutionSavingAsync" OnPhotoUploadChanged="SetPhotoUploadStateAsync" />
             </MudTabPanel>
             <MudTabPanel Text="Agendamentos">
-                <WorkOrderAppointmentsPanel WorkOrderId="@detail.Id" IsOwner="@isOwner" />
+                <WorkOrderAppointmentsPanel WorkOrderId="@detail.Id"
+                                           IsOwner="@isOwner"
+                                           CanCreateAppointments="@(isOwner || currentProfessionalId is { } currentProfessionalIdValue && detail.ProfessionalId == currentProfessionalIdValue)" />
             </MudTabPanel>
         }
     </MudTabs>
@@ -407,9 +409,9 @@ else
             newCustomerStateId,
             newCustomerCityId);
         var result = await CreateCustomerUseCase.ExecuteAsync(new CreateCustomerCommand(newCustomerName, newCustomerDocument, newCustomerWhatsApp, null, null, [address]));
-        if (result.Code != CustomerOperationResultCode.Success || result.CustomerId is not { } id)
+        if (!result.IsSuccess || result.Value is not { } id)
         {
-            Snackbar.Add("Revise os dados do cliente.", Severity.Warning);
+            Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
             return;
         }
 
@@ -444,9 +446,9 @@ else
         }
 
         var result = await CreateEquipmentUseCase.ExecuteAsync(new CreateEquipmentCommand(customerId.Value, newEquipmentType, newEquipmentManufacturer, newEquipmentModel, null, null, null, null, null));
-        if (result.Code != EquipmentOperationResultCode.Success || result.EquipmentId is not { } id)
+        if (!result.IsSuccess || result.Value is not { } id)
         {
-            Snackbar.Add("Revise os dados do equipamento.", Severity.Warning);
+            Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
             return;
         }
 
@@ -487,25 +489,25 @@ else
                 ? new WorkOrderAppointmentInput(DateOnly.FromDateTime(newAppointmentDate!.Value), newAppointmentStartTime!.Value)
                 : null;
             var result = await CreateWorkOrderUseCase.ExecuteAsync(new CreateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items, appointment));
-            if (result.Code == WorkOrderOperationResultCode.Success && result.WorkOrderId is { } createdId)
+            if (result.IsSuccess && result.Value?.WorkOrderId is { } createdId)
             {
                 NavigationManager.NavigateTo($"/ordens-servico/registro?id={createdId}");
                 return;
             }
 
-            ShowOperationError(result.Code);
+            ShowOperationError(result.Error?.Code);
             return;
         }
 
         var updateResult = await UpdateWorkOrderUseCase.ExecuteAsync(WorkOrderId.Value, new UpdateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items));
-        if (updateResult.Code == WorkOrderOperationResultCode.Success)
+        if (updateResult.IsSuccess)
         {
             Snackbar.Add("OS atualizada.", Severity.Success);
             await LoadAsync();
             return;
         }
 
-        ShowOperationError(updateResult.Code);
+        ShowOperationError(updateResult.Error?.Code);
     }
 
     private async Task CancelAsync()
@@ -516,30 +518,19 @@ else
         }
 
         var result = await CancelWorkOrderUseCase.ExecuteAsync(id);
-        if (result.Code == WorkOrderOperationResultCode.Success)
+        if (result.IsSuccess)
         {
             Snackbar.Add("OS cancelada.", Severity.Success);
             await LoadAsync();
             return;
         }
 
-        ShowOperationError(result.Code);
+        ShowOperationError(result.Error?.Code);
     }
 
-    private void ShowOperationError(WorkOrderOperationResultCode code)
+    private void ShowOperationError(string? code)
     {
-        var message = code switch
-        {
-            WorkOrderOperationResultCode.ProfessionalProfileRequired => "Seu usuário precisa de um perfil profissional ativo para criar esta OS.",
-            WorkOrderOperationResultCode.ProfessionalRequired => "Selecione um profissional para agendar o atendimento.",
-            WorkOrderOperationResultCode.ProfessionalNotQualified => "O profissional selecionado não está habilitado para este serviço.",
-            WorkOrderOperationResultCode.ProfessionalUnavailable => "O profissional não está disponível no horário selecionado.",
-            WorkOrderOperationResultCode.OpenAppointments => "Conclua ou cancele todos os agendamentos desta OS antes de concluir o serviço.",
-            WorkOrderOperationResultCode.InvalidEquipmentCustomer => "O equipamento não pertence ao cliente selecionado.",
-            _ => "Não foi possível salvar a ordem de serviço. Revise os dados informados."
-        };
-
-        Snackbar.Add(message, Severity.Error);
+        Snackbar.Add(OperationErrorMessages.GetMessage(code), Severity.Warning);
     }
 
     private static string GetPriorityName(WorkOrderPriority value) => value switch

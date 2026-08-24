@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using ServiceSync.Application.Abstractions.Storage;
 using ServiceSync.Application.CompanyOnboarding;
 using ServiceSync.Infrastructure.Identity;
+using ServiceSync.Web.Errors;
 using ServiceSync.Web.Routing;
 
 namespace ServiceSync.Web.Endpoints;
@@ -48,38 +49,18 @@ public static class CompanyOnboardingEndpoints
             logo);
 
         var result = await useCase.ExecuteAsync(command, cancellationToken);
-        return result.Code switch
+        if (result.IsSuccess || result.Error?.Code == CompanyOnboardingErrors.AlreadyOnboarded.Code)
         {
-            CompleteCompanyOnboardingResultCode.Success => Results.Redirect(
-                LocalReturnUrl.Normalize(request.ReturnUrl, "/")),
-            CompleteCompanyOnboardingResultCode.Unauthenticated => RedirectWithError(
-                "/account/login",
-                "Faça login para cadastrar sua empresa.",
-                request.ReturnUrl),
-            CompleteCompanyOnboardingResultCode.AlreadyOnboarded => Results.Redirect(
-                LocalReturnUrl.Normalize(request.ReturnUrl, "/")),
-            CompleteCompanyOnboardingResultCode.InvalidInput => RedirectWithError(
-                "/onboarding/company",
-                "Revise os dados da empresa e tente novamente.",
-                request.ReturnUrl),
-            CompleteCompanyOnboardingResultCode.DocumentAlreadyExists => RedirectWithError(
-                "/onboarding/company",
-                "Este CPF ou CNPJ já está cadastrado.",
-                request.ReturnUrl),
-            CompleteCompanyOnboardingResultCode.SlugAlreadyExists => RedirectWithError(
-                "/onboarding/company",
-                "Não foi possível gerar um endereço público para a empresa. Tente novamente.",
-                request.ReturnUrl),
-            CompleteCompanyOnboardingResultCode.InvalidLocation => RedirectWithError(
-                "/onboarding/company",
-                "Selecione um estado e uma cidade válidos.",
-                request.ReturnUrl),
-            CompleteCompanyOnboardingResultCode.InvalidLogo => RedirectWithError(
-                "/onboarding/company",
-                "Envie uma logo PNG, JPEG ou WebP de até 5 MB.",
-                request.ReturnUrl),
-            _ => throw new InvalidOperationException($"Unsupported company onboarding result code: {result.Code}.")
-        };
+            return Results.Redirect(LocalReturnUrl.Normalize(request.ReturnUrl, "/"));
+        }
+
+        var target = result.Error?.Code == CompanyOnboardingErrors.Unauthenticated.Code
+            ? "/account/login"
+            : "/onboarding/company";
+        return RedirectWithError(
+            target,
+            OperationErrorMessages.GetMessage(result.Error?.Code),
+            request.ReturnUrl);
     }
 
     private static IResult RedirectWithError(string path, string error, string? returnUrl) =>

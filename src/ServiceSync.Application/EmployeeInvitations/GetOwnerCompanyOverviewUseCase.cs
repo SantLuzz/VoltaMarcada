@@ -17,12 +17,7 @@ public sealed class GetOwnerCompanyOverviewUseCase(
             return null;
         }
 
-        Guid companyId;
-        try
-        {
-            companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
-        }
-        catch (CurrentCompanyNotFoundException)
+        if (await currentCompany.FindCompanyIdAsync(cancellationToken) is not { } companyId)
         {
             return null;
         }

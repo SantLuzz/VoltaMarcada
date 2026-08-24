@@ -181,7 +181,7 @@
         try
         {
             var result = await DeleteEquipmentUseCase.ExecuteAsync(equipmentToDelete.Id);
-            if (result.Code == EquipmentOperationResultCode.Success)
+            if (result.IsSuccess)
             {
                 equipment = equipment.Where(item => item.Id != equipmentToDelete.Id).ToArray();
                 Snackbar.Add("Equipamento inativado com sucesso.", Severity.Success);
@@ -189,7 +189,7 @@
                 return;
             }
 
-            Snackbar.Add("O equipamento não foi encontrado. Atualize a lista e tente novamente.", Severity.Warning);
+            Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
             CloseDeleteDialog();
             await LoadEquipmentAsync();
         }

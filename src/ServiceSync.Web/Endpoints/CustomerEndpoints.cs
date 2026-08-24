@@ -1,6 +1,7 @@
 using ServiceSync.Application.Customers;
 using ServiceSync.Domain.Enums;
 using ServiceSync.Web.Authorization;
+using ServiceSync.Web.Errors;
 
 namespace ServiceSync.Web.Endpoints;
 
@@ -27,23 +28,15 @@ public static class CustomerEndpoints
     {
         if (HasInvalidAddressCollection(request))
         {
-            return InvalidInput();
+            return OperationResultHttpExtensions.ValidationProblem(
+                CustomerErrors.InvalidInput.Code,
+                OperationErrorMessages.GetMessage(CustomerErrors.InvalidInput.Code));
         }
 
         var result = await useCase.ExecuteAsync(ToCreateCommand(request), cancellationToken);
-
-        return result.Code switch
-        {
-            CustomerOperationResultCode.Success => Results.Created(
-                $"/customers/{result.CustomerId}/edit",
-                new { customerId = result.CustomerId }),
-            CustomerOperationResultCode.InvalidInput => InvalidInput(),
-            CustomerOperationResultCode.DuplicateDocument => Results.Conflict(
-                new { error = "J\u00e1 existe um cliente com este CPF ou CNPJ." }),
-            CustomerOperationResultCode.InvalidLocation => Results.BadRequest(
-                new { error = "Selecione um estado e uma cidade válidos." }),
-            _ => UnexpectedResult()
-        };
+        return result.ToHttpResult(customerId => Results.Created(
+            $"/customers/{customerId}/edit",
+            new { customerId }));
     }
 
     private static async Task<IResult> GetAllAsync(
@@ -74,22 +67,13 @@ public static class CustomerEndpoints
     {
         if (HasInvalidAddressCollection(request))
         {
-            return InvalidInput();
+            return OperationResultHttpExtensions.ValidationProblem(
+                CustomerErrors.InvalidInput.Code,
+                OperationErrorMessages.GetMessage(CustomerErrors.InvalidInput.Code));
         }
 
         var result = await useCase.ExecuteAsync(customerId, ToUpdateCommand(request), cancellationToken);
-
-        return result.Code switch
-        {
-            CustomerOperationResultCode.Success => Results.Ok(),
-            CustomerOperationResultCode.InvalidInput => InvalidInput(),
-            CustomerOperationResultCode.DuplicateDocument => Results.Conflict(
-                new { error = "J\u00e1 existe um cliente com este CPF ou CNPJ." }),
-            CustomerOperationResultCode.InvalidLocation => Results.BadRequest(
-                new { error = "Selecione um estado e uma cidade válidos." }),
-            CustomerOperationResultCode.NotFound => Results.NotFound(),
-            _ => UnexpectedResult()
-        };
+        return result.ToHttpResult(_ => Results.Ok());
     }
 
     private static async Task<IResult> DeleteAsync(
@@ -98,15 +82,7 @@ public static class CustomerEndpoints
         CancellationToken cancellationToken)
     {
         var result = await useCase.ExecuteAsync(customerId, cancellationToken);
-
-        return result.Code switch
-        {
-            CustomerOperationResultCode.Success => Results.NoContent(),
-            CustomerOperationResultCode.NotFound => Results.NotFound(),
-            CustomerOperationResultCode.HasLinkedEquipment => Results.Conflict(
-                new { error = "O cliente possui equipamentos vinculados e n\u00e3o pode ser exclu\u00eddo." }),
-            _ => UnexpectedResult()
-        };
+        return result.ToHttpResult(_ => Results.NoContent());
     }
 
     private static CreateCustomerCommand ToCreateCommand(CustomerRequest request) =>
@@ -141,12 +117,6 @@ public static class CustomerEndpoints
 
     private static bool HasInvalidAddressCollection(CustomerRequest request) =>
         request.Addresses is null || request.Addresses.Any(address => address is null);
-
-    private static IResult InvalidInput() =>
-        Results.BadRequest(new { error = "Revise os dados do cliente e tente novamente." });
-
-    private static IResult UnexpectedResult() =>
-        Results.Problem(statusCode: StatusCodes.Status500InternalServerError);
 
     public sealed record CustomerRequest(
         string Name,
