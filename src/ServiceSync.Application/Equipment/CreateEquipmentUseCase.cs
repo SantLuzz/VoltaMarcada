@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using FluentValidation;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
@@ -11,21 +12,21 @@ public sealed class CreateEquipmentUseCase(
     IValidator<CreateEquipmentCommand> validator,
     TimeProvider timeProvider)
 {
-    public async Task<EquipmentOperationResult> ExecuteAsync(
+    public async Task<OperationResult<Guid?>> ExecuteAsync(
         CreateEquipmentCommand command,
         CancellationToken cancellationToken = default)
     {
         var validationResult = await validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid)
         {
-            return EquipmentOperationResult.InvalidInput();
+            return OperationResult<Guid?>.Failure(EquipmentErrors.InvalidInput);
         }
 
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         var customer = await customerRepository.GetForCompanyAsync(command.CustomerId, companyId, cancellationToken);
         if (customer is null)
         {
-            return EquipmentOperationResult.CustomerNotFound();
+            return OperationResult<Guid?>.Failure(EquipmentErrors.CustomerNotFound);
         }
 
         var equipment = global::ServiceSync.Domain.Entities.Equipment.Create(
@@ -43,6 +44,6 @@ public sealed class CreateEquipmentUseCase(
 
         await equipmentRepository.AddAsync(equipment, cancellationToken);
         await equipmentRepository.SaveChangesAsync(cancellationToken);
-        return EquipmentOperationResult.Success(equipment.Id);
+        return OperationResult<Guid?>.Success(equipment.Id);
     }
 }

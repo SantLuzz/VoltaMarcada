@@ -193,20 +193,14 @@ else
                 ? await UpdateEquipmentUseCase.ExecuteAsync(equipmentId, ToUpdateCommand(equipment))
                 : await CreateEquipmentUseCase.ExecuteAsync(ToCreateCommand(equipment));
 
-            if (result.Code == EquipmentOperationResultCode.Success)
+            if (result.IsSuccess)
             {
                 Snackbar.Add(isEditing ? "Equipamento atualizado com sucesso." : "Equipamento cadastrado com sucesso.", Severity.Success);
                 NavigationManager.NavigateTo("/equipamentos");
                 return;
             }
 
-            submitError = result.Code switch
-            {
-                EquipmentOperationResultCode.InvalidInput => "Revise os dados do equipamento e tente novamente.",
-                EquipmentOperationResultCode.CustomerNotFound => "Selecione um cliente válido da sua empresa.",
-                EquipmentOperationResultCode.NotFound => "Equipamento não encontrado.",
-                _ => "Não foi possível salvar o equipamento. Tente novamente."
-            };
+            submitError = OperationErrorMessages.GetMessage(result.Error?.Code);
         }
         catch (Exception exception)
         {

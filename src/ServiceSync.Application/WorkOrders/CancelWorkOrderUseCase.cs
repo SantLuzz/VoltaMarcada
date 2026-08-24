@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Domain.Enums;
 
@@ -8,7 +9,7 @@ public sealed class CancelWorkOrderUseCase(
     WorkOrderAuthorization authorization,
     TimeProvider timeProvider)
 {
-    public async Task<WorkOrderOperationResult> ExecuteAsync(
+    public async Task<OperationResult<WorkOrderOperationValue>> ExecuteAsync(
         Guid workOrderId,
         CancellationToken cancellationToken = default)
     {
@@ -21,16 +22,16 @@ public sealed class CancelWorkOrderUseCase(
 
         if (workOrder is null)
         {
-            return WorkOrderOperationResult.Failure(WorkOrderOperationResultCode.NotFound);
+            return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.NotFound);
         }
 
         if (workOrder.Status is WorkOrderStatus.Completed or WorkOrderStatus.Cancelled)
         {
-            return WorkOrderOperationResult.Failure(WorkOrderOperationResultCode.InvalidStatus);
+            return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidStatus);
         }
 
         workOrder.Cancel(timeProvider.GetUtcNow());
         await repository.SaveChangesAsync(cancellationToken);
-        return WorkOrderOperationResult.Success(workOrder.Id);
+        return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(workOrder.Id));
     }
 }

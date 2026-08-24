@@ -550,7 +550,7 @@ else
                     customer.Notes,
                     addressInputs));
 
-            if (result.Code == CustomerOperationResultCode.Success)
+            if (result.IsSuccess)
             {
                 Snackbar.Add(
                     isEditing ? "Cliente atualizado com sucesso." : "Cliente cadastrado com sucesso.",
@@ -559,14 +559,7 @@ else
                 return;
             }
 
-            submitError = result.Code switch
-            {
-                CustomerOperationResultCode.InvalidInput => "Revise os dados do cliente e tente novamente.",
-                CustomerOperationResultCode.DuplicateDocument => "J\u00e1 existe um cliente com este CPF ou CNPJ.",
-                CustomerOperationResultCode.InvalidLocation => "Selecione um estado e uma cidade válidos.",
-                CustomerOperationResultCode.NotFound => "Cliente não encontrado.",
-                _ => "Não foi possível salvar o cliente. Tente novamente."
-            };
+            submitError = OperationErrorMessages.GetMessage(result.Error?.Code);
         }
         catch (Exception exception)
         {

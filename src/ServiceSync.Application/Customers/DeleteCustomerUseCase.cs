@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
 
@@ -8,17 +9,17 @@ public sealed class DeleteCustomerUseCase(
     ICustomerRepository repository,
     TimeProvider timeProvider)
 {
-    public async Task<CustomerOperationResult> ExecuteAsync(Guid customerId, CancellationToken cancellationToken = default)
+    public async Task<OperationResult<Guid?>> ExecuteAsync(Guid customerId, CancellationToken cancellationToken = default)
     {
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         var customer = await repository.GetForCompanyAsync(customerId, companyId, cancellationToken);
         if (customer is null)
         {
-            return CustomerOperationResult.NotFound();
+            return OperationResult<Guid?>.Failure(CustomerErrors.NotFound);
         }
 
         customer.Deactivate(timeProvider.GetUtcNow());
         await repository.SaveChangesAsync(cancellationToken);
-        return CustomerOperationResult.Success(customer.Id);
+        return OperationResult<Guid?>.Success(customer.Id);
     }
 }

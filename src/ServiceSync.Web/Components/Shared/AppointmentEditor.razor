@@ -1,0 +1,352 @@
+@using ServiceSync.Application.Customers
+@using ServiceSync.Application.Equipment
+@using ServiceSync.Application.Professionals
+@using ServiceSync.Application.Scheduling
+@using ServiceSync.Application.Services
+@using ServiceSync.Application.WorkOrders
+@inject WorkOrderAuthorization WorkOrderAuthorization
+@inject GetAvailableAppointmentSlotsUseCase GetAvailableAppointmentSlotsUseCase
+@inject CreateAppointmentUseCase CreateAppointmentUseCase
+@inject GetCustomersUseCase GetCustomersUseCase
+@inject GetCustomerEquipmentUseCase GetCustomerEquipmentUseCase
+@inject GetServicesUseCase GetServicesUseCase
+@inject GetProfessionalsUseCase GetProfessionalsUseCase
+@inject GetWorkOrdersUseCase GetWorkOrdersUseCase
+@inject GetWorkOrderDetailsUseCase GetWorkOrderDetailsUseCase
+@inject ISchedulingConfiguration SchedulingConfiguration
+@inject ISnackbar Snackbar
+@inject TimeProvider TimeProvider
+
+<MudDialog Visible="Visible" VisibleChanged="SetVisibleAsync">
+    <TitleContent><MudText Typo="Typo.h6">Novo agendamento</MudText></TitleContent>
+    <DialogContent>
+        @if (isLoadingOptions)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <MudGrid>
+                @if (FixedWorkOrderId is { })
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Este agendamento será vinculado a esta ordem de serviço.</MudAlert>
+                    </MudItem>
+                }
+                else if (isOwner)
+                {
+                    <MudItem xs="12">
+                        <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Opcional: vincule a uma OS" Clearable="true" @bind-Value="workOrderId" @bind-Value:after="OnWorkOrderChangedAsync" Disabled="@isCreating">
+                            @foreach (var workOrder in workOrders)
+                            {
+                                <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12">
+                        <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Selecione uma ordem de serviço" @bind-Value="workOrderId" @bind-Value:after="OnWorkOrderChangedAsync" Disabled="@isCreating">
+                            @foreach (var workOrder in workOrders)
+                            {
+                                <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
+
+                @if (isOwner)
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="Guid?" Label="Cliente" Placeholder="Selecione um cliente" Clearable="true" @bind-Value="customerId" @bind-Value:after="LoadEquipmentAsync" Disabled="@(isCreating || workOrderId is not null)">
+                            @foreach (var customer in customers)
+                            {
+                                <MudSelectItem Value="@((Guid?)customer.Id)">@customer.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="Guid?" Label="Equipamento" Placeholder="Selecione um equipamento" Clearable="true" @bind-Value="equipmentId" Disabled="@(isCreating || customerId is null || workOrderId is not null)">
+                            @foreach (var equipment in equipment)
+                            {
+                                <MudSelectItem Value="@((Guid?)equipment.Id)">@GetEquipmentName(equipment)</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="Guid?" Label="Serviço" Placeholder="Selecione um serviço" @bind-Value="serviceId" @bind-Value:after="OnServiceChangedAsync" Disabled="@(isCreating || workOrderId is not null)">
+                            @foreach (var service in services)
+                            {
+                                <MudSelectItem Value="@((Guid?)service.Id)">@service.Name (@service.DurationMinutes min)</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    @if (serviceId is null)
+                    {
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="int?" Label="Duração (minutos)" Min="1" @bind-Value="manualDurationMinutes" @bind-Value:after="LoadSlotsAsync" Disabled="@(isCreating || workOrderId is not null)" />
+                        </MudItem>
+                    }
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="Guid?" Label="Profissional" Placeholder="Selecione um profissional" @bind-Value="professionalId" @bind-Value:after="LoadSlotsAsync" Disabled="@(isCreating || (serviceId is null && manualDurationMinutes is null) || workOrderId is not null)">
+                            @foreach (var professional in AvailableProfessionals)
+                            {
+                                <MudSelectItem Value="@((Guid?)professional.Id)">@professional.CompanyMemberName</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
+
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Data" @bind-Date="date" @bind-Date:after="LoadSlotsAsync" Disabled="@isCreating" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="TimeOnly?" Label="Horário" Placeholder="Selecione um horário" @bind-Value="startTime" Disabled="@(isCreating || slots.Count == 0)">
+                        @foreach (var slot in slots)
+                        {
+                            <MudSelectItem Value="@((TimeOnly?)slot.StartTime)">@slot.StartTime.ToString("HH:mm")</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="Observações" Lines="3" @bind-Value="notes" Disabled="@isCreating" />
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseAsync" Disabled="@isCreating">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CreateAsync" Disabled="@(isLoadingOptions || isCreating)">@(isCreating ? "Agendando..." : "Agendar")</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter]
+    public Guid? FixedWorkOrderId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid> Created { get; set; }
+
+    private WorkOrderAccessScope? accessScope;
+    private bool isOwner;
+    private bool wasVisible;
+    private bool isLoadingOptions;
+    private bool isCreating;
+    private IReadOnlyList<CustomerDto> customers = [];
+    private IReadOnlyList<EquipmentDto> equipment = [];
+    private IReadOnlyList<ServiceDto> services = [];
+    private IReadOnlyList<ProfessionalDto> professionals = [];
+    private IReadOnlyList<WorkOrderListItem> workOrders = [];
+    private IReadOnlyList<AppointmentSlotDto> slots = [];
+    private Guid? customerId;
+    private Guid? equipmentId;
+    private Guid? serviceId;
+    private Guid? professionalId;
+    private Guid? workOrderId;
+    private int? manualDurationMinutes;
+    private DateTime? date;
+    private TimeOnly? startTime;
+    private string? notes;
+
+    private IReadOnlyList<ProfessionalDto> AvailableProfessionals => serviceId is { } selectedServiceId
+        ? professionals.Where(professional => professional.ServiceIds.Contains(selectedServiceId)).ToArray()
+        : professionals;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Visible && !wasVisible)
+        {
+            await InitializeAsync();
+        }
+
+        wasVisible = Visible;
+    }
+
+    private async Task InitializeAsync()
+    {
+        isLoadingOptions = true;
+        customerId = null;
+        equipmentId = null;
+        serviceId = null;
+        professionalId = null;
+        workOrderId = FixedWorkOrderId;
+        manualDurationMinutes = null;
+        startTime = null;
+        notes = null;
+        equipment = [];
+        professionals = [];
+        workOrders = [];
+        slots = [];
+        date = GetCurrentDate().ToDateTime(TimeOnly.MinValue);
+
+        try
+        {
+            accessScope = await WorkOrderAuthorization.GetAccessScopeAsync();
+            isOwner = accessScope.IsOwner;
+            services = (await GetServicesUseCase.ExecuteAsync()).Where(service => service.IsActive).ToArray();
+            workOrders = (await GetWorkOrdersUseCase.ExecuteAsync(new GetWorkOrdersQuery(null, null)))
+                .Where(workOrder => workOrder.Status is ServiceSync.Domain.Enums.WorkOrderStatus.Pending or ServiceSync.Domain.Enums.WorkOrderStatus.InProgress)
+                .ToArray();
+
+            if (isOwner)
+            {
+                customers = (await GetCustomersUseCase.ExecuteAsync()).Where(customer => customer.IsActive).ToArray();
+                professionals = (await GetProfessionalsUseCase.ExecuteAsync()).Where(professional => professional.IsActive).ToArray();
+            }
+
+            if (workOrderId is not null)
+            {
+                await OnWorkOrderChangedAsync();
+            }
+        }
+        finally
+        {
+            isLoadingOptions = false;
+        }
+    }
+
+    private async Task LoadEquipmentAsync()
+    {
+        equipmentId = null;
+        equipment = customerId is { } selectedCustomerId
+            ? (await GetCustomerEquipmentUseCase.ExecuteAsync(selectedCustomerId)).Where(item => item.IsActive).ToArray()
+            : [];
+    }
+
+    private Task OnServiceChangedAsync()
+    {
+        if (isOwner)
+        {
+            professionalId = null;
+        }
+
+        startTime = null;
+        slots = [];
+        return Task.CompletedTask;
+    }
+
+    private async Task OnWorkOrderChangedAsync()
+    {
+        startTime = null;
+        slots = [];
+        customerId = null;
+        equipmentId = null;
+        serviceId = null;
+        professionalId = isOwner ? null : accessScope?.ProfessionalId;
+
+        if (workOrderId is not { } selectedWorkOrderId)
+        {
+            return;
+        }
+
+        var workOrder = await GetWorkOrderDetailsUseCase.ExecuteAsync(selectedWorkOrderId);
+        if (workOrder is null || workOrder.ProfessionalId is null || !isOwner && workOrder.ProfessionalId != professionalId)
+        {
+            workOrderId = FixedWorkOrderId;
+            professionalId = null;
+            Snackbar.Add("A ordem de serviço não está disponível para agendamento.", Severity.Warning);
+            return;
+        }
+
+        customerId = workOrder.CustomerId;
+        equipmentId = workOrder.EquipmentId;
+        serviceId = workOrder.ServiceId;
+        professionalId = workOrder.ProfessionalId;
+        await LoadSlotsAsync();
+    }
+
+    private async Task LoadSlotsAsync()
+    {
+        startTime = null;
+        slots = [];
+        var durationMinutes = GetDurationMinutes();
+        if (professionalId is not { } selectedProfessionalId || date is null || durationMinutes is null)
+        {
+            return;
+        }
+
+        slots = await GetAvailableAppointmentSlotsUseCase.ExecuteAsync(
+            selectedProfessionalId,
+            DateOnly.FromDateTime(date.Value),
+            durationMinutes.Value);
+    }
+
+    private async Task CreateAsync()
+    {
+        if (professionalId is not { } selectedProfessionalId ||
+            date is null ||
+            startTime is null ||
+            GetDurationMinutes() is not { } durationMinutes ||
+            !isOwner && workOrderId is null)
+        {
+            Snackbar.Add("Selecione serviço, profissional, data e horário.", Severity.Warning);
+            return;
+        }
+
+        isCreating = true;
+        try
+        {
+            var result = await CreateAppointmentUseCase.ExecuteAsync(new CreateAppointmentCommand(
+                selectedProfessionalId,
+                DateOnly.FromDateTime(date.Value),
+                startTime.Value,
+                durationMinutes,
+                customerId,
+                equipmentId,
+                serviceId,
+                workOrderId,
+                notes));
+
+            if (result.IsSuccess && result.Value is { } appointmentId)
+            {
+                await SetVisibleAsync(false);
+                await Created.InvokeAsync(appointmentId);
+                Snackbar.Add("Agendamento criado.", Severity.Success);
+                return;
+            }
+
+            Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
+            await LoadSlotsAsync();
+        }
+        finally
+        {
+            isCreating = false;
+        }
+    }
+
+    private Task CloseAsync() => SetVisibleAsync(false);
+
+    private Task SetVisibleAsync(bool visible) => VisibleChanged.InvokeAsync(visible);
+
+    private ServiceDto? GetSelectedService() => serviceId is { } selectedServiceId
+        ? services.SingleOrDefault(service => service.Id == selectedServiceId)
+        : null;
+
+    private int? GetDurationMinutes()
+    {
+        var service = GetSelectedService();
+        if (service is not null)
+        {
+            return service.DurationMinutes;
+        }
+
+        return isOwner && manualDurationMinutes is > 0 ? manualDurationMinutes : null;
+    }
+
+    private DateOnly GetCurrentDate() => DateOnly.FromDateTime(
+        AppointmentCalendarTime.ToLocalDateTime(TimeProvider.GetUtcNow(), SchedulingConfiguration.DefaultTimeZoneId));
+
+    private static string GetEquipmentName(EquipmentDto selectedEquipment) => string.Join(
+        " ",
+        new[] { selectedEquipment.Type, selectedEquipment.Manufacturer, selectedEquipment.Model }.Where(value => !string.IsNullOrWhiteSpace(value)));
+
+}
+
+

@@ -244,13 +244,13 @@ else if (overview is not null)
         {
             var result = await CreateEmployeeInvitationUseCase.ExecuteAsync(new CreateEmployeeInvitationCommand(
                 employee.FullName, employee.Email, employee.Document, employee.Phone, employee.Address));
-            if (result.Code != EmployeeInvitationResultCode.Success || result.Token is null)
+            if (!result.IsSuccess || result.Value?.Token is not { } token)
             {
-                operationError = GetOperationError(result.Code);
+                operationError = OperationErrorMessages.GetMessage(result.Error?.Code);
                 return;
             }
 
-            generatedInvitationLink = new Uri(new Uri(NavigationManager.BaseUri), $"convites/funcionarios/{result.Token}").ToString();
+            generatedInvitationLink = new Uri(new Uri(NavigationManager.BaseUri), $"convites/funcionarios/{token}").ToString();
             employee = new EmployeeFormModel();
             await employeeForm.ResetValidationAsync();
             await ReloadOverviewAsync();
@@ -287,7 +287,7 @@ else if (overview is not null)
     }
 
     private async Task ExecuteInvitationActionAsync(
-        Func<Task<EmployeeInvitationResult>> action,
+        Func<Task<OperationResult<EmployeeInvitationOutcome>>> action,
         string fallbackError)
     {
         operationError = null;
@@ -296,15 +296,15 @@ else if (overview is not null)
         try
         {
             var result = await action();
-            if (result.Code != EmployeeInvitationResultCode.Success)
+            if (!result.IsSuccess)
             {
-                operationError = GetOperationError(result.Code);
+                operationError = OperationErrorMessages.GetMessage(result.Error?.Code);
                 return;
             }
 
-            if (result.Token is not null)
+            if (result.Value?.Token is { } token)
             {
-                generatedInvitationLink = new Uri(new Uri(NavigationManager.BaseUri), $"convites/funcionarios/{result.Token}").ToString();
+                generatedInvitationLink = new Uri(new Uri(NavigationManager.BaseUri), $"convites/funcionarios/{token}").ToString();
             }
 
             await ReloadOverviewAsync();
@@ -373,9 +373,9 @@ else if (overview is not null)
                 profile.Document,
                 profile.Phone,
                 profile.Address));
-            if (result.Code != EmployeeInvitationResultCode.Success)
+            if (!result.IsSuccess)
             {
-                profileError = GetOperationError(result.Code);
+                profileError = OperationErrorMessages.GetMessage(result.Error?.Code);
                 return;
             }
 
@@ -402,16 +402,6 @@ else if (overview is not null)
         }
     }
 
-    private static string GetOperationError(EmployeeInvitationResultCode code) => code switch
-    {
-        EmployeeInvitationResultCode.InvalidInput => "Revise os dados do funcionário e tente novamente.",
-        EmployeeInvitationResultCode.EmailAlreadyRegistered => "Já existe uma conta cadastrada com este e-mail.",
-        EmployeeInvitationResultCode.DuplicateEmail => "Já existe um convite pendente para este e-mail.",
-        EmployeeInvitationResultCode.DuplicateDocument => "Já existe um funcionário ou convite com este CPF.",
-        EmployeeInvitationResultCode.InvitationNotFound => "Convite não encontrado.",
-        EmployeeInvitationResultCode.InvitationUnavailable => "Este convite não está mais disponível.",
-        _ => "Você não tem permissão para realizar esta ação."
-    };
 
     private static string GetStatusLabel(EmployeeInvitationDto invitation) => invitation switch
     {

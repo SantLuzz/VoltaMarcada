@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<RescheduleAppointmentUseCase>();
         services.AddScoped<ReassignAppointmentUseCase>();
         services.AddScoped<AdjustAppointmentUseCase>();
+        services.AddScoped<UpdateAppointmentNotesUseCase>();
         services.AddScoped<CreateScheduleBlockRequestUseCase>();
         services.AddScoped<GetScheduleBlockRequestsUseCase>();
         services.AddScoped<ApproveScheduleBlockRequestUseCase>();

@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using FluentValidation;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
@@ -13,44 +14,44 @@ public sealed class UpdateProfessionalUseCase(
     IValidator<UpdateProfessionalCommand> validator,
     TimeProvider timeProvider)
 {
-    public async Task<ProfessionalOperationResult> ExecuteAsync(Guid professionalId, UpdateProfessionalCommand command, CancellationToken cancellationToken = default)
+    public async Task<OperationResult<Guid?>> ExecuteAsync(Guid professionalId, UpdateProfessionalCommand command, CancellationToken cancellationToken = default)
     {
         if (!(await validator.ValidateAsync(command, cancellationToken)).IsValid)
         {
-            return ProfessionalOperationResult.InvalidInput();
+            return OperationResult<Guid?>.Failure(ProfessionalErrors.InvalidInput);
         }
 
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         if (!await ownerAuthorization.IsOwnerAsync(companyId, cancellationToken))
         {
-            return ProfessionalOperationResult.Forbidden();
+            return OperationResult<Guid?>.Failure(ProfessionalErrors.Forbidden);
         }
 
         var professional = await repository.GetForCompanyAsync(professionalId, companyId, cancellationToken);
         if (professional is null)
         {
-            return ProfessionalOperationResult.NotFound();
+            return OperationResult<Guid?>.Failure(ProfessionalErrors.NotFound);
         }
 
         if (!await repository.IsCompanyMemberAvailableAsync(command.CompanyUserId, companyId, professionalId, cancellationToken))
         {
-            return ProfessionalOperationResult.InvalidCompanyMember();
+            return OperationResult<Guid?>.Failure(ProfessionalErrors.InvalidCompanyMember);
         }
 
         if (!await repository.AreActiveServicesValidAsync(companyId, command.ServiceIds, cancellationToken))
         {
-            return ProfessionalOperationResult.InvalidService();
+            return OperationResult<Guid?>.Failure(ProfessionalErrors.InvalidService);
         }
 
         var timeZoneId = NormalizeTimeZoneId(command.TimeZoneId, schedulingConfiguration);
         if (timeZoneId is null)
         {
-            return ProfessionalOperationResult.InvalidInput();
+            return OperationResult<Guid?>.Failure(ProfessionalErrors.InvalidInput);
         }
 
         professional.Update(command.CompanyUserId, command.ServiceIds, timeZoneId, timeProvider.GetUtcNow());
         await repository.SaveChangesAsync(cancellationToken);
-        return ProfessionalOperationResult.Success(professional.Id);
+        return OperationResult<Guid?>.Success(professional.Id);
     }
 
     private static string? NormalizeTimeZoneId(string? value, ISchedulingConfiguration configuration)

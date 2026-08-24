@@ -305,13 +305,18 @@ else
                             schedule.HasLunchBreak ? TimeOnly.FromTimeSpan(schedule.LunchStartTime!.Value) : null,
                             schedule.HasLunchBreak ? TimeOnly.FromTimeSpan(schedule.LunchEndTime!.Value) : null))
                         .ToArray()));
-            if (result.Code != ProfessionalAvailabilityOperationResultCode.Success)
+            if (!result.IsSuccess)
             {
-                scheduleError = "Revise os dias e horários informados.";
+                scheduleError = OperationErrorMessages.GetMessage(result.Error?.Code);
                 return;
             }
 
-            await ReloadAvailabilityAsync();
+            if (!await ReloadAvailabilityAsync())
+            {
+                scheduleError = "O profissional não está mais disponível.";
+                return;
+            }
+
             Snackbar.Add("Horário do profissional salvo com sucesso.", Severity.Success);
         }
         catch (Exception exception)
@@ -414,13 +419,18 @@ else
                     blockForm.IsFullDay ? null : TimeOnly.FromTimeSpan(blockForm.StartTime!.Value),
                     blockForm.IsFullDay ? null : TimeOnly.FromTimeSpan(blockForm.EndTime!.Value),
                     blockForm.Notes));
-            if (result.Code != ProfessionalAvailabilityOperationResultCode.Success)
+            if (!result.IsSuccess)
             {
-                blockError = "Revise o período informado.";
+                blockError = OperationErrorMessages.GetMessage(result.Error?.Code);
                 return;
             }
 
-            await ReloadAvailabilityAsync();
+            if (!await ReloadAvailabilityAsync())
+            {
+                blockError = "O profissional não está mais disponível.";
+                return;
+            }
+
             showBlockForm = false;
             blockForm = ScheduleBlockFormModel.CreateDefault();
             Snackbar.Add("Indisponibilidade adicionada com sucesso.", Severity.Success);
@@ -483,13 +493,18 @@ else
         try
         {
             var result = await DeleteScheduleBlockUseCase.ExecuteAsync(ProfessionalId, block.Id);
-            if (result.Code != ProfessionalAvailabilityOperationResultCode.Success)
+            if (!result.IsSuccess)
             {
-                Snackbar.Add("Não foi possível remover a indisponibilidade.", Severity.Error);
+                Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
                 return;
             }
 
-            await ReloadAvailabilityAsync();
+            if (!await ReloadAvailabilityAsync())
+            {
+                Snackbar.Add("O profissional não está mais disponível.", Severity.Error);
+                return;
+            }
+
             Snackbar.Add("Indisponibilidade removida.", Severity.Success);
         }
         catch (Exception exception)
@@ -507,15 +522,16 @@ else
         }
     }
 
-    private async Task ReloadAvailabilityAsync()
+    private async Task<bool> ReloadAvailabilityAsync()
     {
         availability = await GetProfessionalAvailabilityUseCase.ExecuteAsync(ProfessionalId);
         if (availability is null)
         {
-            throw new InvalidOperationException("Professional availability could not be reloaded.");
+            return false;
         }
 
         LoadScheduleRows(availability.DailySchedules);
+        return true;
     }
 
     private void LoadScheduleRows(IReadOnlyList<DailyScheduleDto>? dailySchedules)

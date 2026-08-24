@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
 
@@ -9,18 +10,18 @@ public sealed class ChangeProfessionalStatusUseCase(
     ProfessionalOwnerAuthorization ownerAuthorization,
     TimeProvider timeProvider)
 {
-    public async Task<ProfessionalOperationResult> ExecuteAsync(Guid professionalId, bool isActive, CancellationToken cancellationToken = default)
+    public async Task<OperationResult<Guid?>> ExecuteAsync(Guid professionalId, bool isActive, CancellationToken cancellationToken = default)
     {
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         if (!await ownerAuthorization.IsOwnerAsync(companyId, cancellationToken))
         {
-            return ProfessionalOperationResult.Forbidden();
+            return OperationResult<Guid?>.Failure(ProfessionalErrors.Forbidden);
         }
 
         var professional = await repository.GetForCompanyAsync(professionalId, companyId, cancellationToken);
         if (professional is null)
         {
-            return ProfessionalOperationResult.NotFound();
+            return OperationResult<Guid?>.Failure(ProfessionalErrors.NotFound);
         }
 
         if (isActive)
@@ -33,6 +34,6 @@ public sealed class ChangeProfessionalStatusUseCase(
         }
 
         await repository.SaveChangesAsync(cancellationToken);
-        return ProfessionalOperationResult.Success(professional.Id);
+        return OperationResult<Guid?>.Success(professional.Id);
     }
 }

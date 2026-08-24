@@ -89,9 +89,9 @@ public sealed class ScheduleBlockRequest : ICompanyScopedEntity
 
     private void EnsureAwaitingDecision()
     {
-        if (Status != ScheduleBlockRequestStatus.Pending)
+        if (Status is not (ScheduleBlockRequestStatus.Pending or ScheduleBlockRequestStatus.RequiresAppointmentResolution))
         {
-            throw new DomainException("Only pending block requests can be decided.");
+            throw new DomainException("Only pending or resolution-required block requests can be decided.");
         }
     }
 

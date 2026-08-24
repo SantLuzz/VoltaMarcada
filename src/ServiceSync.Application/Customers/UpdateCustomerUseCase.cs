@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using FluentValidation;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
@@ -11,7 +12,7 @@ public sealed class UpdateCustomerUseCase(
     IValidator<UpdateCustomerCommand> validator,
     TimeProvider timeProvider)
 {
-    public async Task<CustomerOperationResult> ExecuteAsync(
+    public async Task<OperationResult<Guid?>> ExecuteAsync(
         Guid customerId,
         UpdateCustomerCommand command,
         CancellationToken cancellationToken = default)
@@ -19,14 +20,14 @@ public sealed class UpdateCustomerUseCase(
         var validationResult = await validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid || !BrazilianDocument.TryNormalize(command.Document, out var normalizedDocument))
         {
-            return CustomerOperationResult.InvalidInput();
+            return OperationResult<Guid?>.Failure(CustomerErrors.InvalidInput);
         }
 
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         var customer = await repository.GetForCompanyAsync(customerId, companyId, cancellationToken);
         if (customer is null)
         {
-            return CustomerOperationResult.NotFound();
+            return OperationResult<Guid?>.Failure(CustomerErrors.NotFound);
         }
 
         if (await repository.DocumentExistsAsync(
@@ -35,12 +36,12 @@ public sealed class UpdateCustomerUseCase(
                 customer.Id,
                 cancellationToken))
         {
-            return CustomerOperationResult.DuplicateDocument();
+            return OperationResult<Guid?>.Failure(CustomerErrors.DuplicateDocument);
         }
 
         if (!await repository.AreLocationsValidAsync(command.Addresses, cancellationToken))
         {
-            return CustomerOperationResult.InvalidLocation();
+            return OperationResult<Guid?>.Failure(CustomerErrors.InvalidLocation);
         }
 
         var addresses = CreateCustomerUseCase.CreateAddresses(command.Addresses);
@@ -55,7 +56,7 @@ public sealed class UpdateCustomerUseCase(
         customer.ReplaceAddresses(addresses);
         var persistenceOutcome = await repository.SaveChangesAsync(cancellationToken);
         return persistenceOutcome == CustomerPersistenceOutcome.DuplicateDocument
-            ? CustomerOperationResult.DuplicateDocument()
-            : CustomerOperationResult.Success(customer.Id);
+            ? OperationResult<Guid?>.Failure(CustomerErrors.DuplicateDocument)
+            : OperationResult<Guid?>.Success(customer.Id);
     }
 }

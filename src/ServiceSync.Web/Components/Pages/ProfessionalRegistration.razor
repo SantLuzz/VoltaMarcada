@@ -46,7 +46,7 @@ else
                     }
                 </MudSelect>
 
-                <MudSelect T="string" @bind-Value="model.TimeZoneId" Label="Fuso horÃ¡rio" Variant="Variant.Outlined" FullWidth="true" Required="true" Class="mt-4" Disabled="@isSaving">
+                <MudSelect T="string" @bind-Value="model.TimeZoneId" Label="Fuso horário" Variant="Variant.Outlined" FullWidth="true" Required="true" Class="mt-4" Disabled="@isSaving">
                     @foreach (var timeZoneId in options.TimeZoneIds)
                     {
                         <MudSelectItem Value="@timeZoneId">@timeZoneId</MudSelectItem>
@@ -132,9 +132,9 @@ else
             var result = ProfessionalId is { } professionalId
                 ? await UpdateProfessionalUseCase.ExecuteAsync(professionalId, new UpdateProfessionalCommand(companyUserId, model.ServiceIds.ToArray(), model.TimeZoneId))
                 : await CreateProfessionalUseCase.ExecuteAsync(new CreateProfessionalCommand(companyUserId, model.ServiceIds.ToArray(), model.TimeZoneId));
-            if (result.Code != ProfessionalOperationResultCode.Success)
+            if (!result.IsSuccess)
             {
-                submitError = "Revise o funcionário e os serviços selecionados.";
+                submitError = OperationErrorMessages.GetMessage(result.Error?.Code);
                 return;
             }
 

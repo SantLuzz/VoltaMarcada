@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using FluentValidation;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
@@ -12,25 +13,25 @@ public sealed class CreateCustomerUseCase(
     IValidator<CreateCustomerCommand> validator,
     TimeProvider timeProvider)
 {
-    public async Task<CustomerOperationResult> ExecuteAsync(
+    public async Task<OperationResult<Guid?>> ExecuteAsync(
         CreateCustomerCommand command,
         CancellationToken cancellationToken = default)
     {
         var validationResult = await validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid || !BrazilianDocument.TryNormalize(command.Document, out var normalizedDocument))
         {
-            return CustomerOperationResult.InvalidInput();
+            return OperationResult<Guid?>.Failure(CustomerErrors.InvalidInput);
         }
 
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         if (await repository.DocumentExistsAsync(companyId, normalizedDocument, cancellationToken: cancellationToken))
         {
-            return CustomerOperationResult.DuplicateDocument();
+            return OperationResult<Guid?>.Failure(CustomerErrors.DuplicateDocument);
         }
 
         if (!await repository.AreLocationsValidAsync(command.Addresses, cancellationToken))
         {
-            return CustomerOperationResult.InvalidLocation();
+            return OperationResult<Guid?>.Failure(CustomerErrors.InvalidLocation);
         }
 
         var addresses = CreateAddresses(command.Addresses);
@@ -47,8 +48,8 @@ public sealed class CreateCustomerUseCase(
         await repository.AddAsync(customer, cancellationToken);
         var persistenceOutcome = await repository.SaveChangesAsync(cancellationToken);
         return persistenceOutcome == CustomerPersistenceOutcome.DuplicateDocument
-            ? CustomerOperationResult.DuplicateDocument()
-            : CustomerOperationResult.Success(customer.Id);
+            ? OperationResult<Guid?>.Failure(CustomerErrors.DuplicateDocument)
+            : OperationResult<Guid?>.Success(customer.Id);
     }
 
     internal static IReadOnlyList<CustomerAddress> CreateAddresses(IReadOnlyCollection<CustomerAddressInput> inputs) =>

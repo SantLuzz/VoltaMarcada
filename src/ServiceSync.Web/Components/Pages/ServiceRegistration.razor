@@ -298,19 +298,14 @@ else
                 ? await UpdateServiceUseCase.ExecuteAsync(serviceId, ToUpdateCommand(service))
                 : await CreateServiceUseCase.ExecuteAsync(ToCreateCommand(service));
 
-            if (result.Code == ServiceOperationResultCode.Success)
+            if (result.IsSuccess)
             {
                 Snackbar.Add(isEditing ? "Serviço atualizado com sucesso." : "Serviço cadastrado com sucesso.", Severity.Success);
                 NavigationManager.NavigateTo("/servicos");
                 return;
             }
 
-            submitError = result.Code switch
-            {
-                ServiceOperationResultCode.InvalidInput => "Revise os dados do serviço e tente novamente.",
-                ServiceOperationResultCode.NotFound => "Serviço não encontrado.",
-                _ => "Não foi possível salvar o serviço. Tente novamente."
-            };
+            submitError = OperationErrorMessages.GetMessage(result.Error?.Code);
         }
         catch (Exception exception)
         {

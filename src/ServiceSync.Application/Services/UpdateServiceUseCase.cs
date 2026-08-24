@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using FluentValidation;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
@@ -10,7 +11,7 @@ public sealed class UpdateServiceUseCase(
     IValidator<UpdateServiceCommand> validator,
     TimeProvider timeProvider)
 {
-    public async Task<ServiceOperationResult> ExecuteAsync(
+    public async Task<OperationResult<Guid?>> ExecuteAsync(
         Guid serviceId,
         UpdateServiceCommand command,
         CancellationToken cancellationToken = default)
@@ -18,14 +19,14 @@ public sealed class UpdateServiceUseCase(
         var validationResult = await validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid)
         {
-            return ServiceOperationResult.InvalidInput();
+            return OperationResult<Guid?>.Failure(ServiceErrors.InvalidInput);
         }
 
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
         var service = await serviceRepository.GetForCompanyAsync(serviceId, companyId, cancellationToken);
         if (service is null)
         {
-            return ServiceOperationResult.NotFound();
+            return OperationResult<Guid?>.Failure(ServiceErrors.NotFound);
         }
 
         service.Update(
@@ -41,6 +42,6 @@ public sealed class UpdateServiceUseCase(
             timeProvider.GetUtcNow());
 
         await serviceRepository.SaveChangesAsync(cancellationToken);
-        return ServiceOperationResult.Success(service.Id);
+        return OperationResult<Guid?>.Success(service.Id);
     }
 }

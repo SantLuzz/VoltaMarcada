@@ -1,5 +1,6 @@
 using ServiceSync.Application.Professionals;
 using ServiceSync.Web.Authorization;
+using ServiceSync.Web.Errors;
 
 namespace ServiceSync.Web.Endpoints;
 
@@ -70,7 +71,7 @@ public static class ProfessionalEndpoints
                         schedule.LunchEndTime))
                     .ToArray()),
             cancellationToken);
-        return ToAvailabilityResult(result, _ => Results.Ok());
+        return result.ToHttpResult(_ => Results.Ok());
     }
 
     private static async Task<IResult> CreateScheduleBlockAsync(
@@ -90,8 +91,7 @@ public static class ProfessionalEndpoints
                 request.EndTime,
                 request.Notes),
             cancellationToken);
-        return ToAvailabilityResult(
-            result,
+        return result.ToHttpResult(
             scheduleBlockId => Results.Created(
                 $"/professionals/{professionalId}/availability/blocks/{scheduleBlockId}",
                 new { scheduleBlockId }));
@@ -104,51 +104,27 @@ public static class ProfessionalEndpoints
         CancellationToken cancellationToken)
     {
         var result = await useCase.ExecuteAsync(professionalId, scheduleBlockId, cancellationToken);
-        return ToAvailabilityResult(result, _ => Results.NoContent());
+        return result.ToHttpResult(_ => Results.NoContent());
     }
 
     private static async Task<IResult> CreateAsync(ProfessionalRequest request, CreateProfessionalUseCase useCase, CancellationToken cancellationToken)
     {
         var result = await useCase.ExecuteAsync(new CreateProfessionalCommand(request.CompanyUserId, request.ServiceIds, request.TimeZoneId), cancellationToken);
-        return ToResult(result, professionalId => Results.Created($"/professionals/{professionalId}", new { professionalId }));
+        return result.ToHttpResult(professionalId =>
+            Results.Created($"/professionals/{professionalId}", new { professionalId }));
     }
 
     private static async Task<IResult> UpdateAsync(Guid professionalId, ProfessionalRequest request, UpdateProfessionalUseCase useCase, CancellationToken cancellationToken)
     {
         var result = await useCase.ExecuteAsync(professionalId, new UpdateProfessionalCommand(request.CompanyUserId, request.ServiceIds, request.TimeZoneId), cancellationToken);
-        return ToResult(result, _ => Results.Ok());
+        return result.ToHttpResult(_ => Results.Ok());
     }
 
     private static async Task<IResult> ChangeStatusAsync(Guid professionalId, ProfessionalStatusRequest request, ChangeProfessionalStatusUseCase useCase, CancellationToken cancellationToken)
     {
         var result = await useCase.ExecuteAsync(professionalId, request.IsActive, cancellationToken);
-        return ToResult(result, _ => Results.Ok());
+        return result.ToHttpResult(_ => Results.Ok());
     }
-
-    private static IResult ToResult(ProfessionalOperationResult result, Func<Guid, IResult> success) =>
-        result.Code switch
-        {
-            ProfessionalOperationResultCode.Success when result.ProfessionalId is { } professionalId => success(professionalId),
-            ProfessionalOperationResultCode.InvalidInput => Results.BadRequest(new { error = "Revise os dados do profissional e tente novamente." }),
-            ProfessionalOperationResultCode.InvalidCompanyMember => Results.BadRequest(new { error = "Selecione um funcionário disponível da sua empresa." }),
-            ProfessionalOperationResultCode.InvalidService => Results.BadRequest(new { error = "Selecione serviços ativos válidos da sua empresa." }),
-            ProfessionalOperationResultCode.NotFound => Results.NotFound(),
-            ProfessionalOperationResultCode.Forbidden => Results.Forbid(),
-            _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError)
-        };
-
-    private static IResult ToAvailabilityResult(
-        ProfessionalAvailabilityOperationResult result,
-        Func<Guid?, IResult> success) =>
-        result.Code switch
-        {
-            ProfessionalAvailabilityOperationResultCode.Success => success(result.ScheduleBlockId),
-            ProfessionalAvailabilityOperationResultCode.InvalidInput => Results.BadRequest(new { error = "Revise os dados da disponibilidade e tente novamente." }),
-            ProfessionalAvailabilityOperationResultCode.ProfessionalNotFound => Results.NotFound(),
-            ProfessionalAvailabilityOperationResultCode.ScheduleBlockNotFound => Results.NotFound(),
-            ProfessionalAvailabilityOperationResultCode.Forbidden => Results.Forbid(),
-            _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError)
-        };
 
     public sealed record ProfessionalRequest(Guid CompanyUserId, IReadOnlyList<Guid> ServiceIds, string? TimeZoneId);
 

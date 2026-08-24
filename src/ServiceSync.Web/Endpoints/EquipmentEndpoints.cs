@@ -1,5 +1,6 @@
 using ServiceSync.Application.Equipment;
 using ServiceSync.Web.Authorization;
+using ServiceSync.Web.Errors;
 
 namespace ServiceSync.Web.Endpoints;
 
@@ -25,7 +26,8 @@ public static class EquipmentEndpoints
         CancellationToken cancellationToken)
     {
         var result = await useCase.ExecuteAsync(ToCreateCommand(request), cancellationToken);
-        return ToResult(result, equipmentId => Results.Created($"/equipment/{equipmentId}/edit", new { equipmentId }));
+        return result.ToHttpResult(equipmentId =>
+            Results.Created($"/equipment/{equipmentId}/edit", new { equipmentId }));
     }
 
     private static async Task<IResult> GetAllAsync(
@@ -50,7 +52,7 @@ public static class EquipmentEndpoints
         CancellationToken cancellationToken)
     {
         var result = await useCase.ExecuteAsync(equipmentId, ToUpdateCommand(request), cancellationToken);
-        return ToResult(result, _ => Results.Ok());
+        return result.ToHttpResult(_ => Results.Ok());
     }
 
     private static async Task<IResult> DeleteAsync(
@@ -59,25 +61,8 @@ public static class EquipmentEndpoints
         CancellationToken cancellationToken)
     {
         var result = await useCase.ExecuteAsync(equipmentId, cancellationToken);
-        return result.Code switch
-        {
-            EquipmentOperationResultCode.Success => Results.NoContent(),
-            EquipmentOperationResultCode.NotFound => Results.NotFound(),
-            _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError)
-        };
+        return result.ToHttpResult(_ => Results.NoContent());
     }
-
-    private static IResult ToResult(EquipmentOperationResult result, Func<Guid, IResult> success) =>
-        result.Code switch
-        {
-            EquipmentOperationResultCode.Success when result.EquipmentId is { } equipmentId => success(equipmentId),
-            EquipmentOperationResultCode.InvalidInput => Results.BadRequest(
-                new { error = "Revise os dados do equipamento e tente novamente." }),
-            EquipmentOperationResultCode.CustomerNotFound => Results.BadRequest(
-                new { error = "Selecione um cliente v\u00e1lido da sua empresa." }),
-            EquipmentOperationResultCode.NotFound => Results.NotFound(),
-            _ => Results.Problem(statusCode: StatusCodes.Status500InternalServerError)
-        };
 
     private static CreateEquipmentCommand ToCreateCommand(EquipmentRequest request) =>
         new(

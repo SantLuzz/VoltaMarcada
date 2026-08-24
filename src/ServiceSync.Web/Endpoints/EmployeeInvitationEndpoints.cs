@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using ServiceSync.Application.EmployeeInvitations;
 using ServiceSync.Infrastructure.Identity;
+using ServiceSync.Web.Errors;
 
 namespace ServiceSync.Web.Endpoints;
 
@@ -23,12 +24,12 @@ public static class EmployeeInvitationEndpoints
         CancellationToken cancellationToken)
     {
         var result = await useCase.ExecuteAsync(token, request.Password, request.ConfirmPassword, cancellationToken);
-        if (result.Code != EmployeeInvitationResultCode.Success || result.UserId is null)
+        if (!result.IsSuccess || result.Value?.UserId is not { } userId)
         {
-            return RedirectWithError(token, GetError(result.Code));
+            return RedirectWithError(token, GetAcceptanceError(result.Error?.Code));
         }
 
-        var user = await userManager.FindByIdAsync(result.UserId.Value.ToString());
+        var user = await userManager.FindByIdAsync(userId.ToString());
         if (user is null)
         {
             return Results.Problem(statusCode: StatusCodes.Status500InternalServerError);
@@ -41,10 +42,10 @@ public static class EmployeeInvitationEndpoints
     private static IResult RedirectWithError(string token, string error) =>
         Results.Redirect("/convites/funcionarios/" + Uri.EscapeDataString(token) + QueryString.Create("error", error));
 
-    private static string GetError(EmployeeInvitationResultCode code) => code switch
+    private static string GetAcceptanceError(string? code) => code switch
     {
-        EmployeeInvitationResultCode.InvalidInput => "Informe senhas iguais que atendam aos critérios de segurança.",
-        EmployeeInvitationResultCode.EmailAlreadyRegistered => "Não foi possível concluir este cadastro. Entre em contato com a empresa.",
+        "EmployeeInvitation.InvalidInput" => "Informe senhas iguais que atendam aos critérios de segurança.",
+        "EmployeeInvitation.EmailAlreadyRegistered" => "Não foi possível concluir este cadastro. Entre em contato com a empresa.",
         _ => "Este link é inválido, expirou ou já foi utilizado."
     };
 

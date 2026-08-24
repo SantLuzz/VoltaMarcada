@@ -1,5 +1,6 @@
 using FluentValidation;
 using ServiceSync.Application.Abstractions.Identity;
+using ServiceSync.Application.Abstractions.Operations;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Storage;
 using ServiceSync.Domain.Entities;
@@ -15,40 +16,40 @@ public sealed class CompleteCompanyOnboardingUseCase(
     IValidator<CompleteCompanyOnboardingCommand> validator,
     TimeProvider timeProvider)
 {
-    public async Task<CompleteCompanyOnboardingResult> ExecuteAsync(
+    public async Task<OperationResult<Guid>> ExecuteAsync(
         CompleteCompanyOnboardingCommand command,
         CancellationToken cancellationToken)
     {
         if (!currentUser.IsAuthenticated || currentUser.UserId == Guid.Empty)
         {
-            return CompleteCompanyOnboardingResult.Unauthenticated();
+            return OperationResult<Guid>.Failure(CompanyOnboardingErrors.Unauthenticated);
         }
 
         var validationResult = await validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid || !BrazilianDocument.TryNormalize(command.Document, out var normalizedDocument))
         {
-            return CompleteCompanyOnboardingResult.InvalidInput();
+            return OperationResult<Guid>.Failure(CompanyOnboardingErrors.InvalidInput);
         }
 
         if (await repository.HasMembershipAsync(currentUser.UserId, cancellationToken))
         {
-            return CompleteCompanyOnboardingResult.AlreadyOnboarded();
+            return OperationResult<Guid>.Failure(CompanyOnboardingErrors.AlreadyOnboarded);
         }
 
         if (await repository.DocumentExistsAsync(normalizedDocument, cancellationToken))
         {
-            return CompleteCompanyOnboardingResult.DocumentAlreadyExists();
+            return OperationResult<Guid>.Failure(CompanyOnboardingErrors.DocumentAlreadyExists);
         }
 
         if (!await repository.IsCityInStateAsync(command.CityId, command.StateId, cancellationToken))
         {
-            return new CompleteCompanyOnboardingResult(CompleteCompanyOnboardingResultCode.InvalidLocation, null);
+            return OperationResult<Guid>.Failure(CompanyOnboardingErrors.InvalidLocation);
         }
 
         var baseSlug = CompanySlugGenerator.GenerateBaseSlug(command.TradeName);
         if (string.IsNullOrEmpty(baseSlug))
         {
-            return CompleteCompanyOnboardingResult.InvalidInput();
+            return OperationResult<Guid>.Failure(CompanyOnboardingErrors.InvalidInput);
         }
 
         var slug = await repository.SlugExistsAsync(baseSlug, cancellationToken)
@@ -60,7 +61,7 @@ public sealed class CompleteCompanyOnboardingUseCase(
         {
             if (!IsValidLogo(command.Logo))
             {
-                return new CompleteCompanyOnboardingResult(CompleteCompanyOnboardingResultCode.InvalidLogo, null);
+                return OperationResult<Guid>.Failure(CompanyOnboardingErrors.InvalidLogo);
             }
 
             var upload = await fileStorage.UploadAsync(
@@ -91,10 +92,10 @@ public sealed class CompleteCompanyOnboardingUseCase(
         }
         return outcome switch
         {
-            CompanyOnboardingPersistenceOutcome.Success => CompleteCompanyOnboardingResult.Success(company.Id),
-            CompanyOnboardingPersistenceOutcome.DuplicateMembership => CompleteCompanyOnboardingResult.AlreadyOnboarded(),
-            CompanyOnboardingPersistenceOutcome.DuplicateDocument => CompleteCompanyOnboardingResult.DocumentAlreadyExists(),
-            CompanyOnboardingPersistenceOutcome.DuplicateSlug => CompleteCompanyOnboardingResult.SlugAlreadyExists(),
+            CompanyOnboardingPersistenceOutcome.Success => OperationResult<Guid>.Success(company.Id),
+            CompanyOnboardingPersistenceOutcome.DuplicateMembership => OperationResult<Guid>.Failure(CompanyOnboardingErrors.AlreadyOnboarded),
+            CompanyOnboardingPersistenceOutcome.DuplicateDocument => OperationResult<Guid>.Failure(CompanyOnboardingErrors.DocumentAlreadyExists),
+            CompanyOnboardingPersistenceOutcome.DuplicateSlug => OperationResult<Guid>.Failure(CompanyOnboardingErrors.SlugAlreadyExists),
             _ => throw new InvalidOperationException($"Unsupported company onboarding persistence outcome: {outcome}.")
         };
     }

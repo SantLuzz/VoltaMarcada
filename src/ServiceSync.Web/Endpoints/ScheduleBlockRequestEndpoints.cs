@@ -1,5 +1,6 @@
 using ServiceSync.Application.Scheduling;
 using ServiceSync.Web.Authorization;
+using ServiceSync.Web.Errors;
 
 namespace ServiceSync.Web.Endpoints;
 
@@ -16,9 +17,9 @@ public static class ScheduleBlockRequestEndpoints
     }
 
     private static async Task<IResult> GetAsync(GetScheduleBlockRequestsUseCase useCase, CancellationToken cancellationToken) => Results.Ok(await useCase.ExecuteAsync(cancellationToken));
-    private static async Task<IResult> CreateAsync(CreateScheduleBlockRequestRequest request, CreateScheduleBlockRequestUseCase useCase, CancellationToken cancellationToken) => AppointmentEndpoints.ToResult(await useCase.ExecuteAsync(new CreateScheduleBlockRequestCommand(request.Type, request.StartDate, request.EndDate, request.IsFullDay, request.StartTime, request.EndTime, request.Notes), cancellationToken), id => Results.Created($"/schedule-block-requests/{id}", new { requestId = id }));
-    private static async Task<IResult> ApproveAsync(Guid requestId, ApproveScheduleBlockRequestUseCase useCase, CancellationToken cancellationToken) => AppointmentEndpoints.ToResult(await useCase.ExecuteAsync(requestId, cancellationToken), _ => Results.Ok());
-    private static async Task<IResult> RejectAsync(Guid requestId, RejectScheduleBlockRequestRequest request, RejectScheduleBlockRequestUseCase useCase, CancellationToken cancellationToken) => AppointmentEndpoints.ToResult(await useCase.ExecuteAsync(requestId, request.Reason, cancellationToken), _ => Results.Ok());
+    private static async Task<IResult> CreateAsync(CreateScheduleBlockRequestRequest request, CreateScheduleBlockRequestUseCase useCase, CancellationToken cancellationToken) => (await useCase.ExecuteAsync(new CreateScheduleBlockRequestCommand(request.Type, request.StartDate, request.EndDate, request.IsFullDay, request.StartTime, request.EndTime, request.Notes), cancellationToken)).ToHttpResult(id => Results.Created($"/schedule-block-requests/{id}", new { requestId = id }));
+    private static async Task<IResult> ApproveAsync(Guid requestId, ApproveScheduleBlockRequestUseCase useCase, CancellationToken cancellationToken) => (await useCase.ExecuteAsync(requestId, cancellationToken)).ToHttpResult(_ => Results.Ok());
+    private static async Task<IResult> RejectAsync(Guid requestId, RejectScheduleBlockRequestRequest request, RejectScheduleBlockRequestUseCase useCase, CancellationToken cancellationToken) => (await useCase.ExecuteAsync(requestId, request.Reason, cancellationToken)).ToHttpResult(_ => Results.Ok());
 
     public sealed record CreateScheduleBlockRequestRequest(ServiceSync.Domain.Enums.ScheduleBlockType Type, DateOnly StartDate, DateOnly EndDate, bool IsFullDay, TimeOnly? StartTime, TimeOnly? EndTime, string? Notes);
     public sealed record RejectScheduleBlockRequestRequest(string? Reason);

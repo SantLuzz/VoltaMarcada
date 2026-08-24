@@ -96,6 +96,13 @@ public sealed class Appointment : ICompanyScopedEntity
         UpdatedAtUtc = now.ToUniversalTime();
     }
 
+    public void UpdateNotes(string? notes, DateTimeOffset now)
+    {
+        EnsureScheduled();
+        Notes = NormalizeNotes(notes);
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
     public void Complete(DateTimeOffset now)
     {
         EnsureInProgress();

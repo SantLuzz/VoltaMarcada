@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using ServiceSync.Application.Abstractions.Identity;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
@@ -10,44 +11,39 @@ public sealed class RevokeEmployeeInvitationUseCase(
     IEmployeeInvitationRepository repository,
     TimeProvider timeProvider)
 {
-    public async Task<EmployeeInvitationResult> ExecuteAsync(
+    public async Task<OperationResult<EmployeeInvitationOutcome>> ExecuteAsync(
         Guid invitationId,
         CancellationToken cancellationToken = default)
     {
         if (!currentUser.IsAuthenticated || currentUser.UserId == Guid.Empty)
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.Unauthenticated);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.Unauthenticated);
         }
 
-        Guid companyId;
-        try
+        if (await currentCompany.FindCompanyIdAsync(cancellationToken) is not { } companyId)
         {
-            companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
-        }
-        catch (CurrentCompanyNotFoundException)
-        {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.Unauthorized);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.Unauthorized);
         }
 
         if (!await repository.IsCurrentUserOwnerAsync(currentUser.UserId, companyId, cancellationToken))
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.Unauthorized);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.Unauthorized);
         }
 
         var invitation = await repository.GetByIdAsync(invitationId, companyId, cancellationToken);
         if (invitation is null)
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.InvitationNotFound);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.InvitationNotFound);
         }
 
         var now = timeProvider.GetUtcNow();
         if (!invitation.IsPending(now))
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.InvitationUnavailable);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.InvitationUnavailable);
         }
 
         invitation.Revoke(now);
         await repository.SaveChangesAsync(cancellationToken);
-        return EmployeeInvitationResult.Success();
+        return OperationResult<EmployeeInvitationOutcome>.Success(new EmployeeInvitationOutcome());
     }
 }

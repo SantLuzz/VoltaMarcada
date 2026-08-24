@@ -183,13 +183,13 @@ else
     private async Task StartAsync()
     {
         var result = await StartWorkOrderUseCase.ExecuteAsync(WorkOrder.Id);
-        if (result.Code == WorkOrderOperationResultCode.Success)
+        if (result.IsSuccess)
         {
             await OnChanged.InvokeAsync();
             return;
         }
 
-        ShowOperationError(result.Code);
+        ShowOperationError(result.Error?.Code);
     }
 
     private void SetProgress(Guid id, bool value)
@@ -282,9 +282,9 @@ else
                 progress.Select(item => new ChecklistProgressInput(item.Key, item.Value)).ToArray(),
                 executionNotes);
             var result = await SaveWorkOrderChecklistProgressUseCase.ExecuteAsync(WorkOrder.Id, command);
-            if (result.Code != WorkOrderOperationResultCode.Success)
+            if (!result.IsSuccess)
             {
-                ShowOperationError(result.Code);
+                ShowOperationError(result.Error?.Code);
                 return false;
             }
 
@@ -313,14 +313,14 @@ else
         }
 
         var result = await CompleteWorkOrderUseCase.ExecuteAsync(WorkOrder.Id);
-        if (result.Code == WorkOrderOperationResultCode.Success)
+        if (result.IsSuccess)
         {
             Snackbar.Add("Serviço concluído.", Severity.Success);
             await OnChanged.InvokeAsync();
             return;
         }
 
-        ShowOperationError(result.Code);
+        ShowOperationError(result.Error?.Code);
     }
 
     private async Task UploadAsync(InputFileChangeEventArgs args, WorkOrderPhotoType type)
@@ -346,14 +346,14 @@ else
             var result = await AddWorkOrderPhotoUseCase.ExecuteAsync(
                 WorkOrder.Id,
                 new WorkOrderPhotoUpload(stream, file.Name, file.ContentType, file.Size, type, null));
-            if (result.Code == WorkOrderOperationResultCode.Success)
+            if (result.IsSuccess)
             {
                 Snackbar.Add("Foto enviada.", Severity.Success);
                 await OnChanged.InvokeAsync();
                 return;
             }
 
-            ShowOperationError(result.Code);
+            ShowOperationError(result.Error?.Code);
         }
         finally
         {
@@ -376,13 +376,13 @@ else
         try
         {
             var result = await RemoveWorkOrderPhotoUseCase.ExecuteAsync(WorkOrder.Id, photoId);
-            if (result.Code == WorkOrderOperationResultCode.Success)
+            if (result.IsSuccess)
             {
                 await OnChanged.InvokeAsync();
                 return;
             }
 
-            ShowOperationError(result.Code);
+            ShowOperationError(result.Error?.Code);
         }
         finally
         {
@@ -400,20 +400,9 @@ else
     private bool HasPhotoOfType(WorkOrderPhotoType type) =>
         WorkOrder.Photos.Any(photo => photo.Type == type);
 
-    private void ShowOperationError(WorkOrderOperationResultCode code)
+    private void ShowOperationError(string? code)
     {
-        var message = code switch
-        {
-            WorkOrderOperationResultCode.ChecklistIncomplete => "Conclua todos os itens obrigatórios do checklist.",
-            WorkOrderOperationResultCode.BeforePhotoRequired => "Inclua pelo menos uma foto antes de concluir.",
-            WorkOrderOperationResultCode.AfterPhotoRequired => "Inclua pelo menos uma foto depois de concluir.",
-            WorkOrderOperationResultCode.ProfessionalNotQualified => "A OS precisa de um profissional habilitado.",
-            WorkOrderOperationResultCode.PhotoLimitReached => "O limite de fotos para a OS foi atingido.",
-            WorkOrderOperationResultCode.InvalidPhoto => "Envie uma imagem JPEG, PNG, WebP ou HEIC de até 10 MB.",
-            _ => "Não foi possível concluir esta operação."
-        };
-
-        Snackbar.Add(message, Severity.Warning);
+        Snackbar.Add(OperationErrorMessages.GetMessage(code), Severity.Warning);
     }
 
     public ValueTask DisposeAsync()

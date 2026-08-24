@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using FluentValidation;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
@@ -10,14 +11,14 @@ public sealed class CreateServiceUseCase(
     IValidator<CreateServiceCommand> validator,
     TimeProvider timeProvider)
 {
-    public async Task<ServiceOperationResult> ExecuteAsync(
+    public async Task<OperationResult<Guid?>> ExecuteAsync(
         CreateServiceCommand command,
         CancellationToken cancellationToken = default)
     {
         var validationResult = await validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid)
         {
-            return ServiceOperationResult.InvalidInput();
+            return OperationResult<Guid?>.Failure(ServiceErrors.InvalidInput);
         }
 
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
@@ -37,7 +38,7 @@ public sealed class CreateServiceUseCase(
 
         await serviceRepository.AddAsync(service, cancellationToken);
         await serviceRepository.SaveChangesAsync(cancellationToken);
-        return ServiceOperationResult.Success(service.Id);
+        return OperationResult<Guid?>.Success(service.Id);
     }
 
     internal static IReadOnlyList<global::ServiceSync.Domain.Entities.ServiceChecklistItem> ToDomainChecklistItems(

@@ -1,3 +1,4 @@
+using ServiceSync.Application.Abstractions.Operations;
 using ServiceSync.Application.Abstractions.Identity;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.Abstractions.Tenancy;
@@ -11,34 +12,29 @@ public sealed class RenewEmployeeInvitationUseCase(
     CreateEmployeeInvitationUseCase createEmployeeInvitationUseCase,
     TimeProvider timeProvider)
 {
-    public async Task<EmployeeInvitationResult> ExecuteAsync(
+    public async Task<OperationResult<EmployeeInvitationOutcome>> ExecuteAsync(
         Guid invitationId,
         CancellationToken cancellationToken = default)
     {
         if (!currentUser.IsAuthenticated || currentUser.UserId == Guid.Empty)
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.Unauthenticated);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.Unauthenticated);
         }
 
-        Guid companyId;
-        try
+        if (await currentCompany.FindCompanyIdAsync(cancellationToken) is not { } companyId)
         {
-            companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
-        }
-        catch (CurrentCompanyNotFoundException)
-        {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.Unauthorized);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.Unauthorized);
         }
 
         if (!await repository.IsCurrentUserOwnerAsync(currentUser.UserId, companyId, cancellationToken))
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.Unauthorized);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.Unauthorized);
         }
 
         var invitation = await repository.GetByIdAsync(invitationId, companyId, cancellationToken);
         if (invitation is null || invitation.AcceptedAtUtc is not null)
         {
-            return new EmployeeInvitationResult(EmployeeInvitationResultCode.InvitationNotFound);
+            return OperationResult<EmployeeInvitationOutcome>.Failure(EmployeeInvitationErrors.InvitationNotFound);
         }
 
         if (invitation.IsPending(timeProvider.GetUtcNow()))
