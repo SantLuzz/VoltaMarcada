@@ -67,7 +67,11 @@ public static class OperationErrorMessages
             ["WorkOrder.AfterPhotoRequired"] = "Inclua ao menos uma foto depois.",
             ["WorkOrder.OpenAppointments"] = "Conclua ou cancele os agendamentos abertos antes de concluir a ordem de serviço.",
             ["WorkOrder.PhotoLimitReached"] = "O limite de fotos da ordem de serviço foi atingido.",
-            ["WorkOrder.InvalidPhoto"] = "Envie uma imagem JPEG, PNG, WebP ou HEIC de até 10 MB."
+            ["WorkOrder.InvalidPhoto"] = "Envie uma imagem JPEG, PNG, WebP ou HEIC de até 10 MB.",
+            ["MaintenanceOpportunity.InvalidInput"] = "Revise os dados da manuten\u00E7\u00E3o e tente novamente.",
+            ["MaintenanceOpportunity.NotFound"] = "Oportunidade de manuten\u00E7\u00E3o n\u00E3o encontrada.",
+            ["MaintenanceOpportunity.InvalidStatus"] = "A oportunidade de manuten\u00E7ão n\u00E3o permite esta a\u00E7\u00E3o agora.",
+            ["MaintenanceOpportunity.Forbidden"] = "Voc\u00EA n\u00E3o tem permiss\u00E3o para gerenciar manuten\u00E7\u00F5es."
         };
 
     public static string GetMessage(string? code) =>

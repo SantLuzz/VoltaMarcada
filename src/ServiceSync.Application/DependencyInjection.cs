@@ -8,6 +8,7 @@ using ServiceSync.Application.Services;
 using ServiceSync.Application.Professionals;
 using ServiceSync.Application.WorkOrders;
 using ServiceSync.Application.Scheduling;
+using ServiceSync.Application.MaintenanceOpportunities;
 
 namespace ServiceSync.Application;
 
@@ -35,6 +36,10 @@ public static class DependencyInjection
         services.AddScoped<UpdateServiceUseCase>();
         services.AddScoped<DeleteServiceUseCase>();
         services.AddScoped<WorkOrderAuthorization>();
+        services.AddScoped<MaintenanceOpportunityOwnerAuthorization>();
+        services.AddScoped<GetMaintenanceOpportunitiesUseCase>();
+        services.AddScoped<GetMaintenanceOpportunitySummaryUseCase>();
+        services.AddScoped<GetMaintenanceOpportunityForSchedulingUseCase>();
         services.AddScoped<CreateWorkOrderUseCase>();
         services.AddScoped<GetWorkOrdersUseCase>();
         services.AddScoped<GetWorkOrderDetailsUseCase>();
