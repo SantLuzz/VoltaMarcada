@@ -258,6 +258,6 @@ public sealed class GetScheduleBlockRequestsUseCase(WorkOrderAuthorization autho
     private static string FormatAffectedAppointment(AppointmentListItem item, string timeZoneId)
     {
         var localStart = TimeZoneInfo.ConvertTime(item.Appointment.StartAtUtc, TimeZoneInfo.FindSystemTimeZoneById(timeZoneId));
-        return $"{localStart:dd/MM HH:mm} — {item.CustomerName ?? "Customer not informed"}";
+        return $"{localStart:dd/MM HH:mm} — {item.CustomerName ?? "Cliente não informado"}";
     }
 }

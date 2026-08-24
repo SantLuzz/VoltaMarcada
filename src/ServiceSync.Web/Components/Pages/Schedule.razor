@@ -24,6 +24,7 @@
 @inject ISnackbar Snackbar
 @inject ISchedulingConfiguration SchedulingConfiguration
 @inject TimeProvider TimeProvider
+@inject NavigationManager NavigationManager
 
 <PageTitle>Agenda | ServiceSync</PageTitle>
 
@@ -710,7 +711,7 @@ else
                 isAdjustmentDialogOpen = false;
                 appointmentToAdjust = null;
                 Snackbar.Add("Agendamento ajustado.", Severity.Success);
-                await LoadAsync();
+                NavigationManager.Refresh(forceReload: true);
                 return;
             }
 

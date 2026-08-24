@@ -31,22 +31,24 @@
             {
                 <MudListItem T="ScheduleBlockRequestDto" Value="@request" Icon="@Icons.Material.Filled.Block">
                     <MudText>@request.StartDate.ToString("dd/MM") a @request.EndDate.ToString("dd/MM") — @GetStatusName(request.Status)</MudText>
-                    @if (isOwner)
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Solicitado por: @request.ProfessionalName</MudText>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(request.Notes))
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@request.Notes</MudText>
-                    }
-                    @if (request.AffectedAppointments.Count > 0)
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Warning">Ajuste os atendimentos antes de aprovar:</MudText>
-                        @foreach (var appointment in request.AffectedAppointments)
+                    <MudStack Spacing="0">
+                        @if (isOwner)
                         {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Solicitado por: @request.ProfessionalName</MudText>
                         }
-                    }
+                        @if (!string.IsNullOrWhiteSpace(request.Notes))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@request.Notes</MudText>
+                        }
+                        @if (request.AffectedAppointments.Count > 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Warning">Ajuste os atendimentos antes de aprovar:</MudText>
+                            @foreach (var appointment in request.AffectedAppointments)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment</MudText>
+                            }
+                        }
+                    </MudStack>
                     @if (isOwner && (request.Status == ScheduleBlockRequestStatus.Pending || request.Status == ScheduleBlockRequestStatus.RequiresAppointmentResolution && request.AffectedAppointments.Count == 0))
                     {
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Success" OnClick="@(() => ApproveAsync(request.Id))">Aprovar</MudButton>
