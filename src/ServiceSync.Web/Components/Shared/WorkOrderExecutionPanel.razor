@@ -1,12 +1,14 @@
 @implements IAsyncDisposable
 @using Microsoft.AspNetCore.Components.Forms
 @using ServiceSync.Application.WorkOrders
+@using ServiceSync.Application.Services
 @using ServiceSync.Domain.Enums
 @inject StartWorkOrderUseCase StartWorkOrderUseCase
 @inject SaveWorkOrderChecklistProgressUseCase SaveWorkOrderChecklistProgressUseCase
 @inject CompleteWorkOrderUseCase CompleteWorkOrderUseCase
 @inject AddWorkOrderPhotoUseCase AddWorkOrderPhotoUseCase
 @inject RemoveWorkOrderPhotoUseCase RemoveWorkOrderPhotoUseCase
+@inject GetServicesUseCase GetServicesUseCase
 @inject ISnackbar Snackbar
 
 @if (WorkOrder.Status == WorkOrderStatus.Pending)
@@ -28,6 +30,23 @@ else
 {
     <MudStack Spacing="3" Class="work-order-execution-content">
         <MudText Typo="Typo.h6">Fotos antes @(WorkOrder.RequireBeforePhotos ? "(obrigatória)" : string.Empty)</MudText>
+        @if (CanExecute)
+        {
+            <MudPaper Outlined="true" Class="pa-4">
+                <MudSwitch @bind-Value="shouldRecommendMaintenance" Color="Color.Primary">Recomendar proxima manutencao?</MudSwitch>
+                @if (shouldRecommendMaintenance)
+                {
+                    <MudGrid Class="mt-2">
+                        <MudItem xs="12" sm="6"><MudSelect T="string" Label="Quando?" Variant="Variant.Outlined" Required="true" @bind-Value="recommendationPeriod"><MudSelectItem Value="30">30 dias</MudSelectItem><MudSelectItem Value="60">60 dias</MudSelectItem><MudSelectItem Value="90">90 dias</MudSelectItem><MudSelectItem Value="180">180 dias</MudSelectItem><MudSelectItem Value="custom">Personalizado</MudSelectItem><MudSelectItem Value="date">Data especifica</MudSelectItem></MudSelect></MudItem>
+                        @if (recommendationPeriod == "custom") { <MudItem xs="12" sm="6"><MudNumericField T="int?" Label="Intervalo em dias" Variant="Variant.Outlined" Required="true" @bind-Value="customIntervalDays" /></MudItem> }
+                        @if (recommendationPeriod == "date") { <MudItem xs="12" sm="6"><MudDatePicker Label="Proxima manutencao" Variant="Variant.Outlined" Required="true" @bind-Date="recommendedDueDate" /></MudItem> }
+                        <MudItem xs="12" sm="6"><MudSelect T="Guid?" Label="Servico recomendado" Variant="Variant.Outlined" Required="true" @bind-Value="recommendedServiceId">@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect></MudItem>
+                        <MudItem xs="12"><MudTextField Label="Observacoes da recomendacao" Variant="Variant.Outlined" Required="true" Lines="3" @bind-Value="recommendationNotes" /></MudItem>
+                    </MudGrid>
+                }
+            </MudPaper>
+        }
+
         @if (CanExecute)
         {
             <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.Before))" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
@@ -133,6 +152,13 @@ else
     private Guid? photoPendingRemoval;
     private long changeVersion;
     private long savedChangeVersion;
+    private IReadOnlyList<ServiceDto> services = [];
+    private bool shouldRecommendMaintenance;
+    private string? recommendationPeriod;
+    private int? customIntervalDays;
+    private DateTime? recommendedDueDate;
+    private Guid? recommendedServiceId;
+    private string? recommendationNotes;
 
     private bool CanExecute => WorkOrder.Status == WorkOrderStatus.InProgress && WorkOrder.Capabilities.CanExecute;
     private bool IsRemovingPhoto => photoPendingRemoval is not null;
@@ -178,7 +204,10 @@ else
         observedExecutionNotes = executionNotes;
         changeVersion = 0;
         savedChangeVersion = 0;
+        recommendedServiceId = WorkOrder.ServiceId;
     }
+
+    protected override async Task OnInitializedAsync() => services = (await GetServicesUseCase.ExecuteAsync()).Where(service => service.IsActive).ToArray();
 
     private async Task StartAsync()
     {
@@ -312,7 +341,14 @@ else
             return;
         }
 
-        var result = await CompleteWorkOrderUseCase.ExecuteAsync(WorkOrder.Id);
+        MaintenanceRecommendationInput? recommendation = null;
+        if (shouldRecommendMaintenance && !TryCreateRecommendation(out recommendation))
+        {
+            Snackbar.Add("Preencha os dados da proxima manutencao.", Severity.Warning);
+            return;
+        }
+
+        var result = await CompleteWorkOrderUseCase.ExecuteAsync(WorkOrder.Id, new CompleteWorkOrderCommand(recommendation));
         if (result.IsSuccess)
         {
             Snackbar.Add("Serviço concluído.", Severity.Success);
@@ -321,6 +357,17 @@ else
         }
 
         ShowOperationError(result.Error?.Code);
+    }
+
+    private bool TryCreateRecommendation(out MaintenanceRecommendationInput? recommendation)
+    {
+        recommendation = null;
+        if (recommendedServiceId is null || string.IsNullOrWhiteSpace(recommendationNotes)) return false;
+        int? intervalDays = recommendationPeriod switch { "30" => 30, "60" => 60, "90" => 90, "180" => 180, "custom" => customIntervalDays, _ => null };
+        DateOnly? dueDate = recommendationPeriod == "date" && recommendedDueDate is { } date ? DateOnly.FromDateTime(date) : null;
+        if ((intervalDays is null) == (dueDate is null) || intervalDays is <= 0) return false;
+        recommendation = new MaintenanceRecommendationInput(intervalDays, dueDate, recommendedServiceId.Value, recommendationNotes);
+        return true;
     }
 
     private async Task UploadAsync(InputFileChangeEventArgs args, WorkOrderPhotoType type)

@@ -22,7 +22,7 @@ public static class WorkOrderEndpoints
         group.MapDelete("/{workOrderId:guid}", async (Guid workOrderId, CancelWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, cancellationToken)));
         group.MapPost("/{workOrderId:guid}/start", async (Guid workOrderId, StartWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, cancellationToken)));
         group.MapPut("/{workOrderId:guid}/checklist", async (Guid workOrderId, SaveWorkOrderChecklistProgressCommand command, SaveWorkOrderChecklistProgressUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, command, cancellationToken)));
-        group.MapPost("/{workOrderId:guid}/complete", async (Guid workOrderId, CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, cancellationToken)));
+        group.MapPost("/{workOrderId:guid}/complete", async (Guid workOrderId, CompleteWorkOrderCommand? command, CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, command ?? new CompleteWorkOrderCommand(), cancellationToken)));
         group.MapPost("/{workOrderId:guid}/photos", async (Guid workOrderId, IFormFile file, WorkOrderPhotoType type, string? description, AddWorkOrderPhotoUseCase useCase, CancellationToken cancellationToken) =>
         {
             if (file.Length > 10 * 1024 * 1024)

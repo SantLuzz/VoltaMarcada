@@ -6,6 +6,7 @@
 @using ServiceSync.Application.Equipment
 @using ServiceSync.Application.Professionals
 @using ServiceSync.Application.Services
+@using ServiceSync.Application.MaintenanceOpportunities
 @inject GetAppointmentsUseCase GetAppointmentsUseCase
 @inject GetAvailableAppointmentSlotsUseCase GetAvailableAppointmentSlotsUseCase
 @inject CreateAppointmentUseCase CreateAppointmentUseCase
@@ -21,6 +22,7 @@
 @inject GetProfessionalsUseCase GetProfessionalsUseCase
 @inject GetWorkOrdersUseCase GetWorkOrdersUseCase
 @inject GetWorkOrderDetailsUseCase GetWorkOrderDetailsUseCase
+@inject GetMaintenanceOpportunityForSchedulingUseCase GetMaintenanceOpportunityForSchedulingUseCase
 @inject ISnackbar Snackbar
 @inject ISchedulingConfiguration SchedulingConfiguration
 @inject TimeProvider TimeProvider
@@ -290,6 +292,9 @@ else
     [SupplyParameterFromQuery(Name = "new")]
     public bool OpenNewAppointment { get; set; }
 
+    [SupplyParameterFromQuery(Name = "maintenanceOpportunityId")]
+    public Guid? MaintenanceOpportunityId { get; set; }
+
     private DateTime? startDate;
     private DateTime? endDate;
     private IReadOnlyList<AppointmentDto> appointments = [];
@@ -355,6 +360,18 @@ else
                 .ToArray();
         }
         await LoadAsync();
+        if (MaintenanceOpportunityId is { } opportunityId && isOwner)
+        {
+            var context = await GetMaintenanceOpportunityForSchedulingUseCase.ExecuteAsync(opportunityId);
+            if (context.IsSuccess)
+            {
+                await OpenAppointmentDialogAsync();
+                appointmentCustomerId = context.Value!.CustomerId;
+                appointmentEquipmentId = context.Value.EquipmentId;
+                appointmentServiceId = context.Value.RecommendedServiceId;
+                appointmentWorkOrderId = null;
+            }
+        }
         if (OpenNewAppointment && (isOwner || accessScope?.ProfessionalId is not null))
         {
             OpenAppointmentEditor();
@@ -602,7 +619,8 @@ else
                 appointmentEquipmentId,
                 service.Id,
                 appointmentWorkOrderId,
-                appointmentNotes));
+                appointmentNotes,
+                MaintenanceOpportunityId));
 
             if (result.IsSuccess)
             {

@@ -40,6 +40,12 @@ public static class DependencyInjection
         services.AddScoped<GetMaintenanceOpportunitiesUseCase>();
         services.AddScoped<GetMaintenanceOpportunitySummaryUseCase>();
         services.AddScoped<GetMaintenanceOpportunityForSchedulingUseCase>();
+        services.AddScoped<MaintenanceOpportunityActionExecutor>();
+        services.AddScoped<MarkMaintenanceOpportunityAsContactedUseCase>();
+        services.AddScoped<MarkMaintenanceOpportunityAsBookingRequestedUseCase>();
+        services.AddScoped<MarkMaintenanceOpportunityAsBookedUseCase>();
+        services.AddScoped<CompleteMaintenanceOpportunityUseCase>();
+        services.AddScoped<DismissMaintenanceOpportunityUseCase>();
         services.AddScoped<CreateWorkOrderUseCase>();
         services.AddScoped<GetWorkOrdersUseCase>();
         services.AddScoped<GetWorkOrderDetailsUseCase>();

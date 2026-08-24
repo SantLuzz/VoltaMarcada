@@ -1,0 +1,46 @@
+@page "/manutencoes"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
+@using ServiceSync.Application.MaintenanceOpportunities
+@using ServiceSync.Domain.Enums
+@inject GetMaintenanceOpportunitiesUseCase GetMaintenanceOpportunitiesUseCase
+@inject GetMaintenanceOpportunitySummaryUseCase GetMaintenanceOpportunitySummaryUseCase
+@inject MarkMaintenanceOpportunityAsContactedUseCase MarkContactedUseCase
+@inject MarkMaintenanceOpportunityAsBookingRequestedUseCase MarkBookingRequestedUseCase
+@inject CompleteMaintenanceOpportunityUseCase CompleteUseCase
+@inject DismissMaintenanceOpportunityUseCase DismissUseCase
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<PageTitle>Manutencoes | ServiceSync</PageTitle>
+<PageHeader Title="Manutencoes" Description="Acompanhe clientes que podem gerar novos atendimentos." />
+
+@if (isLoading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mt-4" />
+}
+else
+{
+    <MudGrid Class="mt-4">
+        <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-4"><MudText Typo="Typo.caption">Vencidas</MudText><MudText Typo="Typo.h4" Color="Color.Error">@summary.OverdueCount</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-4"><MudText Typo="Typo.caption">Nos proximos 7 dias</MudText><MudText Typo="Typo.h4" Color="Color.Warning">@summary.NextSevenDaysCount</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-4"><MudText Typo="Typo.caption">Nos proximos 30 dias</MudText><MudText Typo="Typo.h4">@summary.NextThirtyDaysCount</MudText></MudPaper></MudItem>
+    </MudGrid>
+    <MudPaper Outlined="true" Class="pa-4 mt-4">
+        <MudSelect T="MaintenanceOpportunityStatus?" Label="Situacao" Clearable="true" @bind-Value="status" @bind-Value:after="LoadAsync"><MudSelectItem Value="@((MaintenanceOpportunityStatus?)MaintenanceOpportunityStatus.Pending)">Pendente</MudSelectItem><MudSelectItem Value="@((MaintenanceOpportunityStatus?)MaintenanceOpportunityStatus.Contacted)">Contatado</MudSelectItem><MudSelectItem Value="@((MaintenanceOpportunityStatus?)MaintenanceOpportunityStatus.BookingRequested)">Agendamento solicitado</MudSelectItem><MudSelectItem Value="@((MaintenanceOpportunityStatus?)MaintenanceOpportunityStatus.Booked)">Agendado</MudSelectItem><MudSelectItem Value="@((MaintenanceOpportunityStatus?)MaintenanceOpportunityStatus.Completed)">Concluido</MudSelectItem><MudSelectItem Value="@((MaintenanceOpportunityStatus?)MaintenanceOpportunityStatus.Dismissed)">Ignorado</MudSelectItem></MudSelect>
+        @if (items.Count == 0) { <EmptyState Icon="@Icons.Material.Filled.BuildCircle" Title="Nenhuma manutencao encontrada" Description="As recomendacoes criadas ao concluir uma OS aparecerao aqui." /> }
+        else { <MudList T="MaintenanceOpportunityListItem">@foreach (var item in items) { <MudListItem T="MaintenanceOpportunityListItem" Value="@item"><MudStack Spacing="1"><MudText Typo="Typo.subtitle1">@item.CustomerName</MudText><MudText>@item.EquipmentDescription - @item.RecommendedServiceName</MudText><MudText Typo="Typo.caption">Ultima manutencao: @item.PreviousWorkOrderCompletedAtUtc.LocalDateTime.ToString("dd/MM/yyyy") | Proxima: @item.DueDate.ToString("dd/MM/yyyy")</MudText><MudStack Row="true"><MudButton Variant="Variant.Text" OnClick="@(() => ContactAsync(item.Id))">Marcar contato</MudButton>@if (item.Status is MaintenanceOpportunityStatus.Pending or MaintenanceOpportunityStatus.Contacted) { <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => ScheduleAsync(item.Id))">Agendar</MudButton> } @if (item.Status == MaintenanceOpportunityStatus.Booked) { <MudButton Variant="Variant.Text" Color="Color.Success" OnClick="@(() => CompleteAsync(item.Id))">Concluir</MudButton> } @if (item.Status is not MaintenanceOpportunityStatus.Completed and not MaintenanceOpportunityStatus.Dismissed) { <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@(() => DismissAsync(item.Id))">Ignorar</MudButton> }</MudStack></MudStack></MudListItem> }</MudList> }
+    </MudPaper>
+}
+
+@code {
+    private MaintenanceOpportunitySummary summary = new(0, 0, 0);
+    private IReadOnlyList<MaintenanceOpportunityListItem> items = [];
+    private MaintenanceOpportunityStatus? status;
+    private bool isLoading = true;
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private async Task LoadAsync() { isLoading = true; try { var summaryResult = await GetMaintenanceOpportunitySummaryUseCase.ExecuteAsync(); var listResult = await GetMaintenanceOpportunitiesUseCase.ExecuteAsync(new GetMaintenanceOpportunitiesQuery(status, null)); if (summaryResult.IsSuccess) summary = summaryResult.Value!; if (listResult.IsSuccess) items = listResult.Value!; else Snackbar.Add(OperationErrorMessages.GetMessage(listResult.Error?.Code), Severity.Warning); } finally { isLoading = false; } }
+    private async Task ContactAsync(Guid id) { var result = await MarkContactedUseCase.ExecuteAsync(id); if (result.IsSuccess) await LoadAsync(); else Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning); }
+    private async Task ScheduleAsync(Guid id) { var result = await MarkBookingRequestedUseCase.ExecuteAsync(id); if (result.IsSuccess) NavigationManager.NavigateTo($"/agenda?maintenanceOpportunityId={id}"); else Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning); }
+    private async Task CompleteAsync(Guid id) { var result = await CompleteUseCase.ExecuteAsync(id); if (result.IsSuccess) await LoadAsync(); else Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning); }
+    private async Task DismissAsync(Guid id) { var result = await DismissUseCase.ExecuteAsync(id); if (result.IsSuccess) await LoadAsync(); else Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning); }
+}

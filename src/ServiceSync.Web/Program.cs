@@ -54,9 +54,10 @@ var app = builder.Build();
 await app.Services.ApplyDatabaseMigrationsAsync();
 await PlatformAdministratorInitializer.InitializeAsync(app.Services, builder.Configuration);
 
+app.UseExceptionHandler();
+
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler();
     app.UseHsts();
 }
 
@@ -101,6 +102,7 @@ app.MapServiceEndpoints();
 app.MapProfessionalEndpoints();
 app.MapEmployeeInvitationEndpoints();
 app.MapWorkOrderEndpoints();
+app.MapMaintenanceOpportunityEndpoints();
 app.MapAppointmentEndpoints();
 app.MapScheduleBlockRequestEndpoints();
 

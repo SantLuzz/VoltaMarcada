@@ -2,7 +2,9 @@ using ServiceSync.Application.Abstractions.Operations;
 using ServiceSync.Application.Abstractions.Identity;
 using ServiceSync.Application.Abstractions.Persistence;
 using ServiceSync.Application.WorkOrders;
+using ServiceSync.Application.MaintenanceOpportunities;
 using ServiceSync.Domain.Entities;
+using ServiceSync.Domain.Enums;
 
 namespace ServiceSync.Application.Scheduling;
 
@@ -46,7 +48,7 @@ public sealed class GetAvailableAppointmentSlotsUseCase(WorkOrderAuthorization a
     }
 }
 
-public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorization, IProfessionalRepository professionalRepository, IWorkOrderRepository workOrderRepository, ICustomerRepository customerRepository, IEquipmentRepository equipmentRepository, IServiceRepository serviceRepository, IAppointmentRepository appointmentRepository, AppointmentAvailability availability, TimeProvider timeProvider)
+public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorization, IProfessionalRepository professionalRepository, IWorkOrderRepository workOrderRepository, ICustomerRepository customerRepository, IEquipmentRepository equipmentRepository, IServiceRepository serviceRepository, IAppointmentRepository appointmentRepository, IMaintenanceOpportunityRepository maintenanceOpportunityRepository, AppointmentAvailability availability, TimeProvider timeProvider)
 {
     public async Task<OperationResult<Guid>> ExecuteAsync(CreateAppointmentCommand command, CancellationToken cancellationToken = default)
     {
@@ -65,6 +67,33 @@ public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorizatio
         }
 
         var normalized = command;
+        MaintenanceOpportunity? maintenanceOpportunity = null;
+        if (command.MaintenanceOpportunityId is { } maintenanceOpportunityId)
+        {
+            if (!scope.IsOwner)
+            {
+                return OperationResult<Guid>.Failure(SchedulingErrors.Forbidden);
+            }
+
+            maintenanceOpportunity = await maintenanceOpportunityRepository.GetForCompanyAsync(maintenanceOpportunityId, scope.CompanyId, cancellationToken);
+            if (maintenanceOpportunity is null)
+            {
+                return OperationResult<Guid>.Failure(SchedulingErrors.NotFound);
+            }
+
+            if (maintenanceOpportunity.Status != MaintenanceOpportunityStatus.BookingRequested)
+            {
+                return OperationResult<Guid>.Failure(SchedulingErrors.InvalidStatus);
+            }
+
+            normalized = command with
+            {
+                CustomerId = maintenanceOpportunity.CustomerId,
+                EquipmentId = maintenanceOpportunity.EquipmentId,
+                ServiceId = maintenanceOpportunity.RecommendedServiceId,
+                WorkOrderId = null
+            };
+        }
         if (!scope.IsOwner)
         {
             if (scope.ProfessionalId != professional.Id || command.WorkOrderId is not { } workOrderId)
@@ -132,6 +161,7 @@ public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorizatio
 
         var appointment = Appointment.Create(scope.CompanyId, professional.Id, normalized.CustomerId, normalized.EquipmentId, normalized.ServiceId, normalized.WorkOrderId, startAtUtc, endAtUtc, normalized.Notes, timeProvider.GetUtcNow());
         await appointmentRepository.AddAsync(appointment, cancellationToken);
+        maintenanceOpportunity?.MarkAsBooked(timeProvider.GetUtcNow());
         if (await appointmentRepository.TrySaveAppointmentChangesAsync(cancellationToken) == AppointmentPersistenceOutcome.Conflict)
         {
             return OperationResult<Guid>.Failure(SchedulingErrors.AppointmentConflict);

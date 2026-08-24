@@ -11,7 +11,8 @@ public sealed record CreateAppointmentCommand(
     Guid? EquipmentId,
     Guid? ServiceId,
     Guid? WorkOrderId,
-    string? Notes);
+    string? Notes,
+    Guid? MaintenanceOpportunityId = null);
 
 public sealed record RescheduleAppointmentCommand(DateOnly Date, TimeOnly StartTime, string Reason);
 
