@@ -2,10 +2,12 @@
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
 @using ServiceSync.Application.Scheduling
 @using ServiceSync.Application.WorkOrders
+@using ServiceSync.Application.MaintenanceOpportunities
 @inject WorkOrderAuthorization WorkOrderAuthorization
 @inject GetAppointmentsUseCase GetAppointmentsUseCase
 @inject GetScheduleBlockRequestsUseCase GetScheduleBlockRequestsUseCase
 @inject GetWorkOrdersUseCase GetWorkOrdersUseCase
+@inject GetMaintenanceOpportunitySummaryUseCase GetMaintenanceOpportunitySummaryUseCase
 @inject ISchedulingConfiguration SchedulingConfiguration
 @inject TimeProvider TimeProvider
 
@@ -27,6 +29,7 @@
         <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">OS abertas</MudText><MudText Typo="Typo.h5">@openWorkOrders</MudText></MudPaper></MudItem>
         <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">Bloqueios aguardando ação</MudText><MudText Typo="Typo.h5">@pendingBlockRequests</MudText></MudPaper></MudItem>
     </MudGrid>
+    <MudPaper Outlined="true" Class="pa-3 mt-4"><MudText Typo="Typo.h6">Manutencoes</MudText><MudText>@maintenanceSummary.OverdueCount vencidas | @maintenanceSummary.NextSevenDaysCount nos proximos 7 dias | @maintenanceSummary.NextThirtyDaysCount nos proximos 30 dias</MudText><MudButton Href="/manutencoes" Variant="Variant.Text" Color="Color.Primary">Ver manutencoes</MudButton></MudPaper>
 }
 
 <MudPaper Outlined="true" Class="dashboard-agenda mt-4">
@@ -122,6 +125,7 @@
     private int pendingBlockRequests;
     private int openWorkOrders;
     private Guid? selectedAppointmentId;
+    private MaintenanceOpportunitySummary maintenanceSummary = new(0, 0, 0);
 
     protected override async Task OnInitializedAsync()
     {
@@ -179,6 +183,8 @@
                     .Count(request => request.Status is ServiceSync.Domain.Enums.ScheduleBlockRequestStatus.Pending or ServiceSync.Domain.Enums.ScheduleBlockRequestStatus.RequiresAppointmentResolution);
                 openWorkOrders = (await GetWorkOrdersUseCase.ExecuteAsync(new GetWorkOrdersQuery(null, null)))
                     .Count(workOrder => workOrder.Status is ServiceSync.Domain.Enums.WorkOrderStatus.Pending or ServiceSync.Domain.Enums.WorkOrderStatus.InProgress);
+                var summaryResult = await GetMaintenanceOpportunitySummaryUseCase.ExecuteAsync();
+                if (summaryResult.IsSuccess) maintenanceSummary = summaryResult.Value!;
             }
         }
         finally

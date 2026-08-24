@@ -162,7 +162,7 @@ else
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudSelect T="Guid?" Label="Cliente" Placeholder="Selecione um cliente" Clearable="true" @bind-Value="appointmentCustomerId" @bind-Value:after="LoadAppointmentEquipmentAsync" Disabled="@(isCreatingAppointment || appointmentWorkOrderId is not null)">
+                    <MudSelect T="Guid?" Label="Cliente" Placeholder="Selecione um cliente" Clearable="true" @bind-Value="appointmentCustomerId" @bind-Value:after="LoadAppointmentEquipmentAsync" Disabled="@(isCreatingAppointment || appointmentWorkOrderId is not null || MaintenanceOpportunityId is not null)">
                         @foreach (var customer in appointmentCustomers)
                         {
                             <MudSelectItem Value="@((Guid?)customer.Id)">@customer.Name</MudSelectItem>
@@ -170,7 +170,7 @@ else
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudSelect T="Guid?" Label="Equipamento" Placeholder="Selecione um equipamento" Clearable="true" @bind-Value="appointmentEquipmentId" Disabled="@(isCreatingAppointment || appointmentCustomerId is null || appointmentWorkOrderId is not null)">
+                    <MudSelect T="Guid?" Label="Equipamento" Placeholder="Selecione um equipamento" Clearable="true" @bind-Value="appointmentEquipmentId" Disabled="@(isCreatingAppointment || appointmentCustomerId is null || appointmentWorkOrderId is not null || MaintenanceOpportunityId is not null)">
                         @foreach (var equipment in appointmentEquipment)
                         {
                             <MudSelectItem Value="@((Guid?)equipment.Id)">@GetEquipmentName(equipment)</MudSelectItem>
@@ -178,7 +178,7 @@ else
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudSelect T="Guid?" Label="Serviço" Placeholder="Selecione um serviço" @bind-Value="appointmentServiceId" @bind-Value:after="OnAppointmentServiceChangedAsync" Disabled="@(isCreatingAppointment || appointmentWorkOrderId is not null)">
+                    <MudSelect T="Guid?" Label="Serviço" Placeholder="Selecione um serviço" @bind-Value="appointmentServiceId" @bind-Value:after="OnAppointmentServiceChangedAsync" Disabled="@(isCreatingAppointment || appointmentWorkOrderId is not null || MaintenanceOpportunityId is not null)">
                         @foreach (var service in appointmentServices)
                         {
                             <MudSelectItem Value="@((Guid?)service.Id)">@service.Name (@service.DurationMinutes min)</MudSelectItem>
@@ -370,6 +370,7 @@ else
                 appointmentEquipmentId = context.Value.EquipmentId;
                 appointmentServiceId = context.Value.RecommendedServiceId;
                 appointmentWorkOrderId = null;
+                appointmentEquipment = (await GetCustomerEquipmentUseCase.ExecuteAsync(context.Value.CustomerId)).Where(equipment => equipment.IsActive).ToArray();
             }
         }
         if (OpenNewAppointment && (isOwner || accessScope?.ProfessionalId is not null))
