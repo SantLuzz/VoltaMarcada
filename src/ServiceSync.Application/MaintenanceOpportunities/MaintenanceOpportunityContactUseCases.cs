@@ -86,7 +86,10 @@ public sealed class ConfirmMaintenanceOpportunityContactSentUseCase(
 
         var contact = await contactRepository.GetForCompanyAsync(contactId, companyId.Value, cancellationToken);
         var opportunity = await opportunityRepository.GetForCompanyAsync(opportunityId, companyId.Value, cancellationToken);
-        if (contact is null || opportunity is null || contact.OpportunityId != opportunity.Id)
+        if (contact is null ||
+            opportunity is null ||
+            contact.OpportunityId != opportunity.Id ||
+            contact.CustomerId != opportunity.CustomerId)
         {
             return OperationResult.Failure(CustomerContactErrors.NotFound);
         }
