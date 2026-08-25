@@ -2,15 +2,15 @@
 
 ## Changed Files
 
-- `src/ServiceSync.Application/Abstractions/Identity/ICurrentUser.cs`
-- `src/ServiceSync.Application/Abstractions/Tenancy/ICurrentCompany.cs`
-- `src/ServiceSync.Application/Abstractions/Persistence/ICompanyOnboardingRepository.cs`
-- `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingCommand.cs`
-- `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingResult.cs`
-- `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingCommandValidator.cs`
-- `src/ServiceSync.Application/CompanyOnboarding/CompanySlugGenerator.cs`
-- `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingUseCase.cs`
-- `src/ServiceSync.Application/DependencyInjection.cs`
+- `src/VoltaMarcada.Application/Abstractions/Identity/ICurrentUser.cs`
+- `src/VoltaMarcada.Application/Abstractions/Tenancy/ICurrentCompany.cs`
+- `src/VoltaMarcada.Application/Abstractions/Persistence/ICompanyOnboardingRepository.cs`
+- `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingCommand.cs`
+- `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingResult.cs`
+- `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingCommandValidator.cs`
+- `src/VoltaMarcada.Application/CompanyOnboarding/CompanySlugGenerator.cs`
+- `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingUseCase.cs`
+- `src/VoltaMarcada.Application/DependencyInjection.cs`
 - `.superpowers/sdd/2026-08-18-company-onboarding/task-2-report.md`
 
 ## Exact Public Types and Signatures
@@ -97,10 +97,10 @@ public sealed class CompleteCompanyOnboardingUseCase
 Command run:
 
 ```text
-dotnet build ServiceSync.sln
+dotnet build VoltaMarcada.sln
 ```
 
-Result: exit code 1. `ServiceSync.Domain` and `ServiceSync.Application` compiled successfully. The solution build is blocked solely by the known out-of-scope Infrastructure error in `src/ServiceSync.Infrastructure/Persistence/Configurations/CompanyConfiguration.cs`: the configuration references the removed `Company.Name` property (CS1061). Restore also emitted NU1900 warnings because package vulnerability feeds were unreachable.
+Result: exit code 1. `VoltaMarcada.Domain` and `VoltaMarcada.Application` compiled successfully. The solution build is blocked solely by the known out-of-scope Infrastructure error in `src/VoltaMarcada.Infrastructure/Persistence/Configurations/CompanyConfiguration.cs`: the configuration references the removed `Company.Name` property (CS1061). Restore also emitted NU1900 warnings because package vulnerability feeds were unreachable.
 
 ## Concerns
 

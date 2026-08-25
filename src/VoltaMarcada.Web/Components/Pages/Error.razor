@@ -1,0 +1,14 @@
+@page "/error"
+@attribute [AllowAnonymous]
+@layout AuthLayout
+
+<PageTitle>Erro | VoltaMarcada</PageTitle>
+
+<section class="status-page" aria-labelledby="error-title">
+    <MudPaper Class="status-surface" Elevation="0" Outlined="true">
+        <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="Color.Error" Size="Size.Large" aria-hidden="true" />
+        <MudText id="error-title" Typo="Typo.h4">Não foi possível concluir esta ação</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">Sua sessão pode ter expirado. Recarregue a página e tente novamente.</MudText>
+        <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary">Voltar ao início</MudButton>
+    </MudPaper>
+</section>

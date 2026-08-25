@@ -4,7 +4,7 @@
 
 **Goal:** Keep Data Protection keys in PostgreSQL and render the correct user-facing page for HTTP 400 and 404 without handling 401 as a status page.
 
-**Architecture:** `AppDbContext` becomes the Data Protection key context backed by a new PostgreSQL table. Infrastructure configures a fixed ServiceSync Data Protection application name and persists keys through that context. The web host replaces global status-code re-execution with a selective handler that redirects only 400 and 404 responses to their intended Razor pages.
+**Architecture:** `AppDbContext` becomes the Data Protection key context backed by a new PostgreSQL table. Infrastructure configures a fixed VoltaMarcada Data Protection application name and persists keys through that context. The web host replaces global status-code re-execution with a selective handler that redirects only 400 and 404 responses to their intended Razor pages.
 
 **Tech Stack:** .NET 10, ASP.NET Core Data Protection, Entity Framework Core 10, PostgreSQL, Blazor Web App.
 
@@ -24,12 +24,12 @@
 
 **Files:**
 
-- Modify: `src/ServiceSync.Infrastructure/ServiceSync.Infrastructure.csproj`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`
-- Modify: `src/ServiceSync.Infrastructure/DependencyInjection.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/20260821180000_AddDataProtectionKeys.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/20260821180000_AddDataProtectionKeys.Designer.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/VoltaMarcada.Infrastructure.csproj`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/DependencyInjection.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260821180000_AddDataProtectionKeys.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260821180000_AddDataProtectionKeys.Designer.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
 
 **Interfaces:**
 
@@ -58,7 +58,7 @@ In `AddInfrastructure`, configure Data Protection after the database context reg
 
 ```csharp
 services.AddDataProtection()
-    .SetApplicationName("ServiceSync")
+    .SetApplicationName("VoltaMarcada")
     .PersistKeysToDbContext<AppDbContext>();
 ```
 
@@ -86,7 +86,7 @@ Confirm that the context implements `IDataProtectionKeyContext`, the migration n
 - [ ] **Step 6: Commit the infrastructure change**
 
 ```bash
-git add src/ServiceSync.Infrastructure/ServiceSync.Infrastructure.csproj src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs src/ServiceSync.Infrastructure/DependencyInjection.cs src/ServiceSync.Infrastructure/Persistence/Migrations
+git add src/VoltaMarcada.Infrastructure/VoltaMarcada.Infrastructure.csproj src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs src/VoltaMarcada.Infrastructure/DependencyInjection.cs src/VoltaMarcada.Infrastructure/Persistence/Migrations
 git commit -m "Persist data protection keys in PostgreSQL"
 ```
 
@@ -94,8 +94,8 @@ git commit -m "Persist data protection keys in PostgreSQL"
 
 **Files:**
 
-- Modify: `src/ServiceSync.Web/Program.cs`
-- Modify: `src/ServiceSync.Web/Components/Pages/Error.razor`
+- Modify: `src/VoltaMarcada.Web/Program.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Error.razor`
 
 **Interfaces:**
 
@@ -147,7 +147,7 @@ Verify the handler executes before `UseAuthentication`, `UseAuthorization`, and 
 - [ ] **Step 4: Commit the status-page change**
 
 ```bash
-git add src/ServiceSync.Web/Program.cs src/ServiceSync.Web/Components/Pages/Error.razor
+git add src/VoltaMarcada.Web/Program.cs src/VoltaMarcada.Web/Components/Pages/Error.razor
 git commit -m "Handle production status pages explicitly"
 ```
 

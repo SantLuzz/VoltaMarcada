@@ -1,4 +1,4 @@
-# SDD ledger — plan: D:\Code\ServiceSync\docs\superpowers\plans\2026-08-18-company-onboarding.md
+# SDD ledger — plan: D:\Code\VoltaMarcada\docs\superpowers\plans\2026-08-18-company-onboarding.md
 
 | Scope | Produces / Consumes | Finding | Ruling |
 | --- | --- | --- | --- |

@@ -30,23 +30,23 @@
 
 | File | Responsibility |
 | --- | --- |
-| src/ServiceSync.Domain/Enums/CustomerAddressType.cs | Address-category enum. |
-| src/ServiceSync.Domain/Entities/Customer.cs | Company-scoped aggregate and invariants. |
-| src/ServiceSync.Domain/Entities/CustomerAddress.cs | Address entity and field validation. |
-| src/ServiceSync.Application/Customers | Commands, DTOs, validators, results, and CRUD use cases. |
-| src/ServiceSync.Application/Abstractions/Persistence/ICustomerRepository.cs | Customer persistence boundary. |
-| src/ServiceSync.Infrastructure/Persistence/Configurations/CustomerConfiguration.cs | Customer mapping. |
-| src/ServiceSync.Infrastructure/Persistence/Configurations/CustomerAddressConfiguration.cs | Address mapping and constraints. |
-| src/ServiceSync.Infrastructure/Persistence/Repositories/CustomerRepository.cs | Scoped aggregate persistence. |
-| src/ServiceSync.Infrastructure/Persistence/Migrations/20260819110000_AddCustomers.cs | Schema migration. |
-| src/ServiceSync.Web/Endpoints/CustomerEndpoints.cs | Protected JSON API. |
+| src/VoltaMarcada.Domain/Enums/CustomerAddressType.cs | Address-category enum. |
+| src/VoltaMarcada.Domain/Entities/Customer.cs | Company-scoped aggregate and invariants. |
+| src/VoltaMarcada.Domain/Entities/CustomerAddress.cs | Address entity and field validation. |
+| src/VoltaMarcada.Application/Customers | Commands, DTOs, validators, results, and CRUD use cases. |
+| src/VoltaMarcada.Application/Abstractions/Persistence/ICustomerRepository.cs | Customer persistence boundary. |
+| src/VoltaMarcada.Infrastructure/Persistence/Configurations/CustomerConfiguration.cs | Customer mapping. |
+| src/VoltaMarcada.Infrastructure/Persistence/Configurations/CustomerAddressConfiguration.cs | Address mapping and constraints. |
+| src/VoltaMarcada.Infrastructure/Persistence/Repositories/CustomerRepository.cs | Scoped aggregate persistence. |
+| src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260819110000_AddCustomers.cs | Schema migration. |
+| src/VoltaMarcada.Web/Endpoints/CustomerEndpoints.cs | Protected JSON API. |
 
 ### Task 1: Add Customer Domain Types
 
 **Files:**
-- Create: src/ServiceSync.Domain/Enums/CustomerAddressType.cs
-- Create: src/ServiceSync.Domain/Entities/Customer.cs
-- Create: src/ServiceSync.Domain/Entities/CustomerAddress.cs
+- Create: src/VoltaMarcada.Domain/Enums/CustomerAddressType.cs
+- Create: src/VoltaMarcada.Domain/Entities/Customer.cs
+- Create: src/VoltaMarcada.Domain/Entities/CustomerAddress.cs
 
 **Interfaces:**
 - Consumes: ICompanyScopedEntity, DomainException, BrazilianDocument, and BrazilianPostalCode.
@@ -113,28 +113,28 @@ Store addresses in a private list exposed as IReadOnlyCollection<CustomerAddress
 - [ ] **Step 6: Commit only the domain files.**
 
 ~~~
-git add -- src/ServiceSync.Domain/Enums/CustomerAddressType.cs src/ServiceSync.Domain/Entities/Customer.cs src/ServiceSync.Domain/Entities/CustomerAddress.cs
+git add -- src/VoltaMarcada.Domain/Enums/CustomerAddressType.cs src/VoltaMarcada.Domain/Entities/Customer.cs src/VoltaMarcada.Domain/Entities/CustomerAddress.cs
 git commit -m "feat: add customer aggregate"
 ~~~
 
 ### Task 2: Add Application Contracts and CRUD Use Cases
 
 **Files:**
-- Create: src/ServiceSync.Application/Customers/CustomerAddressInput.cs
-- Create: src/ServiceSync.Application/Customers/CreateCustomerCommand.cs
-- Create: src/ServiceSync.Application/Customers/UpdateCustomerCommand.cs
-- Create: src/ServiceSync.Application/Customers/CreateCustomerCommandValidator.cs
-- Create: src/ServiceSync.Application/Customers/UpdateCustomerCommandValidator.cs
-- Create: src/ServiceSync.Application/Customers/CustomerAddressDto.cs
-- Create: src/ServiceSync.Application/Customers/CustomerDto.cs
-- Create: src/ServiceSync.Application/Customers/CustomerOperationResult.cs
-- Create: src/ServiceSync.Application/Customers/CreateCustomerUseCase.cs
-- Create: src/ServiceSync.Application/Customers/GetCustomersUseCase.cs
-- Create: src/ServiceSync.Application/Customers/GetCustomerForEditUseCase.cs
-- Create: src/ServiceSync.Application/Customers/UpdateCustomerUseCase.cs
-- Create: src/ServiceSync.Application/Customers/DeleteCustomerUseCase.cs
-- Create: src/ServiceSync.Application/Abstractions/Persistence/ICustomerRepository.cs
-- Modify: src/ServiceSync.Application/DependencyInjection.cs
+- Create: src/VoltaMarcada.Application/Customers/CustomerAddressInput.cs
+- Create: src/VoltaMarcada.Application/Customers/CreateCustomerCommand.cs
+- Create: src/VoltaMarcada.Application/Customers/UpdateCustomerCommand.cs
+- Create: src/VoltaMarcada.Application/Customers/CreateCustomerCommandValidator.cs
+- Create: src/VoltaMarcada.Application/Customers/UpdateCustomerCommandValidator.cs
+- Create: src/VoltaMarcada.Application/Customers/CustomerAddressDto.cs
+- Create: src/VoltaMarcada.Application/Customers/CustomerDto.cs
+- Create: src/VoltaMarcada.Application/Customers/CustomerOperationResult.cs
+- Create: src/VoltaMarcada.Application/Customers/CreateCustomerUseCase.cs
+- Create: src/VoltaMarcada.Application/Customers/GetCustomersUseCase.cs
+- Create: src/VoltaMarcada.Application/Customers/GetCustomerForEditUseCase.cs
+- Create: src/VoltaMarcada.Application/Customers/UpdateCustomerUseCase.cs
+- Create: src/VoltaMarcada.Application/Customers/DeleteCustomerUseCase.cs
+- Create: src/VoltaMarcada.Application/Abstractions/Persistence/ICustomerRepository.cs
+- Modify: src/VoltaMarcada.Application/DependencyInjection.cs
 
 **Interfaces:**
 - Consumes: Task 1 types, ICurrentCompany, TimeProvider, and FluentValidation.
@@ -216,21 +216,21 @@ services.AddScoped<DeleteCustomerUseCase>();
 - [ ] **Step 9: Commit only Application customer files, repository abstraction, and DI registration.**
 
 ~~~
-git add -- src/ServiceSync.Application/Customers src/ServiceSync.Application/Abstractions/Persistence/ICustomerRepository.cs src/ServiceSync.Application/DependencyInjection.cs
+git add -- src/VoltaMarcada.Application/Customers src/VoltaMarcada.Application/Abstractions/Persistence/ICustomerRepository.cs src/VoltaMarcada.Application/DependencyInjection.cs
 git commit -m "feat: add customer use cases"
 ~~~
 
 ### Task 3: Map and Persist the Aggregate
 
 **Files:**
-- Create: src/ServiceSync.Infrastructure/Persistence/Configurations/CustomerConfiguration.cs
-- Create: src/ServiceSync.Infrastructure/Persistence/Configurations/CustomerAddressConfiguration.cs
-- Create: src/ServiceSync.Infrastructure/Persistence/Repositories/CustomerRepository.cs
-- Modify: src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs
-- Modify: src/ServiceSync.Infrastructure/DependencyInjection.cs
-- Create: src/ServiceSync.Infrastructure/Persistence/Migrations/20260819110000_AddCustomers.cs
-- Create: src/ServiceSync.Infrastructure/Persistence/Migrations/20260819110000_AddCustomers.Designer.cs
-- Modify: src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs
+- Create: src/VoltaMarcada.Infrastructure/Persistence/Configurations/CustomerConfiguration.cs
+- Create: src/VoltaMarcada.Infrastructure/Persistence/Configurations/CustomerAddressConfiguration.cs
+- Create: src/VoltaMarcada.Infrastructure/Persistence/Repositories/CustomerRepository.cs
+- Modify: src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs
+- Modify: src/VoltaMarcada.Infrastructure/DependencyInjection.cs
+- Create: src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260819110000_AddCustomers.cs
+- Create: src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260819110000_AddCustomers.Designer.cs
+- Modify: src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs
 
 **Interfaces:**
 - Consumes: ICustomerRepository, domain aggregate types, and Company, State, City reference tables.
@@ -280,15 +280,15 @@ services.AddScoped<ICustomerRepository, CustomerRepository>();
 - [ ] **Step 8: Commit only Infrastructure files in this task.**
 
 ~~~
-git add -- src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs src/ServiceSync.Infrastructure/Persistence/Configurations/CustomerConfiguration.cs src/ServiceSync.Infrastructure/Persistence/Configurations/CustomerAddressConfiguration.cs src/ServiceSync.Infrastructure/Persistence/Repositories/CustomerRepository.cs src/ServiceSync.Infrastructure/DependencyInjection.cs src/ServiceSync.Infrastructure/Persistence/Migrations/20260819110000_AddCustomers.cs src/ServiceSync.Infrastructure/Persistence/Migrations/20260819110000_AddCustomers.Designer.cs src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs
+git add -- src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs src/VoltaMarcada.Infrastructure/Persistence/Configurations/CustomerConfiguration.cs src/VoltaMarcada.Infrastructure/Persistence/Configurations/CustomerAddressConfiguration.cs src/VoltaMarcada.Infrastructure/Persistence/Repositories/CustomerRepository.cs src/VoltaMarcada.Infrastructure/DependencyInjection.cs src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260819110000_AddCustomers.cs src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260819110000_AddCustomers.Designer.cs src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs
 git commit -m "feat: persist customers and addresses"
 ~~~
 
 ### Task 4: Expose Protected Customer Endpoints
 
 **Files:**
-- Create: src/ServiceSync.Web/Endpoints/CustomerEndpoints.cs
-- Modify: src/ServiceSync.Web/Program.cs
+- Create: src/VoltaMarcada.Web/Endpoints/CustomerEndpoints.cs
+- Modify: src/VoltaMarcada.Web/Program.cs
 
 **Interfaces:**
 - Consumes: all five customer use cases, complete DTOs, result codes, and AuthorizationPolicies.CompanyMember.
@@ -344,7 +344,7 @@ app.MapCustomerEndpoints();
 - [ ] **Step 7: Commit only CustomerEndpoints.cs and Program.cs.**
 
 ~~~
-git add -- src/ServiceSync.Web/Endpoints/CustomerEndpoints.cs src/ServiceSync.Web/Program.cs
+git add -- src/VoltaMarcada.Web/Endpoints/CustomerEndpoints.cs src/VoltaMarcada.Web/Program.cs
 git commit -m "feat: expose customer api"
 ~~~
 
@@ -361,7 +361,7 @@ git commit -m "feat: expose customer api"
 
 ~~~
 git diff --check
-rg -n "TODO|TBD|NotImplementedException" src/ServiceSync.Domain src/ServiceSync.Application/Customers src/ServiceSync.Infrastructure/Persistence src/ServiceSync.Web/Endpoints/CustomerEndpoints.cs
+rg -n "TODO|TBD|NotImplementedException" src/VoltaMarcada.Domain src/VoltaMarcada.Application/Customers src/VoltaMarcada.Infrastructure/Persistence src/VoltaMarcada.Web/Endpoints/CustomerEndpoints.cs
 ~~~
 
 - [ ] **Step 2: Trace tenant isolation.** From each route to each repository query, confirm server-side company resolution and compound customer/company filtering for individual operations.

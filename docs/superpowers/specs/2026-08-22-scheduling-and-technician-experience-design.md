@@ -14,7 +14,7 @@ The owner dashboard includes only data from modules currently implemented: appoi
 
 ## Scheduling Configuration and Time Zones
 
-`ServiceSync.Web/appsettings.json` defines a typed `SchedulingOptions` section:
+`VoltaMarcada.Web/appsettings.json` defines a typed `SchedulingOptions` section:
 
 ```json
 "Scheduling": {

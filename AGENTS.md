@@ -2,13 +2,13 @@
 
 ## Project Overview
 
-ServiceSync is a multi-tenant SaaS platform for service companies and independent technicians.
+VoltaMarcada is a multi-tenant SaaS platform for service companies and independent technicians.
 
 The product is designed around the complete service lifecycle:
 
 Customer -> Equipment -> Work Order -> Service Execution -> Maintenance Reminder -> Customer Contact -> Booking Request -> Appointment -> New Work Order
 
-The core product differentiator is not only work order management. ServiceSync must help service companies identify future maintenance opportunities, contact customers at the right time, and convert maintenance reminders into new appointments and work orders.
+The core product differentiator is not only work order management. VoltaMarcada must help service companies identify future maintenance opportunities, contact customers at the right time, and convert maintenance reminders into new appointments and work orders.
 
 The initial target market is small service companies such as HVAC, refrigeration, technical assistance, appliance maintenance, electrical services, solar maintenance, pool maintenance, IT support, and equipment maintenance.
 
@@ -99,23 +99,23 @@ Keep domain terminology and source code identifiers in English even when UI labe
 Keep the solution organized as follows:
 
 ```text
-ServiceSync.slnx
+VoltaMarcada.slnx
 
 src/
-    ServiceSync.Domain/
-    ServiceSync.Application/
-    ServiceSync.Infrastructure/
-    ServiceSync.Web/
+    VoltaMarcada.Domain/
+    VoltaMarcada.Application/
+    VoltaMarcada.Infrastructure/
+    VoltaMarcada.Web/
 
 tests/
-    ServiceSync.Domain.Tests/
-    ServiceSync.Application.Tests/
-    ServiceSync.IntegrationTests/
+    VoltaMarcada.Domain.Tests/
+    VoltaMarcada.Application.Tests/
+    VoltaMarcada.IntegrationTests/
 ```
 
 Do not create additional projects unless there is a concrete technical reason.
 
-### ServiceSync.Domain
+### VoltaMarcada.Domain
 
 Contains enterprise and domain rules only.
 
@@ -137,7 +137,7 @@ The Domain project must not depend on:
 - infrastructure libraries
 - UI frameworks
 
-### ServiceSync.Application
+### VoltaMarcada.Application
 
 Contains application behavior and use cases.
 
@@ -178,7 +178,7 @@ GeneralManager
 HelperService
 ```
 
-### ServiceSync.Infrastructure
+### VoltaMarcada.Infrastructure
 
 Contains technical implementations.
 
@@ -195,7 +195,7 @@ Responsibilities include:
 - date/time provider implementation
 - email or messaging integrations
 
-### ServiceSync.Web
+### VoltaMarcada.Web
 
 Contains the web host and presentation layer.
 
@@ -241,7 +241,7 @@ Prefer small, explicit interfaces over broad abstractions.
 
 ## Multi-Tenancy
 
-ServiceSync is multi-tenant from the beginning.
+VoltaMarcada is multi-tenant from the beginning.
 
 `Company` is the tenant boundary.
 
@@ -392,7 +392,7 @@ Typical fields may include:
 - InstallationDate
 - Notes
 
-Equipment is a central part of ServiceSync because maintenance history and future maintenance reminders may be linked to a specific equipment item.
+Equipment is a central part of VoltaMarcada because maintenance history and future maintenance reminders may be linked to a specific equipment item.
 
 ### Professional
 
@@ -567,7 +567,7 @@ Represents quote line items.
 
 ### MaintenanceReminder
 
-This is one of the most important domain concepts in ServiceSync.
+This is one of the most important domain concepts in VoltaMarcada.
 
 When a work order is completed, the technician may recommend a future maintenance date or interval.
 
@@ -822,7 +822,7 @@ Do not expose inactive services or services where `AllowOnlineBooking` is false.
 
 For the MVP, do not integrate the official WhatsApp Business API unless explicitly requested.
 
-Prefer opening WhatsApp with a pre-filled message and a secure ServiceSync link.
+Prefer opening WhatsApp with a pre-filled message and a secure VoltaMarcada link.
 
 Typical actions include:
 
@@ -945,7 +945,7 @@ Example:
 
 ```text
 Persistence/
-    ServiceSyncDbContext.cs
+    VoltaMarcadaDbContext.cs
     Configurations/
         CompanyConfiguration.cs
         CustomerConfiguration.cs
@@ -1271,7 +1271,7 @@ Company creates account
 -> Company creates work order
 -> Technician completes service
 -> Technician schedules future maintenance
--> ServiceSync surfaces the upcoming maintenance
+-> VoltaMarcada surfaces the upcoming maintenance
 -> Company contacts customer
 -> Company sends contextual booking link
 -> Customer selects preferred slot
@@ -1452,19 +1452,19 @@ If a feature does not strongly support one of these goals, it is probably not pa
 
 The most important product principle is:
 
-> ServiceSync should not merely record what already happened. It should tell the service company which customers should be contacted next.
+> VoltaMarcada should not merely record what already happened. It should tell the service company which customers should be contacted next.
 
 The system should become the operational memory of the company.
 
 A technician should not need to remember that a customer's equipment is due for maintenance.
 
-ServiceSync should surface that opportunity, help the company contact the customer, provide a booking path, and connect the resulting appointment back to the customer's equipment and service history.
+VoltaMarcada should surface that opportunity, help the company contact the customer, provide a booking path, and connect the resulting appointment back to the customer's equipment and service history.
 
 Preserve this principle when making architectural, UX, and domain decisions.
 
-# ServiceSync Frontend UI / UX Design System
+# VoltaMarcada Frontend UI / UX Design System
 
-The ServiceSync frontend must look and behave like a modern, professional, clean, and consistent SaaS application.
+The VoltaMarcada frontend must look and behave like a modern, professional, clean, and consistent SaaS application.
 
 The UI must prioritize:
 
@@ -1477,7 +1477,7 @@ The UI must prioritize:
 - low cognitive load
 - fast task completion
 
-ServiceSync is primarily used by service technicians and small service businesses.
+VoltaMarcada is primarily used by service technicians and small service businesses.
 
 The interface must feel simple, organized, trustworthy, and professional even when the underlying workflow is complex.
 
@@ -1491,7 +1491,7 @@ The visual quality, consistency, responsiveness, component reuse, loading states
 
 Whenever modifying an existing frontend page, first inspect its current visual structure.
 
-If the page does not comply with the ServiceSync UI rules defined in this document, refactor the relevant layout, spacing, components, form controls, and visual hierarchy to conform to the design system before completing the task.
+If the page does not comply with the VoltaMarcada UI rules defined in this document, refactor the relevant layout, spacing, components, form controls, and visual hierarchy to conform to the design system before completing the task.
 
 Existing bad UI is not a reason to propagate the same pattern.
 
@@ -1515,7 +1515,7 @@ Do not create page-specific visual patterns unless there is a strong UX reason.
 
 # MudBlazor is Mandatory
 
-MudBlazor is the default and mandatory UI component library for the ServiceSync frontend.
+MudBlazor is the default and mandatory UI component library for the VoltaMarcada frontend.
 
 Whenever MudBlazor provides a component for a UI element, use the MudBlazor component.
 
@@ -1529,7 +1529,7 @@ Before implementing any form field or interactive UI element, check whether an e
 
 Custom input components are only allowed when MudBlazor cannot satisfy the requirement.
 
-Even custom reusable ServiceSync input components should internally use MudBlazor components whenever possible.
+Even custom reusable VoltaMarcada input components should internally use MudBlazor components whenever possible.
 
 ## Component Mapping
 
@@ -1578,13 +1578,13 @@ Do not introduce another UI component library for functionality already availabl
 
 ---
 
-# ServiceSync Official Logo
+# VoltaMarcada Official Logo
 
-The official ServiceSync logo asset is located at:
+The official VoltaMarcada logo asset is located at:
 
-`src/ServiceSync.Web/wwwroot/logos/logo.png`
+`src/VoltaMarcada.Web/wwwroot/logos/logo.png`
 
-This is the canonical ServiceSync logo and must be reused throughout the application.
+This is the canonical VoltaMarcada logo and must be reused throughout the application.
 
 Because the file is located under `wwwroot`, Blazor components should reference it using:
 
@@ -1594,7 +1594,7 @@ Do not duplicate the logo into another folder.
 
 Do not create alternative versions of the logo unless explicitly requested.
 
-Do not recreate the ServiceSync logo using:
+Do not recreate the VoltaMarcada logo using:
 
 - plain text
 - CSS
@@ -1613,7 +1613,7 @@ Never stretch or distort the logo.
 
 # Visual Identity
 
-The ServiceSync visual identity is based on blue tones derived from the official logo.
+The VoltaMarcada visual identity is based on blue tones derived from the official logo.
 
 ## Primary Colors
 
@@ -1671,7 +1671,7 @@ Danger:
 
 These colors must be centralized in the application theme.
 
-Prefer configuring them through the ServiceSync `MudTheme`.
+Prefer configuring them through the VoltaMarcada `MudTheme`.
 
 Do not hardcode these colors repeatedly across individual pages.
 
@@ -1681,7 +1681,7 @@ Do not introduce random colors without a strong semantic or design reason.
 
 # MudBlazor Theme
 
-ServiceSync should maintain a centralized MudBlazor theme.
+VoltaMarcada should maintain a centralized MudBlazor theme.
 
 The theme should be the primary source of visual configuration for:
 
@@ -1742,7 +1742,7 @@ Use MudBlazor typography components or shared typography rules whenever appropri
 
 # Spacing System
 
-ServiceSync must use a consistent spacing system.
+VoltaMarcada must use a consistent spacing system.
 
 Prefer an 8px-based spacing system.
 
@@ -1820,7 +1820,7 @@ Example:
 Clientes                              + Novo cliente
 
 
-The ServiceSync frontend must look like a modern professional SaaS application.
+The VoltaMarcada frontend must look like a modern professional SaaS application.
 
 ### Visual identity
 
@@ -2023,7 +2023,7 @@ consistent navigation
 accessible contrast
 predictable interactions
 
-ServiceSync is used by service technicians and small businesses.
+VoltaMarcada is used by service technicians and small businesses.
 
 The UI must feel simple even when the underlying feature is complex.
 
@@ -2034,7 +2034,7 @@ Before implementing a new page:
 1. Identify the primary user goal.
 2. Define the information hierarchy.
 3. Reuse existing components.
-4. Follow the ServiceSync design system.
+4. Follow the VoltaMarcada design system.
 5. Consider loading, empty, error and success states.
 6. Consider desktop and mobile layouts.
 7. Only then implement the page.

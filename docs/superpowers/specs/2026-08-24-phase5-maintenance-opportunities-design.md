@@ -2,7 +2,7 @@
 
 ## Goal
 
-Deliver the strategic recurrence cycle for ServiceSync: when a completed work order recommends future maintenance, the system creates a company-scoped commercial opportunity and surfaces it in an actionable maintenance center.
+Deliver the strategic recurrence cycle for VoltaMarcada: when a completed work order recommends future maintenance, the system creates a company-scoped commercial opportunity and surfaces it in an actionable maintenance center.
 
 ## Scope
 
@@ -152,7 +152,7 @@ No action exposes storage keys, non-tenant context, raw exception information, o
 
 The authenticated `/manutencoes` page follows the existing two-screen management/list visual conventions where appropriate. It contains a `PageHeader`, three urgency summary cards, filters for status and period, loading and empty states, and a responsive list or grid. Each row/card displays customer, equipment, previous maintenance date, recommended date, status, and only the actions valid for the current state.
 
-The page uses MudBlazor controls and the established ServiceSync theme, spacing, feedback, accessibility, and responsive rules. Dismissal uses a MudBlazor confirmation dialog. Action submissions display loading state, prevent duplicates, show centralized Portuguese errors, and refresh the affected summary/list data after success.
+The page uses MudBlazor controls and the established VoltaMarcada theme, spacing, feedback, accessibility, and responsive rules. Dismissal uses a MudBlazor confirmation dialog. Action submissions display loading state, prevent duplicates, show centralized Portuguese errors, and refresh the affected summary/list data after success.
 
 ### Schedule Handoff
 

@@ -26,34 +26,34 @@
 
 ## File Structure
 
-- Create `src/ServiceSync.Domain/Enums/WorkOrderStatus.cs`, `WorkOrderPriority.cs`, and `WorkOrderPhotoType.cs`: stable work-order status, priority, and evidence-type values.
-- Create `src/ServiceSync.Domain/ValueObjects/WorkOrderItemDefinition.cs` and `WorkOrderChecklistItemDefinition.cs`: immutable inputs used to create/rebuild aggregate children.
-- Create `src/ServiceSync.Domain/Entities/WorkOrder.cs`, `WorkOrderItem.cs`, `WorkOrderChecklistItem.cs`, and `WorkOrderPhoto.cs`: aggregate and protected child state.
-- Create `src/ServiceSync.Application/Abstractions/Persistence/IWorkOrderRepository.cs`: company-scoped work-order persistence and read models.
-- Create `src/ServiceSync.Application/WorkOrders/WorkOrderCommands.cs`, `WorkOrderDtos.cs`, `WorkOrderOperationResult.cs`, `WorkOrderCommandValidators.cs`, `WorkOrderAuthorization.cs`, and one focused file per use case.
-- Modify `src/ServiceSync.Application/Abstractions/Persistence/IProfessionalRepository.cs` and `src/ServiceSync.Infrastructure/Persistence/Repositories/ProfessionalRepository.cs`: resolve active professionals qualified for a service and their company-user identity.
-- Create `src/ServiceSync.Infrastructure/Persistence/Repositories/WorkOrderRepository.cs`: EF Core implementation with tenant and employee predicates in every lookup.
-- Modify `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`: expose work-order DbSets.
-- Create `src/ServiceSync.Infrastructure/Persistence/Configurations/WorkOrderConfiguration.cs`, `WorkOrderItemConfiguration.cs`, `WorkOrderChecklistItemConfiguration.cs`, and `WorkOrderPhotoConfiguration.cs`: EF mappings, tenant-safe foreign keys, and query indexes.
-- Create migration files `src/ServiceSync.Infrastructure/Persistence/Migrations/<timestamp>_AddWorkOrdersAndExecutionRecords.cs` and `.Designer.cs`; modify `AppDbContextModelSnapshot.cs`.
-- Modify `src/ServiceSync.Application/DependencyInjection.cs` and `src/ServiceSync.Infrastructure/DependencyInjection.cs`: register use cases, authorization helper, and repository.
-- Create `src/ServiceSync.Web/Endpoints/WorkOrderEndpoints.cs`; modify `src/ServiceSync.Web/Program.cs`: map authenticated internal API operations and image content delivery.
-- Create `src/ServiceSync.Web/Components/Pages/WorkOrders.razor`, `WorkOrderRegistration.razor`, `Shared/WorkOrderItemsEditor.razor`, and `Shared/WorkOrderExecutionPanel.razor`: listing, data/items tab, quick-create dialogs, and execution tab.
-- Modify `src/ServiceSync.Web/Components/Layout/MainLayout.razor` and `src/ServiceSync.Web/wwwroot/app.css`: navigation and responsive feature styling.
+- Create `src/VoltaMarcada.Domain/Enums/WorkOrderStatus.cs`, `WorkOrderPriority.cs`, and `WorkOrderPhotoType.cs`: stable work-order status, priority, and evidence-type values.
+- Create `src/VoltaMarcada.Domain/ValueObjects/WorkOrderItemDefinition.cs` and `WorkOrderChecklistItemDefinition.cs`: immutable inputs used to create/rebuild aggregate children.
+- Create `src/VoltaMarcada.Domain/Entities/WorkOrder.cs`, `WorkOrderItem.cs`, `WorkOrderChecklistItem.cs`, and `WorkOrderPhoto.cs`: aggregate and protected child state.
+- Create `src/VoltaMarcada.Application/Abstractions/Persistence/IWorkOrderRepository.cs`: company-scoped work-order persistence and read models.
+- Create `src/VoltaMarcada.Application/WorkOrders/WorkOrderCommands.cs`, `WorkOrderDtos.cs`, `WorkOrderOperationResult.cs`, `WorkOrderCommandValidators.cs`, `WorkOrderAuthorization.cs`, and one focused file per use case.
+- Modify `src/VoltaMarcada.Application/Abstractions/Persistence/IProfessionalRepository.cs` and `src/VoltaMarcada.Infrastructure/Persistence/Repositories/ProfessionalRepository.cs`: resolve active professionals qualified for a service and their company-user identity.
+- Create `src/VoltaMarcada.Infrastructure/Persistence/Repositories/WorkOrderRepository.cs`: EF Core implementation with tenant and employee predicates in every lookup.
+- Modify `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`: expose work-order DbSets.
+- Create `src/VoltaMarcada.Infrastructure/Persistence/Configurations/WorkOrderConfiguration.cs`, `WorkOrderItemConfiguration.cs`, `WorkOrderChecklistItemConfiguration.cs`, and `WorkOrderPhotoConfiguration.cs`: EF mappings, tenant-safe foreign keys, and query indexes.
+- Create migration files `src/VoltaMarcada.Infrastructure/Persistence/Migrations/<timestamp>_AddWorkOrdersAndExecutionRecords.cs` and `.Designer.cs`; modify `AppDbContextModelSnapshot.cs`.
+- Modify `src/VoltaMarcada.Application/DependencyInjection.cs` and `src/VoltaMarcada.Infrastructure/DependencyInjection.cs`: register use cases, authorization helper, and repository.
+- Create `src/VoltaMarcada.Web/Endpoints/WorkOrderEndpoints.cs`; modify `src/VoltaMarcada.Web/Program.cs`: map authenticated internal API operations and image content delivery.
+- Create `src/VoltaMarcada.Web/Components/Pages/WorkOrders.razor`, `WorkOrderRegistration.razor`, `Shared/WorkOrderItemsEditor.razor`, and `Shared/WorkOrderExecutionPanel.razor`: listing, data/items tab, quick-create dialogs, and execution tab.
+- Modify `src/VoltaMarcada.Web/Components/Layout/MainLayout.razor` and `src/VoltaMarcada.Web/wwwroot/app.css`: navigation and responsive feature styling.
 
 ## Task 1: Model the Work-Order Aggregate
 
 **Files:**
 
-- Create: `src/ServiceSync.Domain/Enums/WorkOrderStatus.cs`
-- Create: `src/ServiceSync.Domain/Enums/WorkOrderPriority.cs`
-- Create: `src/ServiceSync.Domain/Enums/WorkOrderPhotoType.cs`
-- Create: `src/ServiceSync.Domain/ValueObjects/WorkOrderItemDefinition.cs`
-- Create: `src/ServiceSync.Domain/ValueObjects/WorkOrderChecklistItemDefinition.cs`
-- Create: `src/ServiceSync.Domain/Entities/WorkOrder.cs`
-- Create: `src/ServiceSync.Domain/Entities/WorkOrderItem.cs`
-- Create: `src/ServiceSync.Domain/Entities/WorkOrderChecklistItem.cs`
-- Create: `src/ServiceSync.Domain/Entities/WorkOrderPhoto.cs`
+- Create: `src/VoltaMarcada.Domain/Enums/WorkOrderStatus.cs`
+- Create: `src/VoltaMarcada.Domain/Enums/WorkOrderPriority.cs`
+- Create: `src/VoltaMarcada.Domain/Enums/WorkOrderPhotoType.cs`
+- Create: `src/VoltaMarcada.Domain/ValueObjects/WorkOrderItemDefinition.cs`
+- Create: `src/VoltaMarcada.Domain/ValueObjects/WorkOrderChecklistItemDefinition.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/WorkOrder.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/WorkOrderItem.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/WorkOrderChecklistItem.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/WorkOrderPhoto.cs`
 
 **Consumes:** Existing `ICompanyScopedEntity`, `DomainException`, active-service checklist templates, and the domain timestamp conventions.
 
@@ -108,7 +108,7 @@ Add `Start`, `SaveChecklistProgress`, `UpdateExecutionNotes`, `AddPhoto`, `Remov
 Run:
 
 ```powershell
-rg -n "DateTime\.(Now|UtcNow)|DateTimeOffset\.(Now|UtcNow)|public .* set;|WorkOrderStatus.*string" src/ServiceSync.Domain
+rg -n "DateTime\.(Now|UtcNow)|DateTimeOffset\.(Now|UtcNow)|public .* set;|WorkOrderStatus.*string" src/VoltaMarcada.Domain
 ```
 
 Expected: the new model has no public state setters, direct clock calls, or stringly typed status values.
@@ -117,13 +117,13 @@ Expected: the new model has no public state setters, direct clock calls, or stri
 
 **Files:**
 
-- Create: `src/ServiceSync.Application/Abstractions/Persistence/IWorkOrderRepository.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/WorkOrderCommands.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/WorkOrderDtos.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/WorkOrderOperationResult.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/WorkOrderCommandValidators.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/WorkOrderAuthorization.cs`
-- Modify: `src/ServiceSync.Application/Abstractions/Persistence/IProfessionalRepository.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Persistence/IWorkOrderRepository.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/WorkOrderCommands.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/WorkOrderDtos.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/WorkOrderOperationResult.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/WorkOrderCommandValidators.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/WorkOrderAuthorization.cs`
+- Modify: `src/VoltaMarcada.Application/Abstractions/Persistence/IProfessionalRepository.cs`
 
 **Consumes:** Task 1 aggregate types; existing `ICurrentCompany`, `ICurrentUser`, company membership, customer, equipment, service, and professional repositories.
 
@@ -182,8 +182,8 @@ Add `GetForCurrentUserAndServiceAsync(Guid userId, Guid companyId, Guid serviceI
 Run:
 
 ```powershell
-rg -n "CompanyId" src/ServiceSync.Application/WorkOrders
-rg -n "GetForCurrentUserAndServiceAsync|WorkOrderAccessScope|WorkOrderOperationResultCode" src/ServiceSync.Application
+rg -n "CompanyId" src/VoltaMarcada.Application/WorkOrders
+rg -n "GetForCurrentUserAndServiceAsync|WorkOrderAccessScope|WorkOrderOperationResultCode" src/VoltaMarcada.Application
 ```
 
 Expected: commands contain no `CompanyId`; all create/update/transition paths have an explicit access/result model.
@@ -192,17 +192,17 @@ Expected: commands contain no `CompanyId`; all create/update/transition paths ha
 
 **Files:**
 
-- Create: `src/ServiceSync.Infrastructure/Persistence/Repositories/WorkOrderRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/ProfessionalRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/WorkOrderConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/WorkOrderItemConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/WorkOrderChecklistItemConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/WorkOrderPhotoConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/<timestamp>_AddWorkOrdersAndExecutionRecords.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/<timestamp>_AddWorkOrdersAndExecutionRecords.Designer.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
-- Modify: `src/ServiceSync.Infrastructure/DependencyInjection.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/WorkOrderRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/ProfessionalRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/WorkOrderConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/WorkOrderItemConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/WorkOrderChecklistItemConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/WorkOrderPhotoConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/<timestamp>_AddWorkOrdersAndExecutionRecords.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/<timestamp>_AddWorkOrdersAndExecutionRecords.Designer.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/DependencyInjection.cs`
 
 **Consumes:** Task 1 entities and Task 2 persistence contracts.
 
@@ -240,8 +240,8 @@ Create a descriptive migration named `AddWorkOrdersAndExecutionRecords`, its des
 Register `IWorkOrderRepository` with `WorkOrderRepository` in Infrastructure DI. Run:
 
 ```powershell
-rg -n "WorkOrders|WorkOrderItems|WorkOrderChecklistItems|WorkOrderPhotos|IX_WorkOrders_CompanyId" src/ServiceSync.Infrastructure
-rg -n "CompanyId == companyId" src/ServiceSync.Infrastructure/Persistence/Repositories/WorkOrderRepository.cs
+rg -n "WorkOrders|WorkOrderItems|WorkOrderChecklistItems|WorkOrderPhotos|IX_WorkOrders_CompanyId" src/VoltaMarcada.Infrastructure
+rg -n "CompanyId == companyId" src/VoltaMarcada.Infrastructure/Persistence/Repositories/WorkOrderRepository.cs
 ```
 
 Expected: all four models, indexes, migration artifacts, DI registration, and SQL-level tenant filters are present.
@@ -250,13 +250,13 @@ Expected: all four models, indexes, migration artifacts, DI registration, and SQ
 
 **Files:**
 
-- Create: `src/ServiceSync.Application/WorkOrders/CreateWorkOrderUseCase.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/GetWorkOrdersUseCase.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/GetWorkOrderDetailsUseCase.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/GetWorkOrderFormOptionsUseCase.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/UpdateWorkOrderUseCase.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/CancelWorkOrderUseCase.cs`
-- Modify: `src/ServiceSync.Application/DependencyInjection.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/CreateWorkOrderUseCase.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/GetWorkOrdersUseCase.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/GetWorkOrderDetailsUseCase.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/GetWorkOrderFormOptionsUseCase.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/UpdateWorkOrderUseCase.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/CancelWorkOrderUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/DependencyInjection.cs`
 
 **Consumes:** Tasks 1-3 and existing customer/equipment/service/professional repositories.
 
@@ -285,7 +285,7 @@ For owners, validate a supplied professional is active and has the selected serv
 Register every Task 4 use case as scoped in `AddApplication`. Run:
 
 ```powershell
-rg -n "GetForAccessAsync|GetForCurrentUserAndServiceAsync|EquipmentId.*CustomerId|IsActive" src/ServiceSync.Application/WorkOrders
+rg -n "GetForAccessAsync|GetForCurrentUserAndServiceAsync|EquipmentId.*CustomerId|IsActive" src/VoltaMarcada.Application/WorkOrders
 ```
 
 Expected: creation and pending updates revalidate tenant ownership, equipment/customer association, service activity, and employee self-assignment server-side.
@@ -294,13 +294,13 @@ Expected: creation and pending updates revalidate tenant ownership, equipment/cu
 
 **Files:**
 
-- Create: `src/ServiceSync.Application/WorkOrders/StartWorkOrderUseCase.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/SaveWorkOrderChecklistProgressUseCase.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/AddWorkOrderPhotoUseCase.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/RemoveWorkOrderPhotoUseCase.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/GetWorkOrderPhotoContentUseCase.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/CompleteWorkOrderUseCase.cs`
-- Modify: `src/ServiceSync.Application/DependencyInjection.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/StartWorkOrderUseCase.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/SaveWorkOrderChecklistProgressUseCase.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/AddWorkOrderPhotoUseCase.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/RemoveWorkOrderPhotoUseCase.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/GetWorkOrderPhotoContentUseCase.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/CompleteWorkOrderUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/DependencyInjection.cs`
 
 **Consumes:** Aggregate behavior, access scope, persisted work-order state, `IFileStorage`, and `TimeProvider`.
 
@@ -341,8 +341,8 @@ After storage succeeds, add aggregate photo metadata with current user ID and UT
 Register the six use cases. Run:
 
 ```powershell
-rg -n "10 \* 1024 \* 1024|PhotoLimitReached|RequireBeforePhotos|RequireAfterPhotos|GetForAccessAsync" src/ServiceSync.Application/WorkOrders
-rg -n "FileKey|Key" src/ServiceSync.Application/WorkOrders/WorkOrderDtos.cs
+rg -n "10 \* 1024 \* 1024|PhotoLimitReached|RequireBeforePhotos|RequireAfterPhotos|GetForAccessAsync" src/VoltaMarcada.Application/WorkOrders
+rg -n "FileKey|Key" src/VoltaMarcada.Application/WorkOrders/WorkOrderDtos.cs
 ```
 
 Expected: size/count/completion rules are explicit and no photo DTO exposes an internal storage key.
@@ -351,8 +351,8 @@ Expected: size/count/completion rules are explicit and no photo DTO exposes an i
 
 **Files:**
 
-- Create: `src/ServiceSync.Web/Endpoints/WorkOrderEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Program.cs`
+- Create: `src/VoltaMarcada.Web/Endpoints/WorkOrderEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Program.cs`
 
 **Consumes:** Tasks 4-5 use cases and operation-result codes.
 
@@ -373,7 +373,7 @@ Map `GET /work-orders/{workOrderId:guid}/photos/{photoId:guid}/content` to the c
 Call `app.MapWorkOrderEndpoints()` beside the other authenticated internal endpoint mappings in `Program.cs`. Run:
 
 ```powershell
-rg -n "MapWorkOrderEndpoints|MapGroup\(\"/work-orders\"|RequireAuthorization|OpenReadStream" src/ServiceSync.Web
+rg -n "MapWorkOrderEndpoints|MapGroup\(\"/work-orders\"|RequireAuthorization|OpenReadStream" src/VoltaMarcada.Web
 ```
 
 Expected: all routes require company membership and photo routes use bounded request streams.
@@ -382,11 +382,11 @@ Expected: all routes require company membership and photo routes use bounded req
 
 **Files:**
 
-- Create: `src/ServiceSync.Web/Components/Pages/WorkOrders.razor`
-- Create: `src/ServiceSync.Web/Components/Pages/WorkOrderRegistration.razor`
-- Create: `src/ServiceSync.Web/Components/Shared/WorkOrderItemsEditor.razor`
-- Modify: `src/ServiceSync.Web/Components/Layout/MainLayout.razor`
-- Modify: `src/ServiceSync.Web/wwwroot/app.css`
+- Create: `src/VoltaMarcada.Web/Components/Pages/WorkOrders.razor`
+- Create: `src/VoltaMarcada.Web/Components/Pages/WorkOrderRegistration.razor`
+- Create: `src/VoltaMarcada.Web/Components/Shared/WorkOrderItemsEditor.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Layout/MainLayout.razor`
+- Modify: `src/VoltaMarcada.Web/wwwroot/app.css`
 
 **Consumes:** Task 4 list/detail/options/create/update use cases, the existing customer/equipment command models, and MudBlazor form patterns.
 
@@ -417,7 +417,7 @@ Do not construct company IDs in either dialog; the existing use cases resolve th
 Add only work-order-specific classes to `app.css`: mobile-friendly toolbar actions, two-tab content spacing, item row grids, photo grid placeholders, and status chips. Run:
 
 ```powershell
-rg -n "ordens-servico|Nova OS|Dados e itens|CreateCustomerUseCase|CreateEquipmentUseCase|WorkOrderItemsEditor" src/ServiceSync.Web
+rg -n "ordens-servico|Nova OS|Dados e itens|CreateCustomerUseCase|CreateEquipmentUseCase|WorkOrderItemsEditor" src/VoltaMarcada.Web
 ```
 
 Expected: list, registration page, quick dialogs, and item editor all use the selected use cases and Brazilian Portuguese UI copy.
@@ -426,9 +426,9 @@ Expected: list, registration page, quick dialogs, and item editor all use the se
 
 **Files:**
 
-- Create: `src/ServiceSync.Web/Components/Shared/WorkOrderExecutionPanel.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/WorkOrderRegistration.razor`
-- Modify: `src/ServiceSync.Web/wwwroot/app.css`
+- Create: `src/VoltaMarcada.Web/Components/Shared/WorkOrderExecutionPanel.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/WorkOrderRegistration.razor`
+- Modify: `src/VoltaMarcada.Web/wwwroot/app.css`
 
 **Consumes:** Task 5 start/checklist/photo/complete use cases, the detail DTO, and the persisted work-order ID from Task 7.
 
@@ -459,8 +459,8 @@ Render persisted photo thumbnails from the authenticated content endpoint `/work
 Run:
 
 ```powershell
-rg -n "capture=\"environment\"|OpenReadStream|FlushProgressAsync|SaveWorkOrderChecklistProgressUseCase|CompleteWorkOrderUseCase" src/ServiceSync.Web/Components
-rg -n "byte\[\]|FileKey|Photo.*Url" src/ServiceSync.Web/Components/Shared/WorkOrderExecutionPanel.razor
+rg -n "capture=\"environment\"|OpenReadStream|FlushProgressAsync|SaveWorkOrderChecklistProgressUseCase|CompleteWorkOrderUseCase" src/VoltaMarcada.Web/Components
+rg -n "byte\[\]|FileKey|Photo.*Url" src/VoltaMarcada.Web/Components/Shared/WorkOrderExecutionPanel.razor
 ```
 
 Expected: evidence uploads immediately with bounded streams, checklist saves are batched, completion flushes first, and the component does not retain image bytes or storage keys.
@@ -500,7 +500,7 @@ Run:
 
 ```powershell
 git diff --check
-rg -n "DateTime\.(Now|UtcNow)|DateTimeOffset\.(Now|UtcNow)|CompanyId.*Command|FileKey.*Dto" src/ServiceSync.Domain src/ServiceSync.Application src/ServiceSync.Web
+rg -n "DateTime\.(Now|UtcNow)|DateTimeOffset\.(Now|UtcNow)|CompanyId.*Command|FileKey.*Dto" src/VoltaMarcada.Domain src/VoltaMarcada.Application src/VoltaMarcada.Web
 rg -n "WorkOrderStatus|WorkOrderChecklistItem|WorkOrderPhoto|MapWorkOrderEndpoints" src
 git status --short
 ```

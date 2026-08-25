@@ -4,10 +4,10 @@ Git metadata is unavailable in this workspace, so a commit diff cannot be genera
 
 ## Changed-file review scope
 
-- `src/ServiceSync.Domain/Entities/Company.cs`
-- `src/ServiceSync.Domain/Entities/CompanyUser.cs`
-- `src/ServiceSync.Domain/Enums/CompanyUserRole.cs`
-- `src/ServiceSync.Domain/ValueObjects/BrazilianDocument.cs`
+- `src/VoltaMarcada.Domain/Entities/Company.cs`
+- `src/VoltaMarcada.Domain/Entities/CompanyUser.cs`
+- `src/VoltaMarcada.Domain/Enums/CompanyUserRole.cs`
+- `src/VoltaMarcada.Domain/ValueObjects/BrazilianDocument.cs`
 
 ## Baseline limitation
 
@@ -15,7 +15,7 @@ The previous `Company` entity had only `Id`, `Name`, and `CreatedAtUtc`; the oth
 
 ## Build evidence
 
-`dotnet build ServiceSync.sln` was run. It reached Infrastructure and failed because the unchanged `CompanyConfiguration` still refers to the deliberately removed `Company.Name` property. Task 3 owns that configuration update.
+`dotnet build VoltaMarcada.sln` was run. It reached Infrastructure and failed because the unchanged `CompanyConfiguration` still refers to the deliberately removed `Company.Name` property. Task 3 owns that configuration update.
 
 ## Fix round 1
 

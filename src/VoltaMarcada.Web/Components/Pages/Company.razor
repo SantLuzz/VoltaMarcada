@@ -1,0 +1,463 @@
+@page "/empresa"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
+@using VoltaMarcada.Application.EmployeeInvitations
+@using VoltaMarcada.Web.Authorization
+@using Microsoft.JSInterop
+@using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Application.Abstractions.Storage
+@inject GetOwnerCompanyOverviewUseCase GetOwnerCompanyOverviewUseCase
+@inject CreateEmployeeInvitationUseCase CreateEmployeeInvitationUseCase
+@inject RenewEmployeeInvitationUseCase RenewEmployeeInvitationUseCase
+@inject RevokeEmployeeInvitationUseCase RevokeEmployeeInvitationUseCase
+@inject UpdateCompanyMemberProfileUseCase UpdateCompanyMemberProfileUseCase
+@inject IJSRuntime JsRuntime
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+@inject ILogger<Company> Logger
+@inject IFileStorage FileStorage
+
+<PageTitle>Empresa | VoltaMarcada</PageTitle>
+
+<PageHeader Title="Empresa" Description="Consulte os dados da empresa e gerencie os acessos da equipe." />
+
+@if (isLoading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (loadError is not null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@loadError</MudAlert>
+}
+else if (overview is not null)
+{
+    <div class="company-page">
+        @if (operationError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@operationError</MudAlert>
+        }
+
+        <MudPaper Class="company-section" Elevation="0" Outlined="true">
+            @if (companyLogoDataUrl is not null)
+            {
+                <div class="company-logo-container">
+                    <img src="@companyLogoDataUrl" alt="Logo da @overview.TradeName" class="company-logo" />
+                </div>
+            }
+            <header class="company-section-header">
+                <MudText Typo="Typo.h6">Informações da empresa</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Dados cadastrados na criação da conta.</MudText>
+            </header>
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6"><CompanyDetail Label="Razão social" Value="@overview.LegalName" /></MudItem>
+                <MudItem xs="12" sm="6"><CompanyDetail Label="Nome fantasia" Value="@overview.TradeName" /></MudItem>
+                <MudItem xs="12" sm="6"><CompanyDetail Label="CPF/CNPJ" Value="@FormatDocument(overview.Document)" /></MudItem>
+                <MudItem xs="12" sm="6"><CompanyDetail Label="WhatsApp" Value="@overview.WhatsApp" /></MudItem>
+                <MudItem xs="12"><CompanyDetail Label="Endereço" Value="@overview.Address" /></MudItem>
+                <MudItem xs="12" sm="4"><CompanyDetail Label="CEP" Value="@FormatPostalCode(overview.PostalCode)" /></MudItem>
+                <MudItem xs="12" sm="4"><CompanyDetail Label="Cidade" Value="@overview.CityName" /></MudItem>
+                <MudItem xs="12" sm="4"><CompanyDetail Label="Estado" Value="@overview.StateName" /></MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <MudPaper Class="company-section" Elevation="0" Outlined="true">
+            <header class="company-section-header">
+                <MudText Typo="Typo.h6">Cadastrar funcionário</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">O funcionário receberá um link para criar a própria senha.</MudText>
+            </header>
+            <MudForm @ref="employeeForm">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12"><MudTextField @bind-Value="employee.FullName" Label="Nome completo" Required="true" RequiredError="Informe o nome completo." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="employee.Email" Label="E-mail" InputType="InputType.Email" Required="true" RequiredError="Informe o e-mail." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" /></MudItem>
+                    <MudItem xs="12" sm="6"><BrazilianCpfInput @bind-Value="employee.Document" Id="employee-document" Name="employeeDocument" Required="true" Disabled="@isSaving" /></MudItem>
+                    <MudItem xs="12" sm="6"><BrazilianPhoneInput @bind-Value="employee.Phone" Id="employee-phone" Name="employeePhone" Required="true" Disabled="@isSaving" /></MudItem>
+                    <MudItem xs="12"><MudTextField @bind-Value="employee.Address" Label="Endereço" Required="true" RequiredError="Informe o endereço." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSaving" /></MudItem>
+                </MudGrid>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="CreateInvitationAsync" Disabled="@isSaving" Class="company-form-action">
+                    @(isSaving ? "Gerando link..." : "Gerar link de cadastro")
+                </MudButton>
+            </MudForm>
+
+            @if (generatedInvitationLink is not null)
+            {
+                <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="company-link-alert">
+                    <MudText Typo="Typo.body2">Compartilhe este link com o funcionário. Ele é exibido somente agora.</MudText>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="company-link-row">
+                        <MudTextField T="string" Value="@generatedInvitationLink" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Primary" aria-label="Copiar link de cadastro" OnClick="CopyGeneratedLinkAsync" />
+                    </MudStack>
+                </MudAlert>
+            }
+        </MudPaper>
+
+        <MudPaper Class="company-section" Elevation="0" Outlined="true">
+            <header class="company-section-header">
+                <MudText Typo="Typo.h6">Funcionários ativos</MudText>
+            </header>
+            @if (overview.Employees.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Nenhum funcionário concluiu o cadastro ainda.</MudText>
+            }
+            else
+            {
+                <MudTable Items="@overview.Employees" Class="servicesync-data-grid" Hover="true" Breakpoint="Breakpoint.Md">
+                    <HeaderContent><MudTh>Nome</MudTh><MudTh>Tipo</MudTh><MudTh>E-mail</MudTh><MudTh>CPF</MudTh><MudTh>Telefone</MudTh><MudTh>Endereço</MudTh><MudTh>Cadastro</MudTh><MudTh aria-label="Ações"></MudTh></HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Nome"><GridTextCell Value="@context.FullName" /></MudTd><MudTd DataLabel="Tipo"><MudChip T="string" Size="Size.Small" Color="@GetRoleColor(context.Role)">@GetRoleLabel(context.Role)</MudChip></MudTd><MudTd DataLabel="E-mail"><GridTextCell Value="@context.Email" /></MudTd><MudTd DataLabel="CPF"><GridTextCell Value="@context.Document" /></MudTd><MudTd DataLabel="Telefone"><GridTextCell Value="@context.Phone" /></MudTd><MudTd DataLabel="Endereço"><GridTextCell Value="@context.Address" /></MudTd><MudTd DataLabel="Cadastro"><GridTextCell Value="@context.CreatedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")" /></MudTd><MudTd DataLabel="Ações"><MudTooltip Text="Editar perfil"><MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" aria-label="Editar perfil" OnClick="@(() => OpenProfileDialog(context))" /></MudTooltip></MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+
+        <MudPaper Class="company-section" Elevation="0" Outlined="true">
+            <header class="company-section-header"><MudText Typo="Typo.h6">Convites</MudText></header>
+            @if (overview.Invitations.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Nenhum convite foi criado.</MudText>
+            }
+            else
+            {
+                <MudTable Items="@overview.Invitations" Class="servicesync-data-grid" Hover="true" Breakpoint="Breakpoint.Md">
+                    <HeaderContent><MudTh>Funcionário</MudTh><MudTh>E-mail</MudTh><MudTh>Expira em</MudTh><MudTh>Status</MudTh><MudTh aria-label="Ações"></MudTh></HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Funcionário"><GridTextCell Value="@context.FullName" /></MudTd><MudTd DataLabel="E-mail"><GridTextCell Value="@context.Email" /></MudTd><MudTd DataLabel="Expira em"><GridTextCell Value="@context.ExpiresAtUtc.LocalDateTime.ToString("dd/MM/yyyy HH:mm")" /></MudTd>
+                        <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context)">@GetStatusLabel(context)</MudChip></MudTd>
+                        <MudTd DataLabel="Ações">
+                            @if (!context.IsAccepted)
+                            {
+                                <MudTooltip Text="Gerar novo link"><MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary" aria-label="Gerar novo link" OnClick="@(() => RenewInvitationAsync(context.Id))" Disabled="@isSaving" /></MudTooltip>
+                                @if (context.IsPending)
+                                {
+                                    <MudTooltip Text="Revogar convite"><MudIconButton Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" aria-label="Revogar convite" OnClick="@(() => RevokeInvitationAsync(context.Id))" Disabled="@isSaving" /></MudTooltip>
+                                }
+                            }
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    </div>
+
+    <MudDialog @bind-Visible="isProfileDialogOpen" Options="profileDialogOptions">
+        <TitleContent><MudText Typo="Typo.h6">Editar perfil</MudText></TitleContent>
+        <DialogContent>
+            @if (profileError is not null)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@profileError</MudAlert>
+            }
+            <MudForm @ref="profileForm">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12"><MudTextField @bind-Value="profile.FullName" Label="Nome completo" Required="true" RequiredError="Informe o nome completo." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSavingProfile" /></MudItem>
+                    <MudItem xs="12"><MudTextField T="string" Value="@editingEmployee?.Email" Label="E-mail" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" /></MudItem>
+                    <MudItem xs="12" sm="6"><BrazilianCpfInput @bind-Value="profile.Document" Id="profile-document" Name="profileDocument" Required="true" Disabled="@isSavingProfile" /></MudItem>
+                    <MudItem xs="12" sm="6"><BrazilianPhoneInput @bind-Value="profile.Phone" Id="profile-phone" Name="profilePhone" Required="true" Disabled="@isSavingProfile" /></MudItem>
+                    <MudItem xs="12"><MudTextField @bind-Value="profile.Address" Label="Endereço" Required="true" RequiredError="Informe o endereço." Variant="Variant.Outlined" FullWidth="true" Disabled="@isSavingProfile" /></MudItem>
+                </MudGrid>
+            </MudForm>
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CloseProfileDialog" Disabled="@isSavingProfile">Cancelar</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveProfileAsync" Disabled="@isSavingProfile">@(isSavingProfile ? "Salvando..." : "Salvar")</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private MudForm employeeForm = default!;
+    private readonly DialogOptions profileDialogOptions = new()
+    {
+        CloseButton = true,
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true
+    };
+    private CompanyOverviewDto? overview;
+    private EmployeeFormModel employee = new();
+    private bool isLoading = true;
+    private bool isSaving;
+    private string? loadError;
+    private string? operationError;
+    private string? generatedInvitationLink;
+    private string? companyLogoDataUrl;
+    private MudForm profileForm = default!;
+    private EmployeeDto? editingEmployee;
+    private EmployeeProfileFormModel profile = new();
+    private bool isProfileDialogOpen;
+    private bool isSavingProfile;
+    private string? profileError;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            overview = await GetOwnerCompanyOverviewUseCase.ExecuteAsync();
+            if (overview is null)
+            {
+                loadError = "Não foi possível carregar as informações da empresa.";
+                return;
+            }
+
+            await LoadCompanyLogoAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to load owner company overview");
+            loadError = "Não foi possível carregar as informações da empresa.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadCompanyLogoAsync()
+    {
+        if (string.IsNullOrWhiteSpace(overview?.LogoKey))
+        {
+            return;
+        }
+
+        try
+        {
+            var logo = await FileStorage.GetAsync(overview.LogoKey, CancellationToken.None);
+            companyLogoDataUrl = $"data:{logo.ContentType};base64,{Convert.ToBase64String(logo.Content)}";
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(exception, "Unable to load company logo for the owner company page");
+        }
+    }
+
+    private async Task CreateInvitationAsync()
+    {
+        operationError = null;
+        profileError = null;
+        generatedInvitationLink = null;
+        await employeeForm.Validate();
+        if (!employeeForm.IsValid)
+        {
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var result = await CreateEmployeeInvitationUseCase.ExecuteAsync(new CreateEmployeeInvitationCommand(
+                employee.FullName, employee.Email, employee.Document, employee.Phone, employee.Address));
+            if (!result.IsSuccess || result.Value?.Token is not { } token)
+            {
+                operationError = OperationErrorMessages.GetMessage(result.Error?.Code);
+                return;
+            }
+
+            generatedInvitationLink = new Uri(new Uri(NavigationManager.BaseUri), $"convites/funcionarios/{token}").ToString();
+            employee = new EmployeeFormModel();
+            await employeeForm.ResetValidationAsync();
+            await ReloadOverviewAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to create employee invitation");
+            operationError = "Não foi possível gerar o link. Tente novamente.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task RenewInvitationAsync(Guid invitationId)
+    {
+        await ExecuteInvitationActionAsync(
+            () => RenewEmployeeInvitationUseCase.ExecuteAsync(invitationId),
+            "Não foi possível gerar um novo link.");
+    }
+
+    private async Task RevokeInvitationAsync(Guid invitationId)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync("Revogar convite", "O link deixará de funcionar imediatamente.", "Revogar", null, "Cancelar");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        await ExecuteInvitationActionAsync(
+            () => RevokeEmployeeInvitationUseCase.ExecuteAsync(invitationId),
+            "Não foi possível revogar o convite.");
+    }
+
+    private async Task ExecuteInvitationActionAsync(
+        Func<Task<OperationResult<EmployeeInvitationOutcome>>> action,
+        string fallbackError)
+    {
+        operationError = null;
+        generatedInvitationLink = null;
+        isSaving = true;
+        try
+        {
+            var result = await action();
+            if (!result.IsSuccess)
+            {
+                operationError = OperationErrorMessages.GetMessage(result.Error?.Code);
+                return;
+            }
+
+            if (result.Value?.Token is { } token)
+            {
+                generatedInvitationLink = new Uri(new Uri(NavigationManager.BaseUri), $"convites/funcionarios/{token}").ToString();
+            }
+
+            await ReloadOverviewAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Employee invitation action failed");
+            operationError = fallbackError;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task ReloadOverviewAsync()
+    {
+        overview = await GetOwnerCompanyOverviewUseCase.ExecuteAsync();
+    }
+
+    private void OpenProfileDialog(EmployeeDto employeeToEdit)
+    {
+        operationError = null;
+        profileError = null;
+        editingEmployee = employeeToEdit;
+        profile = new EmployeeProfileFormModel
+        {
+            FullName = employeeToEdit.FullName,
+            Document = employeeToEdit.Document,
+            Phone = employeeToEdit.Phone,
+            Address = employeeToEdit.Address
+        };
+        isProfileDialogOpen = true;
+    }
+
+    private void CloseProfileDialog()
+    {
+        if (!isSavingProfile)
+        {
+            isProfileDialogOpen = false;
+            editingEmployee = null;
+        }
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        if (editingEmployee is null)
+        {
+            return;
+        }
+
+        await profileForm.Validate();
+        if (!profileForm.IsValid)
+        {
+            return;
+        }
+
+        isSavingProfile = true;
+        operationError = null;
+        profileError = null;
+        try
+        {
+            var result = await UpdateCompanyMemberProfileUseCase.ExecuteAsync(new UpdateCompanyMemberProfileCommand(
+                editingEmployee.MembershipId,
+                profile.FullName,
+                profile.Document,
+                profile.Phone,
+                profile.Address));
+            if (!result.IsSuccess)
+            {
+                profileError = OperationErrorMessages.GetMessage(result.Error?.Code);
+                return;
+            }
+
+            isProfileDialogOpen = false;
+            editingEmployee = null;
+            await ReloadOverviewAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to update company member profile");
+            profileError = "Não foi possível atualizar o perfil. Tente novamente.";
+        }
+        finally
+        {
+            isSavingProfile = false;
+        }
+    }
+
+    private async Task CopyGeneratedLinkAsync()
+    {
+        if (generatedInvitationLink is not null)
+        {
+            await JsRuntime.InvokeVoidAsync("serviceSync.copyText", generatedInvitationLink);
+        }
+    }
+
+
+    private static string GetStatusLabel(EmployeeInvitationDto invitation) => invitation switch
+    {
+        { IsAccepted: true } => "Aceito",
+        { IsRevoked: true } => "Revogado",
+        { IsExpired: true } => "Expirado",
+        _ => "Pendente"
+    };
+
+    private static Color GetStatusColor(EmployeeInvitationDto invitation) => invitation switch
+    {
+        { IsAccepted: true } => Color.Success,
+        { IsRevoked: true } => Color.Error,
+        { IsExpired: true } => Color.Warning,
+        _ => Color.Info
+    };
+
+    private static string GetRoleLabel(CompanyUserRole role) => role switch
+    {
+        CompanyUserRole.Owner => "Dono",
+        CompanyUserRole.Employee => "Funcionário",
+        _ => "Usuário"
+    };
+
+    private static Color GetRoleColor(CompanyUserRole role) => role switch
+    {
+        CompanyUserRole.Owner => Color.Primary,
+        CompanyUserRole.Employee => Color.Default,
+        _ => Color.Default
+    };
+
+    private static string FormatDocument(string document) => document.Length switch
+    {
+        11 => $"{document[..3]}.{document[3..6]}.{document[6..9]}-{document[9..]}",
+        14 => $"{document[..2]}.{document[2..5]}.{document[5..8]}/{document[8..12]}-{document[12..]}",
+        _ => document
+    };
+
+    private static string FormatPostalCode(string postalCode) => postalCode.Length == 8
+        ? $"{postalCode[..5]}-{postalCode[5..]}"
+        : postalCode;
+
+    private sealed class EmployeeFormModel
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Document { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+    }
+
+    private sealed class EmployeeProfileFormModel
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Document { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+    }
+}

@@ -23,9 +23,9 @@
 ### Task 1: Make block approval conflict-safe
 
 **Files:**
-- Modify: `src/ServiceSync.Application/Abstractions/Persistence/IAppointmentRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/BlockRequestDecisionUseCases.cs`
+- Modify: `src/VoltaMarcada.Application/Abstractions/Persistence/IAppointmentRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/BlockRequestDecisionUseCases.cs`
 
 **Consumes:** company-scoped appointment conflict queries and `ScheduleBlockRequest` state transitions.
 
@@ -39,11 +39,11 @@
 ### Task 2: Detect and expose block-request conflicts at creation
 
 **Files:**
-- Modify: `src/ServiceSync.Application/Scheduling/SchedulingContracts.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/AppointmentChangeUseCases.cs`
-- Modify: `src/ServiceSync.Application/Abstractions/Persistence/IAppointmentRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`
-- Modify: `src/ServiceSync.Web/Components/Shared/ScheduleBlockRequestPanel.razor`
+- Modify: `src/VoltaMarcada.Application/Scheduling/SchedulingContracts.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/AppointmentChangeUseCases.cs`
+- Modify: `src/VoltaMarcada.Application/Abstractions/Persistence/IAppointmentRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/ScheduleBlockRequestPanel.razor`
 
 **Consumes:** employee access scope, professional time zone, and appointment projections.
 
@@ -58,8 +58,8 @@
 ### Task 3: Support manual appointments without a service
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Components/Shared/AppointmentEditor.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Schedule.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/AppointmentEditor.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Schedule.razor`
 
 **Consumes:** `CreateAppointmentCommand.DurationMinutes` and existing slot lookup use case.
 
@@ -73,11 +73,11 @@
 ### Task 4: Close planned owner and work-order UX gaps
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Components/Pages/Schedule.razor`
-- Modify: `src/ServiceSync.Web/Components/Shared/WorkOrderAppointmentsPanel.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Dashboard.razor`
-- Modify: `src/ServiceSync.Application/Scheduling/SchedulingContracts.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/GetWorkOrderAppointmentsUseCase.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Schedule.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/WorkOrderAppointmentsPanel.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Dashboard.razor`
+- Modify: `src/VoltaMarcada.Application/Scheduling/SchedulingContracts.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/GetWorkOrderAppointmentsUseCase.cs`
 
 **Consumes:** appointment list projection, reschedule history, owner scope, and dashboard data already supplied by scheduling use cases.
 

@@ -23,23 +23,23 @@
 
 ## File Structure
 
-- `src/ServiceSync.Domain/Entities/Appointment*.cs`: appointment, reschedule history, and block-request state/invariants.
-- `src/ServiceSync.Domain/Enums/Appointment*.cs`: appointment and block-request statuses.
-- `src/ServiceSync.Application/Scheduling/*.cs`: DTOs, commands, operation result, authorization, slot calculator, and use cases.
-- `src/ServiceSync.Application/Abstractions/Persistence/IAppointmentRepository.cs`: company/access-scoped scheduling persistence contract.
-- `src/ServiceSync.Infrastructure/Persistence/Configurations/*Appointment*.cs`: EF mappings and indexes.
-- `src/ServiceSync.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`: EF scheduling queries, transaction boundary, and dashboard projections.
-- `src/ServiceSync.Web/Configuration/SchedulingOptions.cs`: validated typed configuration model.
-- `src/ServiceSync.Web/Components/Pages/Schedule.razor` and `Dashboard.razor`: owner and technician scheduling/dashboard experience.
-- `src/ServiceSync.Web/Components/Shared/WorkOrderAppointmentsPanel.razor`: work-order `Agendamentos` tab.
+- `src/VoltaMarcada.Domain/Entities/Appointment*.cs`: appointment, reschedule history, and block-request state/invariants.
+- `src/VoltaMarcada.Domain/Enums/Appointment*.cs`: appointment and block-request statuses.
+- `src/VoltaMarcada.Application/Scheduling/*.cs`: DTOs, commands, operation result, authorization, slot calculator, and use cases.
+- `src/VoltaMarcada.Application/Abstractions/Persistence/IAppointmentRepository.cs`: company/access-scoped scheduling persistence contract.
+- `src/VoltaMarcada.Infrastructure/Persistence/Configurations/*Appointment*.cs`: EF mappings and indexes.
+- `src/VoltaMarcada.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`: EF scheduling queries, transaction boundary, and dashboard projections.
+- `src/VoltaMarcada.Web/Configuration/SchedulingOptions.cs`: validated typed configuration model.
+- `src/VoltaMarcada.Web/Components/Pages/Schedule.razor` and `Dashboard.razor`: owner and technician scheduling/dashboard experience.
+- `src/VoltaMarcada.Web/Components/Shared/WorkOrderAppointmentsPanel.razor`: work-order `Agendamentos` tab.
 
 ### Task 1: Add scheduling configuration and professional time zone
 
 **Files:**
-- Create: `src/ServiceSync.Web/Configuration/SchedulingOptions.cs`
-- Modify: `src/ServiceSync.Web/appsettings.json`, `src/ServiceSync.Web/Program.cs`
-- Modify: `src/ServiceSync.Domain/Entities/Professional.cs`, `src/ServiceSync.Application/Professionals/ProfessionalCommands.cs`, `ProfessionalDtos.cs`, `ProfessionalCommandValidator.cs`, `CreateProfessionalUseCase.cs`, `UpdateProfessionalUseCase.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Configurations/ProfessionalConfiguration.cs`, `src/ServiceSync.Web/Components/Pages/ProfessionalRegistration.razor`
+- Create: `src/VoltaMarcada.Web/Configuration/SchedulingOptions.cs`
+- Modify: `src/VoltaMarcada.Web/appsettings.json`, `src/VoltaMarcada.Web/Program.cs`
+- Modify: `src/VoltaMarcada.Domain/Entities/Professional.cs`, `src/VoltaMarcada.Application/Professionals/ProfessionalCommands.cs`, `ProfessionalDtos.cs`, `ProfessionalCommandValidator.cs`, `CreateProfessionalUseCase.cs`, `UpdateProfessionalUseCase.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/ProfessionalConfiguration.cs`, `src/VoltaMarcada.Web/Components/Pages/ProfessionalRegistration.razor`
 
 **Produces:** `SchedulingOptions`, `Professional.TimeZoneId`, and owner-managed professional time-zone selection.
 
@@ -51,9 +51,9 @@
 ### Task 2: Model appointments, histories, and technician block requests
 
 **Files:**
-- Create: `src/ServiceSync.Domain/Entities/Appointment.cs`, `AppointmentRescheduleHistory.cs`, `ScheduleBlockRequest.cs`
-- Create: `src/ServiceSync.Domain/Enums/AppointmentStatus.cs`, `ScheduleBlockRequestStatus.cs`
-- Modify: `src/ServiceSync.Domain/Entities/WorkOrder.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/Appointment.cs`, `AppointmentRescheduleHistory.cs`, `ScheduleBlockRequest.cs`
+- Create: `src/VoltaMarcada.Domain/Enums/AppointmentStatus.cs`, `ScheduleBlockRequestStatus.cs`
+- Modify: `src/VoltaMarcada.Domain/Entities/WorkOrder.cs`
 
 **Produces:** guarded aggregate methods `Create`, `Reschedule`, `Reassign`, `Complete`, `Cancel`, `Approve`, and `Reject`.
 
@@ -65,11 +65,11 @@
 ### Task 3: Persist scheduling data and migrate the schema
 
 **Files:**
-- Modify: `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/AppointmentConfiguration.cs`, `AppointmentRescheduleHistoryConfiguration.cs`, `ScheduleBlockRequestConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`
-- Create: `src/ServiceSync.Application/Abstractions/Persistence/IAppointmentRepository.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/AddSchedulingAndBlockRequests.cs` and designer; update model snapshot
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/AppointmentConfiguration.cs`, `AppointmentRescheduleHistoryConfiguration.cs`, `ScheduleBlockRequestConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Persistence/IAppointmentRepository.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/AddSchedulingAndBlockRequests.cs` and designer; update model snapshot
 
 **Produces:** EF Core data model and access-scoped scheduling repository.
 
@@ -81,10 +81,10 @@
 ### Task 4: Implement scheduling application behavior
 
 **Files:**
-- Create: `src/ServiceSync.Application/Scheduling/SchedulingCommands.cs`, `SchedulingDtos.cs`, `SchedulingOperationResult.cs`, `SchedulingAuthorization.cs`, `GetAvailableAppointmentSlotsUseCase.cs`
+- Create: `src/VoltaMarcada.Application/Scheduling/SchedulingCommands.cs`, `SchedulingDtos.cs`, `SchedulingOperationResult.cs`, `SchedulingAuthorization.cs`, `GetAvailableAppointmentSlotsUseCase.cs`
 - Create: `CreateAppointmentUseCase.cs`, `GetAppointmentsUseCase.cs`, `GetWorkOrderAppointmentsUseCase.cs`, `RescheduleAppointmentUseCase.cs`, `ReassignAppointmentUseCase.cs`, `CompleteAppointmentUseCase.cs`, `CancelAppointmentUseCase.cs`
 - Create: `CreateScheduleBlockRequestUseCase.cs`, `GetScheduleBlockRequestsUseCase.cs`, `ApproveScheduleBlockRequestUseCase.cs`, `RejectScheduleBlockRequestUseCase.cs`, `GetSchedulingDashboardUseCase.cs`
-- Modify: `src/ServiceSync.Application/DependencyInjection.cs`, `src/ServiceSync.Application/WorkOrders/CompleteWorkOrderUseCase.cs`, `WorkOrderOperationResult.cs`
+- Modify: `src/VoltaMarcada.Application/DependencyInjection.cs`, `src/VoltaMarcada.Application/WorkOrders/CompleteWorkOrderUseCase.cs`, `WorkOrderOperationResult.cs`
 
 **Produces:** explicit use cases that return business result codes instead of expected-flow exceptions.
 
@@ -97,10 +97,10 @@
 ### Task 5: Expose scheduling HTTP operations and work-order integration
 
 **Files:**
-- Create: `src/ServiceSync.Web/Endpoints/AppointmentEndpoints.cs`, `ScheduleBlockRequestEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Program.cs`, `src/ServiceSync.Web/Endpoints/WorkOrderEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Components/Pages/WorkOrderRegistration.razor`
-- Create: `src/ServiceSync.Web/Components/Shared/WorkOrderAppointmentsPanel.razor`
+- Create: `src/VoltaMarcada.Web/Endpoints/AppointmentEndpoints.cs`, `ScheduleBlockRequestEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Program.cs`, `src/VoltaMarcada.Web/Endpoints/WorkOrderEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/WorkOrderRegistration.razor`
+- Create: `src/VoltaMarcada.Web/Components/Shared/WorkOrderAppointmentsPanel.razor`
 
 **Produces:** authenticated endpoint contracts and the `Agendamentos` work-order tab.
 
@@ -112,8 +112,8 @@
 ### Task 6: Deliver role-specific dashboard and calendar UX
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Components/Pages/Dashboard.razor`, `src/ServiceSync.Web/Components/Layout/MainLayout.razor`, `src/ServiceSync.Web/wwwroot/app.css`
-- Create: `src/ServiceSync.Web/Components/Pages/Schedule.razor`, `src/ServiceSync.Web/Components/Shared/AppointmentEditor.razor`, `DateRangeNavigator.razor`, `ScheduleBlockRequestPanel.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Dashboard.razor`, `src/VoltaMarcada.Web/Components/Layout/MainLayout.razor`, `src/VoltaMarcada.Web/wwwroot/app.css`
+- Create: `src/VoltaMarcada.Web/Components/Pages/Schedule.razor`, `src/VoltaMarcada.Web/Components/Shared/AppointmentEditor.razor`, `DateRangeNavigator.razor`, `ScheduleBlockRequestPanel.razor`
 
 **Produces:** owner administration and a distinct mobile-first technician dashboard.
 
@@ -126,7 +126,7 @@
 ### Task 7: Static verification and documentation status
 
 **Files:**
-- Modify: `ServiceSync_Plano_Negocio_Desenvolvimento_v2.md`, `Planos negócio/ServiceSync_Plano_Negocio_Desenvolvimento_v2.md`, `Planos negócio/plano_de_negocio.md`
+- Modify: `VoltaMarcada_Plano_Negocio_Desenvolvimento_v2.md`, `Planos negócio/VoltaMarcada_Plano_Negocio_Desenvolvimento_v2.md`, `Planos negócio/plano_de_negocio.md`
 
 **Produces:** reviewed Phase 4 delivery and updated roadmap status.
 

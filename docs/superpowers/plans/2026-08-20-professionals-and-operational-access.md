@@ -24,11 +24,11 @@
 ### Task 1: Add domain status and Professional aggregates
 
 **Files:**
-- Create: `src/ServiceSync.Domain/Entities/Professional.cs`
-- Create: `src/ServiceSync.Domain/Entities/ProfessionalService.cs`
-- Modify: `src/ServiceSync.Domain/Entities/Customer.cs`
-- Modify: `src/ServiceSync.Domain/Entities/Equipment.cs`
-- Modify: `src/ServiceSync.Domain/Entities/Service.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/Professional.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/ProfessionalService.cs`
+- Modify: `src/VoltaMarcada.Domain/Entities/Customer.cs`
+- Modify: `src/VoltaMarcada.Domain/Entities/Equipment.cs`
+- Modify: `src/VoltaMarcada.Domain/Entities/Service.cs`
 
 **Interfaces:**
 - Produces `Professional.Create(companyId, companyUserId, serviceIds, now)`, `Professional.Update(companyUserId, serviceIds, now)`, `Professional.Activate(now)`, and `Professional.Deactivate(now)`.
@@ -54,13 +54,13 @@
 ### Task 2: Map persistence and create the migration
 
 **Files:**
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/ProfessionalConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/ProfessionalServiceConfiguration.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Configurations/CustomerConfiguration.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Configurations/EquipmentConfiguration.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Configurations/ServiceConfiguration.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/20260820_AddProfessionalsAndLogicalDeactivation.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/ProfessionalConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/ProfessionalServiceConfiguration.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/CustomerConfiguration.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/EquipmentConfiguration.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/ServiceConfiguration.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260820_AddProfessionalsAndLogicalDeactivation.cs`
 
 **Interfaces:**
 - Produces `AppDbContext.Professionals` and `AppDbContext.ProfessionalServices`.
@@ -85,14 +85,14 @@
 ### Task 3: Add repository contracts and tenant-safe implementations
 
 **Files:**
-- Create: `src/ServiceSync.Application/Abstractions/Persistence/IProfessionalRepository.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Repositories/ProfessionalRepository.cs`
-- Modify: `src/ServiceSync.Application/Abstractions/Persistence/ICustomerRepository.cs`
-- Modify: `src/ServiceSync.Application/Abstractions/Persistence/IEquipmentRepository.cs`
-- Modify: `src/ServiceSync.Application/Abstractions/Persistence/IServiceRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/CustomerRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/EquipmentRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/ServiceRepository.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Persistence/IProfessionalRepository.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/ProfessionalRepository.cs`
+- Modify: `src/VoltaMarcada.Application/Abstractions/Persistence/ICustomerRepository.cs`
+- Modify: `src/VoltaMarcada.Application/Abstractions/Persistence/IEquipmentRepository.cs`
+- Modify: `src/VoltaMarcada.Application/Abstractions/Persistence/IServiceRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/CustomerRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/EquipmentRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/ServiceRepository.cs`
 
 **Interfaces:**
 - `IProfessionalRepository` exposes `GetAllForCompanyAsync`, `GetForCompanyAsync`, `GetForCurrentMemberAsync`, `GetAvailableCompanyMembersAsync`, `GetAvailableServicesAsync`, `AddAsync`, `ReplaceServices`, `SaveChangesAsync`, and `ExistsForCompanyMemberAsync`.
@@ -117,19 +117,19 @@
 ### Task 4: Implement Professional use cases and status operations
 
 **Files:**
-- Create: `src/ServiceSync.Application/Professionals/ProfessionalDto.cs`
-- Create: `src/ServiceSync.Application/Professionals/ProfessionalCommands.cs`
-- Create: `src/ServiceSync.Application/Professionals/ProfessionalOperationResult.cs`
-- Create: `src/ServiceSync.Application/Professionals/ProfessionalCommandValidator.cs`
-- Create: `src/ServiceSync.Application/Professionals/CreateProfessionalUseCase.cs`
-- Create: `src/ServiceSync.Application/Professionals/GetProfessionalsUseCase.cs`
-- Create: `src/ServiceSync.Application/Professionals/GetProfessionalForEditUseCase.cs`
-- Create: `src/ServiceSync.Application/Professionals/GetCurrentEmployeeProfessionalUseCase.cs`
-- Create: `src/ServiceSync.Application/Professionals/UpdateProfessionalUseCase.cs`
-- Create: `src/ServiceSync.Application/Professionals/ChangeProfessionalStatusUseCase.cs`
-- Modify: `src/ServiceSync.Application/Customers/DeleteCustomerUseCase.cs`
-- Modify: `src/ServiceSync.Application/Equipment/DeleteEquipmentUseCase.cs`
-- Modify: `src/ServiceSync.Application/Services/DeleteServiceUseCase.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/ProfessionalDto.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/ProfessionalCommands.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/ProfessionalOperationResult.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/ProfessionalCommandValidator.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/CreateProfessionalUseCase.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/GetProfessionalsUseCase.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/GetProfessionalForEditUseCase.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/GetCurrentEmployeeProfessionalUseCase.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/UpdateProfessionalUseCase.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/ChangeProfessionalStatusUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/Customers/DeleteCustomerUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/Equipment/DeleteEquipmentUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/Services/DeleteServiceUseCase.cs`
 
 **Interfaces:**
 - `CreateProfessionalCommand(Guid CompanyUserId, IReadOnlyCollection<Guid> ServiceIds)`.
@@ -156,13 +156,13 @@
 ### Task 5: Enforce Owner-only mutation in endpoints and authorization
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Authorization/AuthorizationPolicies.cs`
-- Modify: `src/ServiceSync.Web/Authorization/CompanyMemberAuthorizationHandler.cs`
-- Create or modify: `src/ServiceSync.Web/Authorization/CompanyOwnerAuthorizationHandler.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/CustomerEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/EquipmentEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/ServiceEndpoints.cs`
-- Create: `src/ServiceSync.Web/Endpoints/ProfessionalEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Authorization/AuthorizationPolicies.cs`
+- Modify: `src/VoltaMarcada.Web/Authorization/CompanyMemberAuthorizationHandler.cs`
+- Create or modify: `src/VoltaMarcada.Web/Authorization/CompanyOwnerAuthorizationHandler.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/CustomerEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/EquipmentEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/ServiceEndpoints.cs`
+- Create: `src/VoltaMarcada.Web/Endpoints/ProfessionalEndpoints.cs`
 
 **Interfaces:**
 - Produces an Owner policy usable by all mutating endpoint handlers.
@@ -187,10 +187,10 @@
 ### Task 6: Build Professional management and Employee read-only pages
 
 **Files:**
-- Create: `src/ServiceSync.Web/Components/Pages/Professionals.razor`
-- Create: `src/ServiceSync.Web/Components/Pages/ProfessionalRegistration.razor`
-- Modify: `src/ServiceSync.Web/Components/Layout/MainLayout.razor`
-- Modify: `src/ServiceSync.Web/Components/_Imports.razor` if shared imports are required
+- Create: `src/VoltaMarcada.Web/Components/Pages/Professionals.razor`
+- Create: `src/VoltaMarcada.Web/Components/Pages/ProfessionalRegistration.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Layout/MainLayout.razor`
+- Modify: `src/VoltaMarcada.Web/Components/_Imports.razor` if shared imports are required
 
 **Interfaces:**
 - Owner list uses `GetProfessionalsUseCase`; form uses create/update/status use cases; Employee mode uses `GetCurrentEmployeeProfessionalUseCase`.
@@ -219,12 +219,12 @@
 ### Task 7: Convert Customer, Equipment, and Service UI to status management and read-only Employee views
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Components/Pages/Customers.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/CustomerRegistration.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Equipment.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/EquipmentRegistration.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Services.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/ServiceRegistration.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Customers.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/CustomerRegistration.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Equipment.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/EquipmentRegistration.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Services.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/ServiceRegistration.razor`
 
 **Interfaces:**
 - Existing list pages display active status and invoke Owner-only activate/deactivate operations.
@@ -249,11 +249,11 @@
 ### Task 8: Register dependencies and perform final static verification
 
 **Files:**
-- Modify: `src/ServiceSync.Application/DependencyInjection.cs`
-- Modify: `src/ServiceSync.Infrastructure/DependencyInjection.cs`
-- Modify: `src/ServiceSync.Web/Program.cs`
-- Modify: `src/ServiceSync.Web/Components/Layout/MainLayout.razor`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- Modify: `src/VoltaMarcada.Application/DependencyInjection.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/DependencyInjection.cs`
+- Modify: `src/VoltaMarcada.Web/Program.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Layout/MainLayout.razor`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
 
 - [ ] **Step 1: Register repositories and use cases**
 

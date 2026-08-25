@@ -26,37 +26,37 @@
 
 | Path | Responsibility |
 | --- | --- |
-| `src/ServiceSync.Domain/Entities/State.cs` | State reference entity invariants. |
-| `src/ServiceSync.Domain/Entities/City.cs` | City reference entity and state relationship invariant. |
-| `src/ServiceSync.Domain/ValueObjects/BrazilianPostalCode.cs` | CEP normalization and validation. |
-| `src/ServiceSync.Domain/Entities/Company.cs` | Company location, CEP, WhatsApp, and logo state. |
-| `src/ServiceSync.Application/Abstractions/Persistence/ICompanyOnboardingRepository.cs` | State/city ownership validation during company onboarding. |
-| `src/ServiceSync.Application/Abstractions/Storage/ICompanyLogoStorage.cs` | Application-level logo storage contract. |
-| `src/ServiceSync.Infrastructure/Storage/CompanyLogoStorageOptions.cs` | Configurable local logo root path. |
-| `src/ServiceSync.Application/CompanyOnboarding/*` | New onboarding command, validation, outcomes, and use case behavior. |
-| `src/ServiceSync.Application/CompanyLocations/*` | Explicit state and city read use cases for the onboarding page. |
-| `src/ServiceSync.Infrastructure/Persistence/Configurations/{State,City,Company}Configuration.cs` | EF mappings, foreign keys, and indexes. |
-| `src/ServiceSync.Infrastructure/Persistence/LocationSeedData.cs` | Generated, versioned catalog with fixed GUIDs. |
-| `src/ServiceSync.Infrastructure/Persistence/Repositories/*` | Location reads and company onboarding ownership checks. |
-| `src/ServiceSync.Infrastructure/Storage/LocalCompanyLogoStorage.cs` | Temporary local-file implementation. |
-| `src/ServiceSync.Infrastructure/Persistence/Migrations/*AddCompanyLocationsAndLogo.cs` | Schema and catalog data transition. |
-| `src/ServiceSync.Web/Endpoints/CompanyOnboardingEndpoints.cs` | Multipart binding, localized failures, and no tenant IDs. |
-| `src/ServiceSync.Web/Components/Pages/CompanyOnboarding.razor` | Logo input, CEP, and dependent state/city selects. |
-| `tests/ServiceSync.Domain.Tests/*` | Pure CEP and entity invariant tests. |
-| `tests/ServiceSync.Application.Tests/*` | State/city and logo use case tests. |
-| `tests/ServiceSync.Domain.Tests/ServiceSync.Domain.Tests.csproj` | Domain test project. |
-| `tests/ServiceSync.Application.Tests/ServiceSync.Application.Tests.csproj` | Application test project. |
+| `src/VoltaMarcada.Domain/Entities/State.cs` | State reference entity invariants. |
+| `src/VoltaMarcada.Domain/Entities/City.cs` | City reference entity and state relationship invariant. |
+| `src/VoltaMarcada.Domain/ValueObjects/BrazilianPostalCode.cs` | CEP normalization and validation. |
+| `src/VoltaMarcada.Domain/Entities/Company.cs` | Company location, CEP, WhatsApp, and logo state. |
+| `src/VoltaMarcada.Application/Abstractions/Persistence/ICompanyOnboardingRepository.cs` | State/city ownership validation during company onboarding. |
+| `src/VoltaMarcada.Application/Abstractions/Storage/ICompanyLogoStorage.cs` | Application-level logo storage contract. |
+| `src/VoltaMarcada.Infrastructure/Storage/CompanyLogoStorageOptions.cs` | Configurable local logo root path. |
+| `src/VoltaMarcada.Application/CompanyOnboarding/*` | New onboarding command, validation, outcomes, and use case behavior. |
+| `src/VoltaMarcada.Application/CompanyLocations/*` | Explicit state and city read use cases for the onboarding page. |
+| `src/VoltaMarcada.Infrastructure/Persistence/Configurations/{State,City,Company}Configuration.cs` | EF mappings, foreign keys, and indexes. |
+| `src/VoltaMarcada.Infrastructure/Persistence/LocationSeedData.cs` | Generated, versioned catalog with fixed GUIDs. |
+| `src/VoltaMarcada.Infrastructure/Persistence/Repositories/*` | Location reads and company onboarding ownership checks. |
+| `src/VoltaMarcada.Infrastructure/Storage/LocalCompanyLogoStorage.cs` | Temporary local-file implementation. |
+| `src/VoltaMarcada.Infrastructure/Persistence/Migrations/*AddCompanyLocationsAndLogo.cs` | Schema and catalog data transition. |
+| `src/VoltaMarcada.Web/Endpoints/CompanyOnboardingEndpoints.cs` | Multipart binding, localized failures, and no tenant IDs. |
+| `src/VoltaMarcada.Web/Components/Pages/CompanyOnboarding.razor` | Logo input, CEP, and dependent state/city selects. |
+| `tests/VoltaMarcada.Domain.Tests/*` | Pure CEP and entity invariant tests. |
+| `tests/VoltaMarcada.Application.Tests/*` | State/city and logo use case tests. |
+| `tests/VoltaMarcada.Domain.Tests/VoltaMarcada.Domain.Tests.csproj` | Domain test project. |
+| `tests/VoltaMarcada.Application.Tests/VoltaMarcada.Application.Tests.csproj` | Application test project. |
 
 ### Task 1: Create the location and postal-code domain model
 
 **Files:**
 
-- Create: `src/ServiceSync.Domain/Entities/State.cs`
-- Create: `src/ServiceSync.Domain/Entities/City.cs`
-- Create: `src/ServiceSync.Domain/ValueObjects/BrazilianPostalCode.cs`
-- Modify: `src/ServiceSync.Domain/Entities/Company.cs`
-- Create: `tests/ServiceSync.Domain.Tests/ServiceSync.Domain.Tests.csproj`
-- Create: `tests/ServiceSync.Domain.Tests/BrazilianPostalCodeTests.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/State.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/City.cs`
+- Create: `src/VoltaMarcada.Domain/ValueObjects/BrazilianPostalCode.cs`
+- Modify: `src/VoltaMarcada.Domain/Entities/Company.cs`
+- Create: `tests/VoltaMarcada.Domain.Tests/VoltaMarcada.Domain.Tests.csproj`
+- Create: `tests/VoltaMarcada.Domain.Tests/BrazilianPostalCodeTests.cs`
 
 **Consumes:** Existing `DomainException` and `BrazilianDocument` conventions.
 
@@ -82,7 +82,7 @@ public static bool TryNormalize(string? value, out string normalizedPostalCode);
 
 - [ ] **Step 1: Add failing CEP tests**
 
-Create the domain test project with references to `ServiceSync.Domain`, `Microsoft.NET.Test.Sdk`, `xunit`, and `xunit.runner.visualstudio`, then add the test class.
+Create the domain test project with references to `VoltaMarcada.Domain`, `Microsoft.NET.Test.Sdk`, `xunit`, and `xunit.runner.visualstudio`, then add the test class.
 
 ```csharp
 [Theory]
@@ -127,9 +127,9 @@ Add tests that assert `Company.Create` rejects an empty `stateId`, empty `cityId
 **Files:**
 
 - Create: `scripts/GenerateBrazilianLocationSeed.ps1`
-- Create: `src/ServiceSync.Infrastructure/Persistence/LocationSeedData.cs`
-- Create: `tests/ServiceSync.Application.Tests/ServiceSync.Application.Tests.csproj`
-- Create: `tests/ServiceSync.Application.Tests/LocationSeedDataTests.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/LocationSeedData.cs`
+- Create: `tests/VoltaMarcada.Application.Tests/VoltaMarcada.Application.Tests.csproj`
+- Create: `tests/VoltaMarcada.Application.Tests/LocationSeedDataTests.cs`
 
 **Consumes:** IBGE state endpoint `https://servicodados.ibge.gov.br/api/v1/localidades/estados` and per-state municipality endpoint `https://servicodados.ibge.gov.br/api/v1/localidades/estados/{stateCode}/municipios` during generation only.
 
@@ -148,7 +148,7 @@ public sealed record CitySeed(Guid Id, Guid StateId, string Name);
 
 - [ ] **Step 1: Create a deterministic GUID generator in the PowerShell script**
 
-Create the application test project with references to `ServiceSync.Application`, `ServiceSync.Infrastructure`, `Microsoft.NET.Test.Sdk`, `xunit`, and `xunit.runner.visualstudio`.
+Create the application test project with references to `VoltaMarcada.Application`, `VoltaMarcada.Infrastructure`, `Microsoft.NET.Test.Sdk`, `xunit`, and `xunit.runner.visualstudio`.
 
 Derive each GUID from SHA-256 of `state:{UF}` for states and `city:{UF}:{normalized municipality name}` for cities. Use a canonical lowercase, accent-insensitive source string before hashing so re-running generation produces identical GUIDs.
 
@@ -183,11 +183,11 @@ public void States_ShouldContainAllBrazilianFederativeUnits()
 
 **Files:**
 
-- Modify: `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/StateConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/CityConfiguration.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Configurations/CompanyConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/*AddCompanyLocationsAndLogo.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/StateConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/CityConfiguration.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/CompanyConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/*AddCompanyLocationsAndLogo.cs`
 
 **Consumes:** `State`, `City`, `LocationSeedData`, and the changed `Company` model.
 
@@ -220,16 +220,16 @@ Assert the state abbreviation unique index, city `(StateId, Name)` unique index,
 
 **Files:**
 
-- Create: `src/ServiceSync.Application/Abstractions/Storage/ICompanyLogoStorage.cs`
-- Modify: `src/ServiceSync.Application/Abstractions/Persistence/ICompanyOnboardingRepository.cs`
-- Create: `src/ServiceSync.Application/CompanyLocations/GetOnboardingStatesUseCase.cs`
-- Create: `src/ServiceSync.Application/CompanyLocations/GetOnboardingCitiesUseCase.cs`
-- Modify: `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingCommand.cs`
-- Modify: `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingCommandValidator.cs`
-- Modify: `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingResult.cs`
-- Modify: `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingUseCase.cs`
-- Modify: `src/ServiceSync.Application/DependencyInjection.cs`
-- Create: `tests/ServiceSync.Application.Tests/CompleteCompanyOnboardingUseCaseTests.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Storage/ICompanyLogoStorage.cs`
+- Modify: `src/VoltaMarcada.Application/Abstractions/Persistence/ICompanyOnboardingRepository.cs`
+- Create: `src/VoltaMarcada.Application/CompanyLocations/GetOnboardingStatesUseCase.cs`
+- Create: `src/VoltaMarcada.Application/CompanyLocations/GetOnboardingCitiesUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingCommand.cs`
+- Modify: `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingCommandValidator.cs`
+- Modify: `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingResult.cs`
+- Modify: `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/DependencyInjection.cs`
+- Create: `tests/VoltaMarcada.Application.Tests/CompleteCompanyOnboardingUseCaseTests.cs`
 
 **Consumes:** Domain model and persistence mappings from Tasks 1 and 3.
 
@@ -280,12 +280,12 @@ Cover city/state mismatch, invalid CEP, successful no-logo onboarding, valid-log
 
 **Files:**
 
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/CompanyOnboardingRepository.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Repositories/CompanyLocationRepository.cs`
-- Create: `src/ServiceSync.Infrastructure/Storage/LocalCompanyLogoStorage.cs`
-- Create: `src/ServiceSync.Infrastructure/Storage/CompanyLogoStorageOptions.cs`
-- Modify: `src/ServiceSync.Infrastructure/DependencyInjection.cs`
-- Modify: `src/ServiceSync.Web/Program.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/CompanyOnboardingRepository.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/CompanyLocationRepository.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Storage/LocalCompanyLogoStorage.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Storage/CompanyLogoStorageOptions.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/DependencyInjection.cs`
+- Modify: `src/VoltaMarcada.Web/Program.cs`
 
 **Consumes:** Application contracts from Task 4 and `IHostEnvironment` path configured by the Web host.
 
@@ -311,10 +311,10 @@ Register `ICompanyLogoStorage` and the location repository as scoped services. D
 
 **Files:**
 
-- Modify: `src/ServiceSync.Web/Endpoints/CompanyOnboardingEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Components/Pages/CompanyOnboarding.razor`
-- Modify: `src/ServiceSync.Web/wwwroot/app.css`
-- Create: `tests/ServiceSync.Application.Tests/CompanyLogoUploadTests.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/CompanyOnboardingEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/CompanyOnboarding.razor`
+- Modify: `src/VoltaMarcada.Web/wwwroot/app.css`
+- Create: `tests/VoltaMarcada.Application.Tests/CompanyLogoUploadTests.cs`
 
 **Consumes:** Tasks 4 and 5.
 

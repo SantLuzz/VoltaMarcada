@@ -2,10 +2,10 @@
 
 ## Files Changed
 
-- `src/ServiceSync.Domain/Entities/Company.cs`
-- `src/ServiceSync.Domain/Entities/CompanyUser.cs`
-- `src/ServiceSync.Domain/Enums/CompanyUserRole.cs`
-- `src/ServiceSync.Domain/ValueObjects/BrazilianDocument.cs`
+- `src/VoltaMarcada.Domain/Entities/Company.cs`
+- `src/VoltaMarcada.Domain/Entities/CompanyUser.cs`
+- `src/VoltaMarcada.Domain/Enums/CompanyUserRole.cs`
+- `src/VoltaMarcada.Domain/ValueObjects/BrazilianDocument.cs`
 
 ## Implementation Decisions
 
@@ -21,14 +21,14 @@
 Command run:
 
 ```text
-dotnet build ServiceSync.sln
+dotnet build VoltaMarcada.sln
 ```
 
 Result: exit code 1. Domain compilation completed, but the solution build failed in the existing Infrastructure project because `CompanyConfiguration.cs` references `Company.Name`, which Task 1 correctly replaced with the required company fields. Restore also emitted NU1900 warnings because package vulnerability sources could not be reached.
 
 ## Concerns
 
-- `src/ServiceSync.Infrastructure/Persistence/Configurations/CompanyConfiguration.cs` must be updated by its owning scoped task to map the new `Company` properties and remove its obsolete `Name` mapping. This file was intentionally not modified because it is outside Task 1's allowed file list.
+- `src/VoltaMarcada.Infrastructure/Persistence/Configurations/CompanyConfiguration.cs` must be updated by its owning scoped task to map the new `Company` properties and remove its obsolete `Name` mapping. This file was intentionally not modified because it is outside Task 1's allowed file list.
 - No automated tests were run or created, as explicitly prohibited by the task.
 
 ## Review Fix Round 1
@@ -43,7 +43,7 @@ Result: exit code 1. Domain compilation completed, but the solution build failed
 Command run:
 
 ```text
-dotnet build ServiceSync.sln
+dotnet build VoltaMarcada.sln
 ```
 
 Result: exit code 1. The Domain and Application projects built successfully. The solution remains blocked by the existing Infrastructure compilation error in `CompanyConfiguration.cs`, which still references the removed `Company.Name` property. NU1900 warnings were also emitted because the package vulnerability sources could not be reached.

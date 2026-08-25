@@ -23,28 +23,28 @@
 
 ## File Structure
 
-- Create `src/ServiceSync.Domain/ValueObjects/ProfessionalDailyScheduleDefinition.cs`: immutable schedule input used by the availability aggregate.
-- Create `src/ServiceSync.Domain/Entities/ProfessionalDailySchedule.cs`: tenant-scoped child entity representing one weekday's work period and optional lunch interval.
-- Modify `src/ServiceSync.Domain/Entities/ProfessionalAvailability.cs`: own and validate the complete set of daily schedules.
-- Delete `src/ServiceSync.Domain/Enums/ProfessionalWorkDays.cs`: the flags enum becomes obsolete after all consumers use `DayOfWeek` entries.
-- Create `src/ServiceSync.Infrastructure/Persistence/Configurations/ProfessionalDailyScheduleConfiguration.cs`: map the child table, keys, relationships, nullable lunch fields, and unique weekday constraint.
-- Modify `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`: expose the new set for explicit EF Core mapping and migration discovery.
-- Modify `src/ServiceSync.Infrastructure/Persistence/Configurations/ProfessionalAvailabilityConfiguration.cs`: configure the aggregate-to-child navigation and remove old scalar mappings.
-- Modify `src/ServiceSync.Infrastructure/Persistence/Repositories/ProfessionalAvailabilityRepository.cs`: include daily schedules whenever an availability is read.
-- Create migration and designer `src/ServiceSync.Infrastructure/Persistence/Migrations/20260821100000_ReplaceSharedProfessionalAvailabilityWithDailySchedules.cs` and `.Designer.cs`; modify `AppDbContextModelSnapshot.cs`.
-- Modify `src/ServiceSync.Application/Professionals/ProfessionalAvailabilityCommands.cs`, `ProfessionalAvailabilityDtos.cs`, and `ProfessionalAvailabilityCommandValidators.cs`: replace the shared schedule contracts with per-day contracts and collection validation.
-- Modify `src/ServiceSync.Application/Professionals/SaveProfessionalAvailabilityUseCase.cs` and `GetProfessionalAvailabilityUseCase.cs`: map the full day collection to and from the aggregate.
-- Modify `src/ServiceSync.Web/Endpoints/ProfessionalEndpoints.cs`: receive the list of daily schedule requests.
-- Modify `src/ServiceSync.Web/Components/Shared/ProfessionalAvailabilityPanel.razor`: render, validate, save, copy, and display individual weekdays.
+- Create `src/VoltaMarcada.Domain/ValueObjects/ProfessionalDailyScheduleDefinition.cs`: immutable schedule input used by the availability aggregate.
+- Create `src/VoltaMarcada.Domain/Entities/ProfessionalDailySchedule.cs`: tenant-scoped child entity representing one weekday's work period and optional lunch interval.
+- Modify `src/VoltaMarcada.Domain/Entities/ProfessionalAvailability.cs`: own and validate the complete set of daily schedules.
+- Delete `src/VoltaMarcada.Domain/Enums/ProfessionalWorkDays.cs`: the flags enum becomes obsolete after all consumers use `DayOfWeek` entries.
+- Create `src/VoltaMarcada.Infrastructure/Persistence/Configurations/ProfessionalDailyScheduleConfiguration.cs`: map the child table, keys, relationships, nullable lunch fields, and unique weekday constraint.
+- Modify `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`: expose the new set for explicit EF Core mapping and migration discovery.
+- Modify `src/VoltaMarcada.Infrastructure/Persistence/Configurations/ProfessionalAvailabilityConfiguration.cs`: configure the aggregate-to-child navigation and remove old scalar mappings.
+- Modify `src/VoltaMarcada.Infrastructure/Persistence/Repositories/ProfessionalAvailabilityRepository.cs`: include daily schedules whenever an availability is read.
+- Create migration and designer `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260821100000_ReplaceSharedProfessionalAvailabilityWithDailySchedules.cs` and `.Designer.cs`; modify `AppDbContextModelSnapshot.cs`.
+- Modify `src/VoltaMarcada.Application/Professionals/ProfessionalAvailabilityCommands.cs`, `ProfessionalAvailabilityDtos.cs`, and `ProfessionalAvailabilityCommandValidators.cs`: replace the shared schedule contracts with per-day contracts and collection validation.
+- Modify `src/VoltaMarcada.Application/Professionals/SaveProfessionalAvailabilityUseCase.cs` and `GetProfessionalAvailabilityUseCase.cs`: map the full day collection to and from the aggregate.
+- Modify `src/VoltaMarcada.Web/Endpoints/ProfessionalEndpoints.cs`: receive the list of daily schedule requests.
+- Modify `src/VoltaMarcada.Web/Components/Shared/ProfessionalAvailabilityPanel.razor`: render, validate, save, copy, and display individual weekdays.
 
 ## Task 1: Model Daily Schedules in the Domain
 
 **Files:**
 
-- Create: `src/ServiceSync.Domain/ValueObjects/ProfessionalDailyScheduleDefinition.cs`
-- Create: `src/ServiceSync.Domain/Entities/ProfessionalDailySchedule.cs`
-- Modify: `src/ServiceSync.Domain/Entities/ProfessionalAvailability.cs`
-- Delete: `src/ServiceSync.Domain/Enums/ProfessionalWorkDays.cs`
+- Create: `src/VoltaMarcada.Domain/ValueObjects/ProfessionalDailyScheduleDefinition.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/ProfessionalDailySchedule.cs`
+- Modify: `src/VoltaMarcada.Domain/Entities/ProfessionalAvailability.cs`
+- Delete: `src/VoltaMarcada.Domain/Enums/ProfessionalWorkDays.cs`
 
 **Consumes:** The existing `ProfessionalAvailability` identifiers, audit timestamps, and `DomainException` pattern.
 
@@ -53,7 +53,7 @@
 - [ ] **Step 1: Add the immutable daily schedule definition**
 
 ```csharp
-namespace ServiceSync.Domain.ValueObjects;
+namespace VoltaMarcada.Domain.ValueObjects;
 
 public sealed record ProfessionalDailyScheduleDefinition(
     DayOfWeek Weekday,
@@ -141,7 +141,7 @@ Delete `ProfessionalWorkDays.cs` only after the compilation references in this f
 Run:
 
 ```powershell
-rg -n "ProfessionalWorkDays|DateTime\.(Now|UtcNow)|DateTimeOffset\.(Now|UtcNow)|public .* set;" src/ServiceSync.Domain
+rg -n "ProfessionalWorkDays|DateTime\.(Now|UtcNow)|DateTimeOffset\.(Now|UtcNow)|public .* set;" src/VoltaMarcada.Domain
 ```
 
 Expected: no `ProfessionalWorkDays` references and no new public setters or direct clock use in the new availability model.
@@ -150,13 +150,13 @@ Expected: no `ProfessionalWorkDays` references and no new public setters or dire
 
 **Files:**
 
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/ProfessionalDailyScheduleConfiguration.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Configurations/ProfessionalAvailabilityConfiguration.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/ProfessionalAvailabilityRepository.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/20260821100000_ReplaceSharedProfessionalAvailabilityWithDailySchedules.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/20260821100000_ReplaceSharedProfessionalAvailabilityWithDailySchedules.Designer.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/ProfessionalDailyScheduleConfiguration.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/ProfessionalAvailabilityConfiguration.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/ProfessionalAvailabilityRepository.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260821100000_ReplaceSharedProfessionalAvailabilityWithDailySchedules.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260821100000_ReplaceSharedProfessionalAvailabilityWithDailySchedules.Designer.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
 
 **Consumes:** The aggregate and child entity from Task 1.
 
@@ -204,7 +204,7 @@ Ensure the generated migration designer and `AppDbContextModelSnapshot` represen
 Run:
 
 ```powershell
-rg -n "ProfessionalDailySchedules|UX_ProfessionalDailySchedules|WorkDays|LunchStartTime|LunchEndTime" src/ServiceSync.Infrastructure
+rg -n "ProfessionalDailySchedules|UX_ProfessionalDailySchedules|WorkDays|LunchStartTime|LunchEndTime" src/VoltaMarcada.Infrastructure
 ```
 
 Expected: daily table, relationship, index, and one-way legacy data expansion are present; old columns appear only in the migration's compatibility SQL.
@@ -213,12 +213,12 @@ Expected: daily table, relationship, index, and one-way legacy data expansion ar
 
 **Files:**
 
-- Modify: `src/ServiceSync.Application/Professionals/ProfessionalAvailabilityCommands.cs`
-- Modify: `src/ServiceSync.Application/Professionals/ProfessionalAvailabilityDtos.cs`
-- Modify: `src/ServiceSync.Application/Professionals/ProfessionalAvailabilityCommandValidators.cs`
-- Modify: `src/ServiceSync.Application/Professionals/SaveProfessionalAvailabilityUseCase.cs`
-- Modify: `src/ServiceSync.Application/Professionals/GetProfessionalAvailabilityUseCase.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/ProfessionalEndpoints.cs`
+- Modify: `src/VoltaMarcada.Application/Professionals/ProfessionalAvailabilityCommands.cs`
+- Modify: `src/VoltaMarcada.Application/Professionals/ProfessionalAvailabilityDtos.cs`
+- Modify: `src/VoltaMarcada.Application/Professionals/ProfessionalAvailabilityCommandValidators.cs`
+- Modify: `src/VoltaMarcada.Application/Professionals/SaveProfessionalAvailabilityUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/Professionals/GetProfessionalAvailabilityUseCase.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/ProfessionalEndpoints.cs`
 
 **Consumes:** `ProfessionalDailyScheduleDefinition` and the collection-backed aggregate from Task 1; repository loading from Task 2.
 
@@ -277,7 +277,7 @@ Map every request row to `SaveProfessionalDailyScheduleCommand`. Keep the owner-
 Run:
 
 ```powershell
-rg -n "WeeklyScheduleDto|ProfessionalWorkDays|SaveProfessionalAvailabilityCommand\(|DailyScheduleDto|SaveProfessionalDailySchedule" src/ServiceSync.Application src/ServiceSync.Web/Endpoints
+rg -n "WeeklyScheduleDto|ProfessionalWorkDays|SaveProfessionalAvailabilityCommand\(|DailyScheduleDto|SaveProfessionalDailySchedule" src/VoltaMarcada.Application src/VoltaMarcada.Web/Endpoints
 ```
 
 Expected: all availability commands and DTOs use the daily schedule collection; no shared-schedule contracts remain.
@@ -286,7 +286,7 @@ Expected: all availability commands and DTOs use the daily schedule collection; 
 
 **Files:**
 
-- Modify: `src/ServiceSync.Web/Components/Shared/ProfessionalAvailabilityPanel.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/ProfessionalAvailabilityPanel.razor`
 
 **Consumes:** `DailyScheduleDto` and the revised save command from Task 3.
 
@@ -331,7 +331,7 @@ Replace selected-day chips plus two shared range fields with a compact list of t
 Run:
 
 ```powershell
-rg -n "Horário padrão|WeeklySchedule|WorkDays|Aplicar aos demais dias ativos|Possui intervalo|ReadOnly" src/ServiceSync.Web/Components/Shared/ProfessionalAvailabilityPanel.razor
+rg -n "Horário padrão|WeeklySchedule|WorkDays|Aplicar aos demais dias ativos|Possui intervalo|ReadOnly" src/VoltaMarcada.Web/Components/Shared/ProfessionalAvailabilityPanel.razor
 ```
 
 Expected: no shared-schedule fields remain, required Portuguese UI labels are present, and the read-only guard still protects all actions.

@@ -35,7 +35,7 @@ public enum CustomerContactStatus
 }
 ```
 
-`Prepared` means ServiceSync prepared and opened a WhatsApp link for a company user. It never claims the message reached WhatsApp or the customer. `Sent` means that user explicitly confirmed the company sent it. There is no delivered/read state in the MVP.
+`Prepared` means VoltaMarcada prepared and opened a WhatsApp link for a company user. It never claims the message reached WhatsApp or the customer. `Sent` means that user explicitly confirmed the company sent it. There is no delivered/read state in the MVP.
 
 ### CustomerContact
 

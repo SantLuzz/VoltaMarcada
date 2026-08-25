@@ -26,13 +26,13 @@
 ### Task 1: Add the Customer Contact Domain Entity and Database Schema
 
 **Files:**
-- Create: `src/ServiceSync.Domain/Enums/CustomerContactChannel.cs`
-- Create: `src/ServiceSync.Domain/Enums/CustomerContactStatus.cs`
-- Create: `src/ServiceSync.Domain/Entities/CustomerContact.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/CustomerContactConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/20260824160000_AddCustomerContacts.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- Create: `src/VoltaMarcada.Domain/Enums/CustomerContactChannel.cs`
+- Create: `src/VoltaMarcada.Domain/Enums/CustomerContactStatus.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/CustomerContact.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/CustomerContactConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260824160000_AddCustomerContacts.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
 
 **Interfaces:**
 - Produces: immutable contact record with `Prepare` and `MarkAsSent` state behavior, `DbSet<CustomerContact> CustomerContacts`, and the `CustomerContacts` table.
@@ -41,7 +41,7 @@
 - [ ] **Step 1: Define the channel and lifecycle enums**
 
 ```csharp
-namespace ServiceSync.Domain.Enums;
+namespace VoltaMarcada.Domain.Enums;
 
 public enum CustomerContactChannel
 {
@@ -104,28 +104,28 @@ Create `CustomerContacts` with UUID identifiers, `varchar(2000)` message, intege
 
 - [ ] **Step 5: Perform static schema verification**
 
-Run: `rg -n "CustomerContact|CustomerContacts|IX_CustomerContacts|public set;|DateTime\.(Now|UtcNow)" src/ServiceSync.Domain src/ServiceSync.Infrastructure/Persistence`
+Run: `rg -n "CustomerContact|CustomerContacts|IX_CustomerContacts|public set;|DateTime\.(Now|UtcNow)" src/VoltaMarcada.Domain src/VoltaMarcada.Infrastructure/Persistence`
 
 Expected: the new entity has private setters, no direct domain/application clock calls, and configuration, migration, and snapshot use the same table/index names.
 
 - [ ] **Step 6: Commit the aggregate and schema**
 
 ```bash
-git add src/ServiceSync.Domain/Enums/CustomerContactChannel.cs src/ServiceSync.Domain/Enums/CustomerContactStatus.cs src/ServiceSync.Domain/Entities/CustomerContact.cs src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs src/ServiceSync.Infrastructure/Persistence/Configurations/CustomerContactConfiguration.cs src/ServiceSync.Infrastructure/Persistence/Migrations/20260824160000_AddCustomerContacts.cs src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs
+git add src/VoltaMarcada.Domain/Enums/CustomerContactChannel.cs src/VoltaMarcada.Domain/Enums/CustomerContactStatus.cs src/VoltaMarcada.Domain/Entities/CustomerContact.cs src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs src/VoltaMarcada.Infrastructure/Persistence/Configurations/CustomerContactConfiguration.cs src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260824160000_AddCustomerContacts.cs src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs
 git commit -m "feat: add customer contact history"
 ```
 
 ### Task 2: Add Tenant-Scoped Contact Persistence and WhatsApp Link Construction
 
 **Files:**
-- Create: `src/ServiceSync.Application/Abstractions/Persistence/ICustomerContactRepository.cs`
-- Create: `src/ServiceSync.Application/Abstractions/Communication/IWhatsAppLinkBuilder.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Repositories/CustomerContactRepository.cs`
-- Create: `src/ServiceSync.Infrastructure/Communication/WhatsAppLinkBuilder.cs`
-- Modify: `src/ServiceSync.Infrastructure/DependencyInjection.cs`
-- Modify: `src/ServiceSync.Application/Abstractions/Persistence/IMaintenanceOpportunityRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/MaintenanceOpportunityRepository.cs`
-- Modify: `src/ServiceSync.Application/MaintenanceOpportunities/MaintenanceOpportunityDtos.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Persistence/ICustomerContactRepository.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Communication/IWhatsAppLinkBuilder.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/CustomerContactRepository.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Communication/WhatsAppLinkBuilder.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/DependencyInjection.cs`
+- Modify: `src/VoltaMarcada.Application/Abstractions/Persistence/IMaintenanceOpportunityRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/MaintenanceOpportunityRepository.cs`
+- Modify: `src/VoltaMarcada.Application/MaintenanceOpportunities/MaintenanceOpportunityDtos.cs`
 
 **Interfaces:**
 - Produces: `ICustomerContactRepository`, `IWhatsAppLinkBuilder`, contact context, and history DTOs returned with every maintenance-opportunity item.
@@ -177,25 +177,25 @@ In `GetListAsync`, fetch contacts in a second company-filtered query for the sel
 
 Register `ICustomerContactRepository` and `IWhatsAppLinkBuilder` as scoped services in Infrastructure. Preserve the shared scoped `AppDbContext` so one `SaveChangesAsync` can persist the contact and opportunity mutations together.
 
-Run: `rg -n "GetContactContextAsync|CustomerContacts|CompanyId == companyId|wa\.me|Uri\.EscapeDataString" src/ServiceSync.Application src/ServiceSync.Infrastructure`
+Run: `rg -n "GetContactContextAsync|CustomerContacts|CompanyId == companyId|wa\.me|Uri\.EscapeDataString" src/VoltaMarcada.Application src/VoltaMarcada.Infrastructure`
 
 Expected: every contact query has a company predicate and WhatsApp URL formatting appears only in `WhatsAppLinkBuilder`.
 
 - [ ] **Step 5: Commit persistence and communication infrastructure**
 
 ```bash
-git add src/ServiceSync.Application/Abstractions/Persistence/ICustomerContactRepository.cs src/ServiceSync.Application/Abstractions/Communication/IWhatsAppLinkBuilder.cs src/ServiceSync.Application/Abstractions/Persistence/IMaintenanceOpportunityRepository.cs src/ServiceSync.Application/MaintenanceOpportunities/MaintenanceOpportunityDtos.cs src/ServiceSync.Infrastructure/Persistence/Repositories/CustomerContactRepository.cs src/ServiceSync.Infrastructure/Persistence/Repositories/MaintenanceOpportunityRepository.cs src/ServiceSync.Infrastructure/Communication/WhatsAppLinkBuilder.cs src/ServiceSync.Infrastructure/DependencyInjection.cs
+git add src/VoltaMarcada.Application/Abstractions/Persistence/ICustomerContactRepository.cs src/VoltaMarcada.Application/Abstractions/Communication/IWhatsAppLinkBuilder.cs src/VoltaMarcada.Application/Abstractions/Persistence/IMaintenanceOpportunityRepository.cs src/VoltaMarcada.Application/MaintenanceOpportunities/MaintenanceOpportunityDtos.cs src/VoltaMarcada.Infrastructure/Persistence/Repositories/CustomerContactRepository.cs src/VoltaMarcada.Infrastructure/Persistence/Repositories/MaintenanceOpportunityRepository.cs src/VoltaMarcada.Infrastructure/Communication/WhatsAppLinkBuilder.cs src/VoltaMarcada.Infrastructure/DependencyInjection.cs
 git commit -m "feat: add customer contact persistence"
 ```
 
 ### Task 3: Implement Explicit Contact Preparation and Sending Use Cases
 
 **Files:**
-- Create: `src/ServiceSync.Application/MaintenanceOpportunities/CustomerContactErrors.cs`
-- Create: `src/ServiceSync.Application/MaintenanceOpportunities/MaintenanceOpportunityContactUseCases.cs`
-- Modify: `src/ServiceSync.Application/DependencyInjection.cs`
-- Modify: `src/ServiceSync.Web/Errors/OperationErrorMessages.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/MaintenanceOpportunityEndpoints.cs`
+- Create: `src/VoltaMarcada.Application/MaintenanceOpportunities/CustomerContactErrors.cs`
+- Create: `src/VoltaMarcada.Application/MaintenanceOpportunities/MaintenanceOpportunityContactUseCases.cs`
+- Modify: `src/VoltaMarcada.Application/DependencyInjection.cs`
+- Modify: `src/VoltaMarcada.Web/Errors/OperationErrorMessages.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/MaintenanceOpportunityEndpoints.cs`
 
 **Interfaces:**
 - Produces: `PrepareMaintenanceOpportunityWhatsAppContactUseCase` and `ConfirmMaintenanceOpportunityContactSentUseCase`, plus owner endpoints that return the prepared link and accept a contact ID for confirmation.
@@ -281,21 +281,21 @@ Keep these routes inside the existing owner-only maintenance group. Remove the o
 
 Register both use cases as scoped services.
 
-Run: `rg -n "PrepareMaintenanceOpportunityWhatsAppContactUseCase|ConfirmMaintenanceOpportunityContactSentUseCase|MarkAsSent|MarkAsContacted|contacts/whatsapp|contacts/.*/sent" src/ServiceSync.Application src/ServiceSync.Web`
+Run: `rg -n "PrepareMaintenanceOpportunityWhatsAppContactUseCase|ConfirmMaintenanceOpportunityContactSentUseCase|MarkAsSent|MarkAsContacted|contacts/whatsapp|contacts/.*/sent" src/VoltaMarcada.Application src/VoltaMarcada.Web`
 
 Expected: preparation persists before link return; confirmation is the only new path that changes an opportunity to contacted; both endpoints require owner authorization through their route group.
 
 - [ ] **Step 6: Commit the contact workflow**
 
 ```bash
-git add src/ServiceSync.Application/MaintenanceOpportunities/CustomerContactErrors.cs src/ServiceSync.Application/MaintenanceOpportunities/MaintenanceOpportunityContactUseCases.cs src/ServiceSync.Application/DependencyInjection.cs src/ServiceSync.Web/Errors/OperationErrorMessages.cs src/ServiceSync.Web/Endpoints/MaintenanceOpportunityEndpoints.cs
+git add src/VoltaMarcada.Application/MaintenanceOpportunities/CustomerContactErrors.cs src/VoltaMarcada.Application/MaintenanceOpportunities/MaintenanceOpportunityContactUseCases.cs src/VoltaMarcada.Application/DependencyInjection.cs src/VoltaMarcada.Web/Errors/OperationErrorMessages.cs src/VoltaMarcada.Web/Endpoints/MaintenanceOpportunityEndpoints.cs
 git commit -m "feat: track maintenance WhatsApp contacts"
 ```
 
 ### Task 4: Replace the Maintenance-Center Contact Action with History and Confirmation
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Components/Pages/MaintenanceOpportunities.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/MaintenanceOpportunities.razor`
 
 **Interfaces:**
 - Consumes: `MaintenanceOpportunityListItem.Contacts`, `PrepareMaintenanceOpportunityWhatsAppContactUseCase`, and `ConfirmMaintenanceOpportunityContactSentUseCase`.
@@ -332,14 +332,14 @@ Only render the WhatsApp preparation button for `Pending` or `Contacted`. Keep s
 
 - [ ] **Step 4: Verify the component’s allowed paths**
 
-Run: `rg -n "PrepareWhatsAppAsync|Confirmar envio|Historico de contatos|CustomerContactStatus\.Prepared|MarkContactedUseCase|wa\.me|EscapeDataString" src/ServiceSync.Web/Components/Pages/MaintenanceOpportunities.razor`
+Run: `rg -n "PrepareWhatsAppAsync|Confirmar envio|Historico de contatos|CustomerContactStatus\.Prepared|MarkContactedUseCase|wa\.me|EscapeDataString" src/VoltaMarcada.Web/Components/Pages/MaintenanceOpportunities.razor`
 
 Expected: history and confirmation exist; the old direct contact action and client-side WhatsApp URL construction are absent.
 
 - [ ] **Step 5: Commit the UI migration**
 
 ```bash
-git add src/ServiceSync.Web/Components/Pages/MaintenanceOpportunities.razor
+git add src/VoltaMarcada.Web/Components/Pages/MaintenanceOpportunities.razor
 git commit -m "feat: show maintenance contact history"
 ```
 
@@ -357,7 +357,7 @@ Run: `git diff --check`
 
 Expected: no whitespace errors.
 
-Run: `rg -n "CustomerContact|WhatsAppCloudApi|wa\.me|IWhatsAppLinkBuilder|CompanyId == companyId" src/ServiceSync.Domain src/ServiceSync.Application src/ServiceSync.Infrastructure src/ServiceSync.Web`
+Run: `rg -n "CustomerContact|WhatsAppCloudApi|wa\.me|IWhatsAppLinkBuilder|CompanyId == companyId" src/VoltaMarcada.Domain src/VoltaMarcada.Application src/VoltaMarcada.Infrastructure src/VoltaMarcada.Web`
 
 Expected: `WhatsAppCloudApi` appears only as future-facing documentation if at all; the link builder is the sole URL construction location; repository paths query contacts by company.
 

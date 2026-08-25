@@ -23,28 +23,28 @@
 
 ## File Structure
 
-- `src/ServiceSync.Infrastructure/Persistence/Migrations/20260822140000_AddOpenAppointmentOverlapConstraint.cs`: installs PostgreSQL `btree_gist` and adds/removes the open-interval exclusion constraint.
-- `src/ServiceSync.Application/Abstractions/Persistence/IAppointmentRepository.cs`: exposes a persistence outcome for an appointment save that may lose a booking race.
-- `src/ServiceSync.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`: translates PostgreSQL exclusion violations and clears failed tracked changes.
-- `src/ServiceSync.Application/Scheduling/AppointmentUseCases.cs`: maps persistence conflicts and validates the selected professional against an appointment service.
-- `src/ServiceSync.Application/Scheduling/AppointmentChangeUseCases.cs`: validates reassignment and maps persistence conflicts for reschedules and adjustments.
-- `src/ServiceSync.Application/WorkOrders/CreateWorkOrderUseCase.cs`: uses the appointment-aware save path when a new work order also creates an appointment.
-- `src/ServiceSync.Application/Scheduling/SchedulingContracts.cs`: carries professional time zone data and adds the qualified-professional failure result.
-- `src/ServiceSync.Application/Abstractions/Persistence/IProfessionalRepository.cs` and `src/ServiceSync.Infrastructure/Persistence/Repositories/ProfessionalRepository.cs`: return time-zone IDs for a set of company professionals in one query.
-- `src/ServiceSync.Application/Scheduling/GetWorkOrderAppointmentsUseCase.cs` and `src/ServiceSync.Application/Scheduling/AppointmentUseCases.cs`: project professional time zones into appointment DTOs.
-- `src/ServiceSync.Web/Scheduling/AppointmentCalendarTime.cs`: converts appointment UTC timestamps and local calendar date ranges using configured professional time zones.
-- `src/ServiceSync.Web/Components/Pages/Dashboard.razor`, `src/ServiceSync.Web/Components/Pages/Schedule.razor`, and `src/ServiceSync.Web/Components/Shared/AppointmentCard.razor`: render professional-local dates and times.
+- `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260822140000_AddOpenAppointmentOverlapConstraint.cs`: installs PostgreSQL `btree_gist` and adds/removes the open-interval exclusion constraint.
+- `src/VoltaMarcada.Application/Abstractions/Persistence/IAppointmentRepository.cs`: exposes a persistence outcome for an appointment save that may lose a booking race.
+- `src/VoltaMarcada.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`: translates PostgreSQL exclusion violations and clears failed tracked changes.
+- `src/VoltaMarcada.Application/Scheduling/AppointmentUseCases.cs`: maps persistence conflicts and validates the selected professional against an appointment service.
+- `src/VoltaMarcada.Application/Scheduling/AppointmentChangeUseCases.cs`: validates reassignment and maps persistence conflicts for reschedules and adjustments.
+- `src/VoltaMarcada.Application/WorkOrders/CreateWorkOrderUseCase.cs`: uses the appointment-aware save path when a new work order also creates an appointment.
+- `src/VoltaMarcada.Application/Scheduling/SchedulingContracts.cs`: carries professional time zone data and adds the qualified-professional failure result.
+- `src/VoltaMarcada.Application/Abstractions/Persistence/IProfessionalRepository.cs` and `src/VoltaMarcada.Infrastructure/Persistence/Repositories/ProfessionalRepository.cs`: return time-zone IDs for a set of company professionals in one query.
+- `src/VoltaMarcada.Application/Scheduling/GetWorkOrderAppointmentsUseCase.cs` and `src/VoltaMarcada.Application/Scheduling/AppointmentUseCases.cs`: project professional time zones into appointment DTOs.
+- `src/VoltaMarcada.Web/Scheduling/AppointmentCalendarTime.cs`: converts appointment UTC timestamps and local calendar date ranges using configured professional time zones.
+- `src/VoltaMarcada.Web/Components/Pages/Dashboard.razor`, `src/VoltaMarcada.Web/Components/Pages/Schedule.razor`, and `src/VoltaMarcada.Web/Components/Shared/AppointmentCard.razor`: render professional-local dates and times.
 
 ### Task 1: Enforce open appointment intervals in PostgreSQL
 
 **Files:**
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/20260822140000_AddOpenAppointmentOverlapConstraint.cs`
-- Modify: `src/ServiceSync.Application/Abstractions/Persistence/IAppointmentRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/SchedulingContracts.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/AppointmentUseCases.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/AppointmentChangeUseCases.cs`
-- Modify: `src/ServiceSync.Application/WorkOrders/CreateWorkOrderUseCase.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260822140000_AddOpenAppointmentOverlapConstraint.cs`
+- Modify: `src/VoltaMarcada.Application/Abstractions/Persistence/IAppointmentRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/SchedulingContracts.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/AppointmentUseCases.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/AppointmentChangeUseCases.cs`
+- Modify: `src/VoltaMarcada.Application/WorkOrders/CreateWorkOrderUseCase.cs`
 
 **Interfaces:**
 - Produces `AppointmentPersistenceOutcome` with `Saved` and `Conflict` values.
@@ -132,11 +132,11 @@ Confirm the constraint name is identical in migration and repository, that only 
 ### Task 2: Enforce professional service qualification in appointment use cases
 
 **Files:**
-- Modify: `src/ServiceSync.Application/Scheduling/SchedulingContracts.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/AppointmentUseCases.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/AppointmentChangeUseCases.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/AppointmentEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Components/Pages/Schedule.razor`
+- Modify: `src/VoltaMarcada.Application/Scheduling/SchedulingContracts.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/AppointmentUseCases.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/AppointmentChangeUseCases.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/AppointmentEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Schedule.razor`
 
 **Interfaces:**
 - Produces `SchedulingOperationResultCode.ProfessionalNotQualified`.
@@ -189,15 +189,15 @@ Confirm the validation executes inside use cases, not only in Razor filters, and
 ### Task 3: Carry professional time zones into calendar rendering
 
 **Files:**
-- Modify: `src/ServiceSync.Application/Abstractions/Persistence/IProfessionalRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/ProfessionalRepository.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/SchedulingContracts.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/AppointmentUseCases.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/GetWorkOrderAppointmentsUseCase.cs`
-- Create: `src/ServiceSync.Web/Scheduling/AppointmentCalendarTime.cs`
-- Modify: `src/ServiceSync.Web/Components/Pages/Dashboard.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Schedule.razor`
-- Modify: `src/ServiceSync.Web/Components/Shared/AppointmentCard.razor`
+- Modify: `src/VoltaMarcada.Application/Abstractions/Persistence/IProfessionalRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/ProfessionalRepository.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/SchedulingContracts.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/AppointmentUseCases.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/GetWorkOrderAppointmentsUseCase.cs`
+- Create: `src/VoltaMarcada.Web/Scheduling/AppointmentCalendarTime.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Dashboard.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Schedule.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/AppointmentCard.razor`
 
 **Interfaces:**
 - Produces `Task<IReadOnlyDictionary<Guid, string>> GetTimeZoneIdsAsync(Guid companyId, IReadOnlyCollection<Guid> professionalIds, CancellationToken cancellationToken = default)`.

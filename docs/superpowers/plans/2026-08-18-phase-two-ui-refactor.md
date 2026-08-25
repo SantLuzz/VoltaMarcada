@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Refactor the implemented ServiceSync Web interface into a coherent, responsive MudBlazor application aligned with the ServiceSync design system.
+**Goal:** Refactor the implemented VoltaMarcada Web interface into a coherent, responsive MudBlazor application aligned with the VoltaMarcada design system.
 
-**Architecture:** Centralize visual tokens and MudBlazor defaults in a shared `ServiceSyncTheme`, make the authenticated and authentication layouts the only application shells, and use small shared presentation components for recurrent page structures. Preserve native endpoint POST contracts and existing domain/application behavior; this is a presentation-only refactor.
+**Architecture:** Centralize visual tokens and MudBlazor defaults in a shared `VoltaMarcadaTheme`, make the authenticated and authentication layouts the only application shells, and use small shared presentation components for recurrent page structures. Preserve native endpoint POST contracts and existing domain/application behavior; this is a presentation-only refactor.
 
 **Tech Stack:** .NET 10, ASP.NET Core Blazor Web App, MudBlazor 9.8, scoped CSS.
 
@@ -25,22 +25,22 @@
 ### Task 1: Establish the shared UI foundation
 
 **Files:**
-- Create: `src/ServiceSync.Web/Components/Theme/ServiceSyncTheme.cs`
-- Modify: `src/ServiceSync.Web/Components/App.razor`
-- Modify: `src/ServiceSync.Web/Components/_Imports.razor`
-- Modify: `src/ServiceSync.Web/wwwroot/app.css`
+- Create: `src/VoltaMarcada.Web/Components/Theme/VoltaMarcadaTheme.cs`
+- Modify: `src/VoltaMarcada.Web/Components/App.razor`
+- Modify: `src/VoltaMarcada.Web/Components/_Imports.razor`
+- Modify: `src/VoltaMarcada.Web/wwwroot/app.css`
 
 **Interfaces:**
-- Produces: `ServiceSyncTheme.Instance`, a `MudTheme` consumed by `MainLayout` and `AuthLayout`.
+- Produces: `VoltaMarcadaTheme.Instance`, a `MudTheme` consumed by `MainLayout` and `AuthLayout`.
 - Produces: global CSS custom properties and layout utility classes used only by shared shells and components.
 
 - [ ] **Step 1: Add a centralized MudBlazor theme**
 
-Create `ServiceSyncTheme` with an `Instance` property configured for the specified primary, secondary, app background, surface, border, text, and semantic colors. Configure Inter-first typography and component defaults for outlined inputs, 12px surface radii, and restrained elevations.
+Create `VoltaMarcadaTheme` with an `Instance` property configured for the specified primary, secondary, app background, surface, border, text, and semantic colors. Configure Inter-first typography and component defaults for outlined inputs, 12px surface radii, and restrained elevations.
 
 - [ ] **Step 2: Make global styles framework-neutral and token-based**
 
-Replace Bootstrap template rules, gradients, raw form input rules, and legacy authentication CSS in `app.css` with font import/fallbacks, full-height document setup, ServiceSync CSS variables, focus behavior, and reusable shell helpers. Do not include component-specific colors that belong in the theme.
+Replace Bootstrap template rules, gradients, raw form input rules, and legacy authentication CSS in `app.css` with font import/fallbacks, full-height document setup, VoltaMarcada CSS variables, focus behavior, and reusable shell helpers. Do not include component-specific colors that belong in the theme.
 
 - [ ] **Step 3: Register shared imports and theme usage**
 
@@ -48,26 +48,26 @@ Add the Theme namespace to `_Imports.razor`. Update `App.razor` metadata so the 
 
 - [ ] **Step 4: Statically inspect the shared foundation**
 
-Run `rg -n "#087e70|#06675c|Bootstrap|btn-primary|form-control" src/ServiceSync.Web/Components src/ServiceSync.Web/wwwroot/app.css` and review every match. Expected outcome: no active legacy green palette or Bootstrap template control styles remain in the refactored UI.
+Run `rg -n "#087e70|#06675c|Bootstrap|btn-primary|form-control" src/VoltaMarcada.Web/Components src/VoltaMarcada.Web/wwwroot/app.css` and review every match. Expected outcome: no active legacy green palette or Bootstrap template control styles remain in the refactored UI.
 
 ### Task 2: Refactor reusable form controls and authentication shell
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Components/Layout/AuthLayout.razor`
-- Modify: `src/ServiceSync.Web/Components/Shared/PasswordInput.razor`
-- Delete: `src/ServiceSync.Web/Components/Shared/PasswordInput.razor.css`
-- Modify: `src/ServiceSync.Web/Components/Shared/BrazilianDocumentInput.razor`
-- Modify: `src/ServiceSync.Web/Components/Shared/BrazilianPhoneInput.razor`
-- Modify: `src/ServiceSync.Web/Components/Shared/BrazilianPostalCodeInput.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Layout/AuthLayout.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/PasswordInput.razor`
+- Delete: `src/VoltaMarcada.Web/Components/Shared/PasswordInput.razor.css`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/BrazilianDocumentInput.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/BrazilianPhoneInput.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/BrazilianPostalCodeInput.razor`
 
 **Interfaces:**
-- Consumes: `ServiceSyncTheme.Instance` from Task 1.
+- Consumes: `VoltaMarcadaTheme.Instance` from Task 1.
 - Preserves: `Id`, `Name`, `Required`, `Autocomplete`, and `MinLength` parameter contracts of all shared inputs.
 - Produces: MudBlazor-based controls whose rendered input names continue to match the account and onboarding endpoints.
 
 - [ ] **Step 1: Make the authentication layout own the shared surface**
 
-Render `MudThemeProvider` with `ServiceSyncTheme.Instance`, `MudPopoverProvider`, `MudDialogProvider`, and `MudSnackbarProvider` in `AuthLayout`. Provide the centered branded card shell with `/logos/logo.png`, responsive widths, and a body region for individual pages.
+Render `MudThemeProvider` with `VoltaMarcadaTheme.Instance`, `MudPopoverProvider`, `MudDialogProvider`, and `MudSnackbarProvider` in `AuthLayout`. Provide the centered branded card shell with `/logos/logo.png`, responsive widths, and a body region for individual pages.
 
 - [ ] **Step 2: Replace the password field implementation**
 
@@ -84,9 +84,9 @@ Delete the password scoped CSS. Compare the input parameter names used by Login 
 ### Task 3: Refactor authentication and company onboarding pages
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Components/Pages/Account/Login.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Account/Register.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/CompanyOnboarding.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Account/Login.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Account/Register.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/CompanyOnboarding.razor`
 
 **Interfaces:**
 - Consumes: `AuthLayout` from Task 2.
@@ -112,19 +112,19 @@ Search `Login.razor`, `Register.razor`, and `CompanyOnboarding.razor` for raw vi
 ### Task 4: Refactor the authenticated shell and navigation
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Components/Layout/MainLayout.razor`
-- Modify: `src/ServiceSync.Web/Components/Layout/MainLayout.razor.css`
-- Delete: `src/ServiceSync.Web/Components/Layout/NavMenu.razor`
-- Delete: `src/ServiceSync.Web/Components/Layout/NavMenu.razor.css`
+- Modify: `src/VoltaMarcada.Web/Components/Layout/MainLayout.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Layout/MainLayout.razor.css`
+- Delete: `src/VoltaMarcada.Web/Components/Layout/NavMenu.razor`
+- Delete: `src/VoltaMarcada.Web/Components/Layout/NavMenu.razor.css`
 
 **Interfaces:**
-- Consumes: `ServiceSyncTheme.Instance` from Task 1 and the existing company lookup behavior.
+- Consumes: `VoltaMarcadaTheme.Instance` from Task 1 and the existing company lookup behavior.
 - Produces: the default authenticated layout used by `Routes.razor`.
 - Preserves: dashboard route, authentication state check, company-name lookup, and POST logout endpoint/action.
 
 - [ ] **Step 1: Apply the centralized theme and responsive MudBlazor shell**
 
-Update `MainLayout` to use `MudThemeProvider Theme="@ServiceSyncTheme.Instance"`, providers, a responsive drawer at the medium breakpoint, a top bar with a labeled drawer toggle, bounded main content, and CSS classes based on design tokens.
+Update `MainLayout` to use `MudThemeProvider Theme="@VoltaMarcadaTheme.Instance"`, providers, a responsive drawer at the medium breakpoint, a top bar with a labeled drawer toggle, bounded main content, and CSS classes based on design tokens.
 
 - [ ] **Step 2: Replace branding and navigation presentation**
 
@@ -141,13 +141,13 @@ Review drawer, app bar, content, and footer CSS at desktop and mobile media-quer
 ### Task 5: Create shared page feedback components and refactor all pages
 
 **Files:**
-- Create: `src/ServiceSync.Web/Components/Shared/PageHeader.razor`
-- Create: `src/ServiceSync.Web/Components/Shared/EmptyState.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Dashboard.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/NotFound.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Error.razor`
-- Modify: `src/ServiceSync.Web/Components/RedirectToLogin.razor`
-- Modify: `src/ServiceSync.Web/Components/Layout/ReconnectModal.razor`
+- Create: `src/VoltaMarcada.Web/Components/Shared/PageHeader.razor`
+- Create: `src/VoltaMarcada.Web/Components/Shared/EmptyState.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Dashboard.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/NotFound.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Error.razor`
+- Modify: `src/VoltaMarcada.Web/Components/RedirectToLogin.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Layout/ReconnectModal.razor`
 
 **Interfaces:**
 - Produces: `PageHeader` with `Title`, `Description`, and optional `Actions` render fragment.

@@ -23,26 +23,26 @@
 
 | Path | Responsibility |
 | --- | --- |
-| `src/ServiceSync.Application/Abstractions/Storage/IFileStorage.cs` | Provider-neutral upload/delete contract and DTOs. |
-| `src/ServiceSync.Application/CompanyOnboarding/*` | Logo-policy validation and storage orchestration. |
-| `src/ServiceSync.Infrastructure/Storage/CloudinaryFileStorage.cs` | Cloudinary SDK upload/delete implementation. |
-| `src/ServiceSync.Infrastructure/Storage/CloudinaryOptions.cs` | Infrastructure-owned provider configuration. |
-| `src/ServiceSync.Infrastructure/DependencyInjection.cs` | Cloudinary client and `IFileStorage` registration. |
-| `src/ServiceSync.Infrastructure/ServiceSync.Infrastructure.csproj` | Cloudinary SDK package reference. |
-| `src/ServiceSync.Web/Program.cs` | Remove provider configuration owned by Infrastructure. |
-| `src/ServiceSync.Web/Configuration/CloudinaryOptions.cs` | Remove obsolete Web-owned options type. |
-| `src/ServiceSync.Web/appsettings.json` | Declare non-secret Cloudinary configuration names. |
-| `src/ServiceSync.Infrastructure/Storage/LocalCompanyLogoStorage.cs` | Remove obsolete `wwwroot` persistence. |
-| `src/ServiceSync.Application/Abstractions/Storage/ICompanyLogoStorage.cs` | Remove replaced logo-specific contract. |
+| `src/VoltaMarcada.Application/Abstractions/Storage/IFileStorage.cs` | Provider-neutral upload/delete contract and DTOs. |
+| `src/VoltaMarcada.Application/CompanyOnboarding/*` | Logo-policy validation and storage orchestration. |
+| `src/VoltaMarcada.Infrastructure/Storage/CloudinaryFileStorage.cs` | Cloudinary SDK upload/delete implementation. |
+| `src/VoltaMarcada.Infrastructure/Storage/CloudinaryOptions.cs` | Infrastructure-owned provider configuration. |
+| `src/VoltaMarcada.Infrastructure/DependencyInjection.cs` | Cloudinary client and `IFileStorage` registration. |
+| `src/VoltaMarcada.Infrastructure/VoltaMarcada.Infrastructure.csproj` | Cloudinary SDK package reference. |
+| `src/VoltaMarcada.Web/Program.cs` | Remove provider configuration owned by Infrastructure. |
+| `src/VoltaMarcada.Web/Configuration/CloudinaryOptions.cs` | Remove obsolete Web-owned options type. |
+| `src/VoltaMarcada.Web/appsettings.json` | Declare non-secret Cloudinary configuration names. |
+| `src/VoltaMarcada.Infrastructure/Storage/LocalCompanyLogoStorage.cs` | Remove obsolete `wwwroot` persistence. |
+| `src/VoltaMarcada.Application/Abstractions/Storage/ICompanyLogoStorage.cs` | Remove replaced logo-specific contract. |
 
 ### Task 1: Replace the logo-specific application contract
 
 **Files:**
 
-- Create: `src/ServiceSync.Application/Abstractions/Storage/IFileStorage.cs`
-- Delete: `src/ServiceSync.Application/Abstractions/Storage/ICompanyLogoStorage.cs`
-- Modify: `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingCommand.cs`
-- Modify: `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingUseCase.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Storage/IFileStorage.cs`
+- Delete: `src/VoltaMarcada.Application/Abstractions/Storage/ICompanyLogoStorage.cs`
+- Modify: `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingCommand.cs`
+- Modify: `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingUseCase.cs`
 
 **Produces:**
 
@@ -60,7 +60,7 @@ public interface IFileStorage
 
 - [ ] **Step 1: Create `IFileStorage` and its DTOs**
 
-Place the definitions above in `ServiceSync.Application.Abstractions.Storage`. Require the storage result key to be non-null through the positional record parameter.
+Place the definitions above in `VoltaMarcada.Application.Abstractions.Storage`. Require the storage result key to be non-null through the positional record parameter.
 
 - [ ] **Step 2: Keep the endpoint-owned upload representation**
 
@@ -92,11 +92,11 @@ Retain the existing non-success persistence rollback, calling `fileStorage.Delet
 
 **Files:**
 
-- Modify: `src/ServiceSync.Infrastructure/ServiceSync.Infrastructure.csproj`
-- Create: `src/ServiceSync.Infrastructure/Storage/CloudinaryOptions.cs`
-- Create: `src/ServiceSync.Infrastructure/Storage/CloudinaryFileStorage.cs`
-- Delete: `src/ServiceSync.Infrastructure/Storage/LocalCompanyLogoStorage.cs`
-- Modify: `src/ServiceSync.Infrastructure/DependencyInjection.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/VoltaMarcada.Infrastructure.csproj`
+- Create: `src/VoltaMarcada.Infrastructure/Storage/CloudinaryOptions.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Storage/CloudinaryFileStorage.cs`
+- Delete: `src/VoltaMarcada.Infrastructure/Storage/LocalCompanyLogoStorage.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/DependencyInjection.cs`
 
 **Consumes:** `IFileStorage`, `FileStorageUploadRequest`, and `FileStorageUploadResult` from Task 1.
 
@@ -143,10 +143,10 @@ In `AddInfrastructure`, bind `CloudinaryOptions`, validate non-empty `CloudName`
 
 **Files:**
 
-- Modify: `src/ServiceSync.Web/Endpoints/CompanyOnboardingEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Program.cs`
-- Modify: `src/ServiceSync.Web/appsettings.json`
-- Delete: `src/ServiceSync.Web/Configuration/CloudinaryOptions.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/CompanyOnboardingEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Program.cs`
+- Modify: `src/VoltaMarcada.Web/appsettings.json`
+- Delete: `src/VoltaMarcada.Web/Configuration/CloudinaryOptions.cs`
 
 **Consumes:** The Application `FileUpload` type and Infrastructure `AddInfrastructure` registration.
 
@@ -162,7 +162,7 @@ Keep stream lifetime and existing localized invalid-logo response unchanged.
 
 - [ ] **Step 2: Remove Web-owned Cloudinary binding**
 
-Remove `using ServiceSync.Web.Configuration;` and the `Configure<CloudinaryOptions>` call from `Program.cs`. `AddInfrastructure(builder.Configuration)` becomes the sole composition point for Cloudinary configuration.
+Remove `using VoltaMarcada.Web.Configuration;` and the `Configure<CloudinaryOptions>` call from `Program.cs`. `AddInfrastructure(builder.Configuration)` becomes the sole composition point for Cloudinary configuration.
 
 - [ ] **Step 3: Align environment configuration keys**
 

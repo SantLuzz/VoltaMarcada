@@ -1,0 +1,13 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="@VoltaMarcadaTheme.Instance" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<main class="auth-layout">
+    <MudPaper Class="auth-card" Elevation="1">
+        <img src="/logos/logo.png" alt="VoltaMarcada" class="auth-logo" />
+        @Body
+    </MudPaper>
+</main>

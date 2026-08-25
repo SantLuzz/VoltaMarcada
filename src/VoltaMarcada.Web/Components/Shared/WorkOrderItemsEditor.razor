@@ -1,0 +1,119 @@
+@using VoltaMarcada.Application.WorkOrders
+
+<MudStack Spacing="2">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+        <MudText Typo="Typo.h6">Itens e valores</MudText>
+        @if (!ReadOnly)
+        {
+            <MudButton Variant="Variant.Outlined" OnClick="AddItem">Adicionar item</MudButton>
+        }
+    </MudStack>
+
+    @if (!string.IsNullOrWhiteSpace(ServiceName))
+    {
+        <MudGrid Class="work-order-item-row" AlignItems="AlignItems.Center">
+            <MudItem xs="12" sm="5">
+                <MudTextField T="string" Value="@ServiceName" Label="Serviço" ReadOnly="true" />
+            </MudItem>
+            <MudItem xs="6" sm="2">
+                <MudNumericField T="decimal" Value="@(1m)" Label="Quantidade" ReadOnly="true" />
+            </MudItem>
+            <MudItem xs="6" sm="2">
+                <BrazilianCurrencyInput Id="service-unit-price"
+                                        Name="service-unit-price"
+                                        Label="Valor do serviço"
+                                        Value="@ServiceUnitPrice"
+                                        ValueChanged="ServiceUnitPriceChanged"
+                                        Required="@(!IsServicePriceFixed)"
+                                        RequiredError="Informe o valor do serviço."
+                                        Variant="Variant.Text"
+                                        Disabled="@(ReadOnly || IsServicePriceFixed)" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudText>Subtotal: @ServiceSubtotal.ToString("C")</MudText>
+            </MudItem>
+        </MudGrid>
+    }
+
+    @if (Items.Count == 0)
+    {
+        <MudText Color="Color.Secondary">Nenhum item adicional adicionado.</MudText>
+    }
+    else
+    {
+        @foreach (var item in Items.Select((value, index) => new { value, index }))
+        {
+            <MudGrid Class="work-order-item-row" AlignItems="AlignItems.Center">
+                <MudItem xs="12" sm="5">
+                    <MudTextField T="string" Value="@item.value.Description" ValueChanged="@(value => UpdateItem(item.index, item.value with { Description = value ?? string.Empty }))" Label="Descrição" ReadOnly="ReadOnly" />
+                </MudItem>
+                <MudItem xs="6" sm="2">
+                    <MudNumericField T="decimal" Value="@item.value.Quantity" ValueChanged="@(value => UpdateItem(item.index, item.value with { Quantity = value }))" Label="Quantidade" Min="0.01m" ReadOnly="ReadOnly" />
+                </MudItem>
+                <MudItem xs="6" sm="2">
+                    <BrazilianCurrencyInput Id="@($"additional-item-{item.index}-unit-price")"
+                                            Name="@($"additional-item-{item.index}-unit-price")"
+                                            Label="Valor unitário"
+                                            Value="@item.value.UnitPrice"
+                                            ValueChanged="@(value => UpdateItem(item.index, item.value with { UnitPrice = value ?? 0m }))"
+                                            Variant="Variant.Text"
+                                            Disabled="ReadOnly" />
+                </MudItem>
+                <MudItem xs="8" sm="2">
+                    <MudText>Subtotal: @((item.value.Quantity * item.value.UnitPrice).ToString("C"))</MudText>
+                </MudItem>
+                @if (!ReadOnly)
+                {
+                    <MudItem xs="4" sm="1">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover item" OnClick="@(() => RemoveItem(item.index))" />
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    }
+
+    <MudText Typo="Typo.subtitle1">Total da OS: @((ServiceSubtotal + Items.Sum(item => item.Quantity * item.UnitPrice)).ToString("C"))</MudText>
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<WorkOrderItemInput> Items { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<List<WorkOrderItemInput>> ItemsChanged { get; set; }
+
+    [Parameter]
+    public bool ReadOnly { get; set; }
+
+    [Parameter]
+    public string ServiceName { get; set; } = string.Empty;
+
+    [Parameter]
+    public decimal? ServiceUnitPrice { get; set; }
+
+    [Parameter]
+    public EventCallback<decimal?> ServiceUnitPriceChanged { get; set; }
+
+    [Parameter]
+    public bool IsServicePriceFixed { get; set; }
+
+    private decimal ServiceSubtotal => ServiceUnitPrice ?? 0m;
+
+    private async Task AddItem()
+    {
+        var updated = Items.Append(new WorkOrderItemInput(string.Empty, 1, 0)).ToList();
+        await ItemsChanged.InvokeAsync(updated);
+    }
+
+    private async Task RemoveItem(int index)
+    {
+        var updated = Items.Where((_, currentIndex) => currentIndex != index).ToList();
+        await ItemsChanged.InvokeAsync(updated);
+    }
+
+    private async Task UpdateItem(int index, WorkOrderItemInput updatedItem)
+    {
+        var updated = Items.Select((item, currentIndex) => currentIndex == index ? updatedItem : item).ToList();
+        await ItemsChanged.InvokeAsync(updated);
+    }
+}

@@ -24,12 +24,12 @@
 ### Task 1: Correct block-request rejection and include requester names
 
 **Files:**
-- Modify: `src/ServiceSync.Domain/Entities/ScheduleBlockRequest.cs`
-- Modify: `src/ServiceSync.Application/Abstractions/Persistence/IProfessionalRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/ProfessionalRepository.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/SchedulingContracts.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/AppointmentChangeUseCases.cs`
-- Modify: `src/ServiceSync.Web/Components/Shared/ScheduleBlockRequestPanel.razor`
+- Modify: `src/VoltaMarcada.Domain/Entities/ScheduleBlockRequest.cs`
+- Modify: `src/VoltaMarcada.Application/Abstractions/Persistence/IProfessionalRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/ProfessionalRepository.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/SchedulingContracts.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/AppointmentChangeUseCases.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/ScheduleBlockRequestPanel.razor`
 
 **Consumes:** `ScheduleBlockRequestStatus.Pending`, `ScheduleBlockRequestStatus.RequiresAppointmentResolution`, and company-scoped professional identifiers.
 
@@ -58,11 +58,11 @@ Confirm the owner UI, use case, and domain allow the same actionable states and 
 ### Task 2: Reuse appointment details and creation UI
 
 **Files:**
-- Create: `src/ServiceSync.Web/Components/Shared/AppointmentDetailsDialog.razor`
-- Create: `src/ServiceSync.Web/Components/Shared/AppointmentEditor.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Dashboard.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Schedule.razor`
-- Modify: `src/ServiceSync.Web/Components/Shared/WorkOrderAppointmentsPanel.razor`
+- Create: `src/VoltaMarcada.Web/Components/Shared/AppointmentDetailsDialog.razor`
+- Create: `src/VoltaMarcada.Web/Components/Shared/AppointmentEditor.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Dashboard.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Schedule.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/WorkOrderAppointmentsPanel.razor`
 
 **Consumes:** `GetAppointmentDetailsUseCase`, `CreateAppointmentUseCase`, `GetAvailableAppointmentSlotsUseCase`, work-order access scope, and current user permissions.
 
@@ -91,13 +91,13 @@ Verify closing the editor resets its state, a successful creation reloads the or
 ### Task 3: Enrich appointment list data and actions
 
 **Files:**
-- Modify: `src/ServiceSync.Application/Scheduling/SchedulingContracts.cs`
-- Modify: `src/ServiceSync.Application/Abstractions/Persistence/IAppointmentRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/AppointmentUseCases.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/GetWorkOrderAppointmentsUseCase.cs`
-- Modify: `src/ServiceSync.Web/Components/Pages/Schedule.razor`
-- Modify: `src/ServiceSync.Web/Components/Shared/WorkOrderAppointmentsPanel.razor`
+- Modify: `src/VoltaMarcada.Application/Scheduling/SchedulingContracts.cs`
+- Modify: `src/VoltaMarcada.Application/Abstractions/Persistence/IAppointmentRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/AppointmentRepository.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/AppointmentUseCases.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/GetWorkOrderAppointmentsUseCase.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Schedule.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/WorkOrderAppointmentsPanel.razor`
 
 **Consumes:** appointment IDs, existing company-scoped access predicates, and appointment status transition use cases.
 
@@ -126,12 +126,12 @@ Confirm employee views remain restricted to their professional appointments, des
 ### Task 4: Add focused appointment editing
 
 **Files:**
-- Modify: `src/ServiceSync.Domain/Entities/Appointment.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/SchedulingContracts.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/AppointmentChangeUseCases.cs`
-- Modify: `src/ServiceSync.Application/DependencyInjection.cs`
-- Modify: `src/ServiceSync.Web/Components/Pages/Schedule.razor`
-- Modify: `src/ServiceSync.Web/Components/Shared/WorkOrderAppointmentsPanel.razor`
+- Modify: `src/VoltaMarcada.Domain/Entities/Appointment.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/SchedulingContracts.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/AppointmentChangeUseCases.cs`
+- Modify: `src/VoltaMarcada.Application/DependencyInjection.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Schedule.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/WorkOrderAppointmentsPanel.razor`
 
 **Consumes:** owner access, a scheduled appointment, and tenant-scoped linked customer/equipment/service records.
 

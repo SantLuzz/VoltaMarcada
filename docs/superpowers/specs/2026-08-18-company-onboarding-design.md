@@ -2,7 +2,7 @@
 
 ## Goal
 
-Implement Phase 1 authentication and first-company onboarding for ServiceSync. A person can create an account, authenticate with ASP.NET Core Identity, register one company, and enter the authenticated dashboard. Every user who can access company functionality must belong to a company.
+Implement Phase 1 authentication and first-company onboarding for VoltaMarcada. A person can create an account, authenticate with ASP.NET Core Identity, register one company, and enter the authenticated dashboard. Every user who can access company functionality must belong to a company.
 
 ## Scope
 

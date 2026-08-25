@@ -7,13 +7,13 @@ Prevent valid production form submissions from being rejected after an applicati
 ## Scope
 
 - Persist ASP.NET Core Data Protection keys in the existing PostgreSQL database.
-- Use a fixed application name so every ServiceSync process uses the same Data Protection purpose chain.
+- Use a fixed application name so every VoltaMarcada process uses the same Data Protection purpose chain.
 - Add an intentional EF Core migration for the Data Protection key table.
 - Replace the global status-code re-execution behavior.
 
 ## Data Protection
 
-`AppDbContext` will implement the Data Protection EF Core key context and expose a `DataProtectionKeys` set. Infrastructure configuration will register Data Protection with `PersistKeysToDbContext<AppDbContext>()` and a fixed ServiceSync application name.
+`AppDbContext` will implement the Data Protection EF Core key context and expose a `DataProtectionKeys` set. Infrastructure configuration will register Data Protection with `PersistKeysToDbContext<AppDbContext>()` and a fixed VoltaMarcada application name.
 
 This makes the authentication and antiforgery cryptographic keys available to every application process connected to the same database. It prevents an app restart or a second instance from invalidating a form token created by another instance.
 

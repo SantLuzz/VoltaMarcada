@@ -2,7 +2,7 @@
 
 ## Objective
 
-ServiceSync will stop using exceptions as the normal representation of validation failures, missing tenant-owned records, authorization failures, state conflicts, scheduling conflicts, and other expected business outcomes. These conditions will be returned explicitly by application use cases and presented consistently by HTTP endpoints and Blazor components.
+VoltaMarcada will stop using exceptions as the normal representation of validation failures, missing tenant-owned records, authorization failures, state conflicts, scheduling conflicts, and other expected business outcomes. These conditions will be returned explicitly by application use cases and presented consistently by HTTP endpoints and Blazor components.
 
 Exceptions remain appropriate for programming errors, corrupted or impossible domain state, unavailable infrastructure, and other unexpected failures. They are logged at an application boundary and are never exposed directly to users.
 
@@ -15,7 +15,7 @@ Application use cases that can fail for expected reasons will return `OperationR
 - an optional field name for input validation;
 - an internal English description suitable for diagnostics, but not direct display to the user.
 
-The common result types belong in `ServiceSync.Application`. They do not depend on ASP.NET Core, MudBlazor, EF Core, or localization concerns. Feature-specific factory methods or static error definitions keep use cases readable and prevent string literals from spreading through the application.
+The common result types belong in `VoltaMarcada.Application`. They do not depend on ASP.NET Core, MudBlazor, EF Core, or localization concerns. Feature-specific factory methods or static error definitions keep use cases readable and prevent string literals from spreading through the application.
 
 The design intentionally avoids a global enum containing every business failure. Stable feature error codes provide a shared contract while each feature continues to own its vocabulary.
 

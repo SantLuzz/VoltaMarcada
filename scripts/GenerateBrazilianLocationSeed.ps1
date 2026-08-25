@@ -49,7 +49,7 @@ if ($cityRows.Count -lt 5000) {
 }
 
 $lines = [System.Collections.Generic.List[string]]::new()
-$lines.Add('namespace ServiceSync.Infrastructure.Persistence;')
+$lines.Add('namespace VoltaMarcada.Infrastructure.Persistence;')
 $lines.Add('')
 $lines.Add('public sealed record StateSeed(Guid Id, string Name, string Abbreviation);')
 $lines.Add('public sealed record CitySeed(Guid Id, Guid StateId, string Name);')

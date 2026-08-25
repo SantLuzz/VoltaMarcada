@@ -3,9 +3,9 @@ WORKDIR /src
 
 COPY . .
 
-RUN dotnet restore "src/ServiceSync.Web/ServiceSync.Web.csproj"
+RUN dotnet restore "src/VoltaMarcada.Web/VoltaMarcada.Web.csproj"
 
-RUN dotnet publish "src/ServiceSync.Web/ServiceSync.Web.csproj" \
+RUN dotnet publish "src/VoltaMarcada.Web/VoltaMarcada.Web.csproj" \
     -c Release \
     -o /app/publish \
     --no-restore
@@ -23,4 +23,4 @@ ENV ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
 
 EXPOSE 10000
 
-ENTRYPOINT ["dotnet", "ServiceSync.Web.dll"]
+ENTRYPOINT ["dotnet", "VoltaMarcada.Web.dll"]

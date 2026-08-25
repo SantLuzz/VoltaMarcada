@@ -6,7 +6,7 @@ Replace local company-logo persistence under `wwwroot` with Cloudinary storage w
 
 ## Architecture
 
-`ServiceSync.Application` will own an `IFileStorage` contract because application use cases depend on storage behavior, while `ServiceSync.Infrastructure` will provide `CloudinaryFileStorage`.
+`VoltaMarcada.Application` will own an `IFileStorage` contract because application use cases depend on storage behavior, while `VoltaMarcada.Infrastructure` will provide `CloudinaryFileStorage`.
 
 The contract will support two operations:
 
@@ -31,7 +31,7 @@ Cloudinary credentials will be read from the existing `Cloudinary` configuration
 
 `CompleteCompanyOnboardingUseCase` will use `IFileStorage` for the logo upload and retain its existing rollback: if company persistence fails after upload, the uploaded Cloudinary object is deleted using its returned key.
 
-The local `wwwroot/uploads/company-logos` implementation and its DI registration will be removed. Static product assets such as the official ServiceSync logo remain under `wwwroot` and are out of scope.
+The local `wwwroot/uploads/company-logos` implementation and its DI registration will be removed. Static product assets such as the official VoltaMarcada logo remain under `wwwroot` and are out of scope.
 
 ## Error Handling and Verification
 

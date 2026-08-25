@@ -26,7 +26,7 @@ The module introduces an authenticated service catalog with list, create, edit, 
 
 `ServiceChecklistItem` is a dependent entity owned by a service. It contains an item description, an `IsRequired` flag, and a zero-based display order. Checklist obligation is deliberately stored per item; there is no service-level "mandatory checklist" setting.
 
-`ServicePriceType` lives in `ServiceSync.Domain.Enums` and uses these values:
+`ServicePriceType` lives in `VoltaMarcada.Domain.Enums` and uses these values:
 
 - `Fixed`
 - `StartingAt`

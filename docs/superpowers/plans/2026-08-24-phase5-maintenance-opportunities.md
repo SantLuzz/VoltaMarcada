@@ -27,10 +27,10 @@
 ### Task 1: Add the Maintenance Opportunity Aggregate and Persistence Mapping
 
 **Files:**
-- Create: `src/ServiceSync.Domain/Enums/MaintenanceOpportunityStatus.cs`
-- Create: `src/ServiceSync.Domain/Entities/MaintenanceOpportunity.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/MaintenanceOpportunityConfiguration.cs`
+- Create: `src/VoltaMarcada.Domain/Enums/MaintenanceOpportunityStatus.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/MaintenanceOpportunity.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/MaintenanceOpportunityConfiguration.cs`
 
 **Interfaces:**
 - Produces: `MaintenanceOpportunityStatus`, `MaintenanceOpportunity`, and `DbSet<MaintenanceOpportunity> MaintenanceOpportunities`.
@@ -39,7 +39,7 @@
 - [ ] **Step 1: Define the stored commercial status**
 
 ```csharp
-namespace ServiceSync.Domain.Enums;
+namespace VoltaMarcada.Domain.Enums;
 
 public enum MaintenanceOpportunityStatus
 {
@@ -110,31 +110,31 @@ Add restrictive relationships to `Customer`, `Equipment`, `WorkOrder`, and `Serv
 
 - [ ] **Step 4: Verify the aggregate and mapping statically**
 
-Run: `rg -n "MaintenanceOpportunity|public set;|DateTime\.Now|DateTime\.UtcNow" src/ServiceSync.Domain src/ServiceSync.Infrastructure/Persistence`
+Run: `rg -n "MaintenanceOpportunity|public set;|DateTime\.Now|DateTime\.UtcNow" src/VoltaMarcada.Domain src/VoltaMarcada.Infrastructure/Persistence`
 
 Expected: only private entity state setters and no direct clock call in new Domain/Application code.
 
 - [ ] **Step 5: Commit the isolated change**
 
 ```bash
-git add src/ServiceSync.Domain/Enums/MaintenanceOpportunityStatus.cs src/ServiceSync.Domain/Entities/MaintenanceOpportunity.cs src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs src/ServiceSync.Infrastructure/Persistence/Configurations/MaintenanceOpportunityConfiguration.cs
+git add src/VoltaMarcada.Domain/Enums/MaintenanceOpportunityStatus.cs src/VoltaMarcada.Domain/Entities/MaintenanceOpportunity.cs src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs src/VoltaMarcada.Infrastructure/Persistence/Configurations/MaintenanceOpportunityConfiguration.cs
 git commit -m "feat: add maintenance opportunity aggregate"
 ```
 
 ### Task 2: Add Tenant-Scoped Repository, DTOs, Authorization, and Queries
 
 **Files:**
-- Create: `src/ServiceSync.Application/Abstractions/Persistence/IMaintenanceOpportunityRepository.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Repositories/MaintenanceOpportunityRepository.cs`
-- Create: `src/ServiceSync.Application/MaintenanceOpportunities/MaintenanceOpportunityDtos.cs`
-- Create: `src/ServiceSync.Application/MaintenanceOpportunities/MaintenanceOpportunityErrors.cs`
-- Create: `src/ServiceSync.Application/MaintenanceOpportunities/MaintenanceOpportunityOwnerAuthorization.cs`
-- Create: `src/ServiceSync.Application/MaintenanceOpportunities/GetMaintenanceOpportunitiesUseCase.cs`
-- Create: `src/ServiceSync.Application/MaintenanceOpportunities/GetMaintenanceOpportunitySummaryUseCase.cs`
-- Create: `src/ServiceSync.Application/MaintenanceOpportunities/GetMaintenanceOpportunityForSchedulingUseCase.cs`
-- Modify: `src/ServiceSync.Application/DependencyInjection.cs`
-- Modify: `src/ServiceSync.Infrastructure/DependencyInjection.cs`
-- Modify: `src/ServiceSync.Web/Errors/OperationErrorMessages.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Persistence/IMaintenanceOpportunityRepository.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/MaintenanceOpportunityRepository.cs`
+- Create: `src/VoltaMarcada.Application/MaintenanceOpportunities/MaintenanceOpportunityDtos.cs`
+- Create: `src/VoltaMarcada.Application/MaintenanceOpportunities/MaintenanceOpportunityErrors.cs`
+- Create: `src/VoltaMarcada.Application/MaintenanceOpportunities/MaintenanceOpportunityOwnerAuthorization.cs`
+- Create: `src/VoltaMarcada.Application/MaintenanceOpportunities/GetMaintenanceOpportunitiesUseCase.cs`
+- Create: `src/VoltaMarcada.Application/MaintenanceOpportunities/GetMaintenanceOpportunitySummaryUseCase.cs`
+- Create: `src/VoltaMarcada.Application/MaintenanceOpportunities/GetMaintenanceOpportunityForSchedulingUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/DependencyInjection.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/DependencyInjection.cs`
+- Modify: `src/VoltaMarcada.Web/Errors/OperationErrorMessages.cs`
 
 **Interfaces:**
 - Produces: owner-scoped opportunity list, summary, and schedule-context contracts.
@@ -193,25 +193,25 @@ Implement the authorization helper using the current user, current company, and 
 
 Register the repository, authorization helper, and all three query use cases as scoped services.
 
-Run: `rg -n "ServiceSync\.Web|GetForCompanyAsync\(|CompanyId" src/ServiceSync.Application/MaintenanceOpportunities src/ServiceSync.Infrastructure/Persistence/Repositories/MaintenanceOpportunityRepository.cs`
+Run: `rg -n "VoltaMarcada\.Web|GetForCompanyAsync\(|CompanyId" src/VoltaMarcada.Application/MaintenanceOpportunities src/VoltaMarcada.Infrastructure/Persistence/Repositories/MaintenanceOpportunityRepository.cs`
 
 Expected: no Web reference in Application; all entity lookups use the company-filtered repository API.
 
 - [ ] **Step 6: Commit the repository and query layer**
 
 ```bash
-git add src/ServiceSync.Application/Abstractions/Persistence/IMaintenanceOpportunityRepository.cs src/ServiceSync.Application/MaintenanceOpportunities src/ServiceSync.Infrastructure/Persistence/Repositories/MaintenanceOpportunityRepository.cs src/ServiceSync.Application/DependencyInjection.cs src/ServiceSync.Infrastructure/DependencyInjection.cs src/ServiceSync.Web/Errors/OperationErrorMessages.cs
+git add src/VoltaMarcada.Application/Abstractions/Persistence/IMaintenanceOpportunityRepository.cs src/VoltaMarcada.Application/MaintenanceOpportunities src/VoltaMarcada.Infrastructure/Persistence/Repositories/MaintenanceOpportunityRepository.cs src/VoltaMarcada.Application/DependencyInjection.cs src/VoltaMarcada.Infrastructure/DependencyInjection.cs src/VoltaMarcada.Web/Errors/OperationErrorMessages.cs
 git commit -m "feat: add maintenance opportunity queries"
 ```
 
 ### Task 3: Complete Work Orders with an Optional Atomic Recommendation
 
 **Files:**
-- Modify: `src/ServiceSync.Application/WorkOrders/WorkOrderCommands.cs`
-- Modify: `src/ServiceSync.Application/WorkOrders/WorkOrderErrors.cs`
-- Modify: `src/ServiceSync.Application/WorkOrders/CompleteWorkOrderUseCase.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/WorkOrderEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Errors/OperationErrorMessages.cs`
+- Modify: `src/VoltaMarcada.Application/WorkOrders/WorkOrderCommands.cs`
+- Modify: `src/VoltaMarcada.Application/WorkOrders/WorkOrderErrors.cs`
+- Modify: `src/VoltaMarcada.Application/WorkOrders/CompleteWorkOrderUseCase.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/WorkOrderEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Errors/OperationErrorMessages.cs`
 
 **Interfaces:**
 - Produces: optional `CompleteWorkOrderCommand` recommendation input and a single transaction for work-order completion plus opportunity creation.
@@ -270,25 +270,25 @@ Do not alter existing successful response payloads or company-member authorizati
 
 - [ ] **Step 5: Verify the transaction and commit**
 
-Run: `rg -n "MaintenanceRecommendation|BeginTransactionAsync|MaintenanceOpportunity\.Create|InvalidMaintenanceRecommendation" src/ServiceSync.Application/WorkOrders src/ServiceSync.Web/Endpoints/WorkOrderEndpoints.cs`
+Run: `rg -n "MaintenanceRecommendation|BeginTransactionAsync|MaintenanceOpportunity\.Create|InvalidMaintenanceRecommendation" src/VoltaMarcada.Application/WorkOrders src/VoltaMarcada.Web/Endpoints/WorkOrderEndpoints.cs`
 
 Expected: validation occurs before creation; both mutations are inside the transaction; no recommendation follows the existing completion behavior.
 
 ```bash
-git add src/ServiceSync.Application/WorkOrders/WorkOrderCommands.cs src/ServiceSync.Application/WorkOrders/WorkOrderErrors.cs src/ServiceSync.Application/WorkOrders/CompleteWorkOrderUseCase.cs src/ServiceSync.Web/Endpoints/WorkOrderEndpoints.cs src/ServiceSync.Web/Errors/OperationErrorMessages.cs
+git add src/VoltaMarcada.Application/WorkOrders/WorkOrderCommands.cs src/VoltaMarcada.Application/WorkOrders/WorkOrderErrors.cs src/VoltaMarcada.Application/WorkOrders/CompleteWorkOrderUseCase.cs src/VoltaMarcada.Web/Endpoints/WorkOrderEndpoints.cs src/VoltaMarcada.Web/Errors/OperationErrorMessages.cs
 git commit -m "feat: create maintenance opportunities from work orders"
 ```
 
 ### Task 4: Add Commercial Actions and Atomically Book from the Existing Schedule
 
 **Files:**
-- Create: `src/ServiceSync.Application/MaintenanceOpportunities/MaintenanceOpportunityActionUseCases.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/SchedulingContracts.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/AppointmentUseCases.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/AppointmentEndpoints.cs`
-- Create: `src/ServiceSync.Web/Endpoints/MaintenanceOpportunityEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Program.cs`
-- Modify: `src/ServiceSync.Application/DependencyInjection.cs`
+- Create: `src/VoltaMarcada.Application/MaintenanceOpportunities/MaintenanceOpportunityActionUseCases.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/SchedulingContracts.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/AppointmentUseCases.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/AppointmentEndpoints.cs`
+- Create: `src/VoltaMarcada.Web/Endpoints/MaintenanceOpportunityEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Program.cs`
+- Modify: `src/VoltaMarcada.Application/DependencyInjection.cs`
 
 **Interfaces:**
 - Produces: owner action use cases, owner endpoints, and `CreateAppointmentCommand.MaintenanceOpportunityId`.
@@ -348,24 +348,24 @@ Register `MapMaintenanceOpportunityEndpoints()` in `Program.cs`.
 
 - [ ] **Step 5: Verify scheduling ownership and commit**
 
-Run: `rg -n "MaintenanceOpportunityId|BookingRequested|MarkAsBooked|BeginSchedulingTransactionAsync|CompanyOwner" src/ServiceSync.Application/Scheduling src/ServiceSync.Web/Endpoints`
+Run: `rg -n "MaintenanceOpportunityId|BookingRequested|MarkAsBooked|BeginSchedulingTransactionAsync|CompanyOwner" src/VoltaMarcada.Application/Scheduling src/VoltaMarcada.Web/Endpoints`
 
 Expected: only owner-authorized contextual creation can book an opportunity, and the booked state is in the appointment transaction.
 
 ```bash
-git add src/ServiceSync.Application/MaintenanceOpportunities/MaintenanceOpportunityActionUseCases.cs src/ServiceSync.Application/Scheduling/SchedulingContracts.cs src/ServiceSync.Application/Scheduling/AppointmentUseCases.cs src/ServiceSync.Web/Endpoints/AppointmentEndpoints.cs src/ServiceSync.Web/Endpoints/MaintenanceOpportunityEndpoints.cs src/ServiceSync.Web/Program.cs src/ServiceSync.Application/DependencyInjection.cs
+git add src/VoltaMarcada.Application/MaintenanceOpportunities/MaintenanceOpportunityActionUseCases.cs src/VoltaMarcada.Application/Scheduling/SchedulingContracts.cs src/VoltaMarcada.Application/Scheduling/AppointmentUseCases.cs src/VoltaMarcada.Web/Endpoints/AppointmentEndpoints.cs src/VoltaMarcada.Web/Endpoints/MaintenanceOpportunityEndpoints.cs src/VoltaMarcada.Web/Program.cs src/VoltaMarcada.Application/DependencyInjection.cs
 git commit -m "feat: schedule maintenance opportunities"
 ```
 
 ### Task 5: Build the Recommendation, Maintenance Center, Dashboard, and Navigation UI
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Components/Shared/WorkOrderExecutionPanel.razor`
-- Create: `src/ServiceSync.Web/Components/Pages/MaintenanceOpportunities.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Schedule.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Dashboard.razor`
-- Modify: `src/ServiceSync.Web/Components/Layout/MainLayout.razor`
-- Create: `src/ServiceSync.Web/MaintenanceOpportunities/MaintenanceOpportunityWhatsAppLinkBuilder.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/WorkOrderExecutionPanel.razor`
+- Create: `src/VoltaMarcada.Web/Components/Pages/MaintenanceOpportunities.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Schedule.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Dashboard.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Layout/MainLayout.razor`
+- Create: `src/VoltaMarcada.Web/MaintenanceOpportunities/MaintenanceOpportunityWhatsAppLinkBuilder.cs`
 
 **Interfaces:**
 - Produces: optional completion recommendation, owner center, secure schedule prefill, dashboard counts, navigation, and a reusable WhatsApp formatter.
@@ -411,23 +411,23 @@ Add “Manutenções” to the owner branch in `MainLayout`. In the owner dashbo
 
 - [ ] **Step 6: Verify UI requirements and commit**
 
-Run: `rg -n "@page \"/manutencoes\"|CompanyOwner|Mud(Dialog|Switch|RadioGroup|Select|DatePicker)|maintenanceOpportunityId|window.open" src/ServiceSync.Web/Components src/ServiceSync.Web/MaintenanceOpportunities`
+Run: `rg -n "@page \"/manutencoes\"|CompanyOwner|Mud(Dialog|Switch|RadioGroup|Select|DatePicker)|maintenanceOpportunityId|window.open" src/VoltaMarcada.Web/Components src/VoltaMarcada.Web/MaintenanceOpportunities`
 
 Expected: the page is owner-protected, every new input is MudBlazor, dismissal uses a dialog, and the schedule query carries only the opportunity ID.
 
 ```bash
-git add src/ServiceSync.Web/Components/Shared/WorkOrderExecutionPanel.razor src/ServiceSync.Web/Components/Pages/MaintenanceOpportunities.razor src/ServiceSync.Web/Components/Pages/Schedule.razor src/ServiceSync.Web/Components/Pages/Dashboard.razor src/ServiceSync.Web/Components/Layout/MainLayout.razor src/ServiceSync.Web/MaintenanceOpportunities/MaintenanceOpportunityWhatsAppLinkBuilder.cs
+git add src/VoltaMarcada.Web/Components/Shared/WorkOrderExecutionPanel.razor src/VoltaMarcada.Web/Components/Pages/MaintenanceOpportunities.razor src/VoltaMarcada.Web/Components/Pages/Schedule.razor src/VoltaMarcada.Web/Components/Pages/Dashboard.razor src/VoltaMarcada.Web/Components/Layout/MainLayout.razor src/VoltaMarcada.Web/MaintenanceOpportunities/MaintenanceOpportunityWhatsAppLinkBuilder.cs
 git commit -m "feat: add maintenance opportunity center"
 ```
 
 ### Task 6: Write the Migration and Activate the Internal-Error Boundary in Every Environment
 
 **Files:**
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/20260824150000_AddMaintenanceOpportunities.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/20260824150000_AddMaintenanceOpportunities.Designer.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
-- Modify: `src/ServiceSync.Web/Program.cs`
-- Verify: `src/ServiceSync.Web/Errors/UnexpectedExceptionHandler.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260824150000_AddMaintenanceOpportunities.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260824150000_AddMaintenanceOpportunities.Designer.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- Modify: `src/VoltaMarcada.Web/Program.cs`
+- Verify: `src/VoltaMarcada.Web/Errors/UnexpectedExceptionHandler.cs`
 
 **Interfaces:**
 - Produces: reversible database schema and generic RFC 7807 HTTP 500 responses for unexpected failures in every environment.
@@ -490,18 +490,18 @@ Run: `git diff --check`
 
 Expected: no whitespace errors.
 
-Run: `rg -n "UseExceptionHandler|exception\.Message|Exception\.Message|StackTrace|MaintenanceOpportunities|IX_MaintenanceOpportunities" src/ServiceSync.Web src/ServiceSync.Infrastructure/Persistence`
+Run: `rg -n "UseExceptionHandler|exception\.Message|Exception\.Message|StackTrace|MaintenanceOpportunities|IX_MaintenanceOpportunities" src/VoltaMarcada.Web src/VoltaMarcada.Infrastructure/Persistence`
 
 Expected: exception middleware is unconditional; raw exception details are absent from presentation; configuration, migration, and snapshot carry the same table/index names.
 
-Run: `rg -n "MaintenanceOpportunity.*CompanyId|GetForCompanyAsync\(" src/ServiceSync.Application src/ServiceSync.Infrastructure`
+Run: `rg -n "MaintenanceOpportunity.*CompanyId|GetForCompanyAsync\(" src/VoltaMarcada.Application src/VoltaMarcada.Infrastructure`
 
 Expected: opportunity entity reads are tenant-filtered and no request model exposes a company selector.
 
 - [ ] **Step 4: Commit schema and exception boundary**
 
 ```bash
-git add src/ServiceSync.Infrastructure/Persistence/Migrations src/ServiceSync.Web/Program.cs src/ServiceSync.Web/Errors/UnexpectedExceptionHandler.cs
+git add src/VoltaMarcada.Infrastructure/Persistence/Migrations src/VoltaMarcada.Web/Program.cs src/VoltaMarcada.Web/Errors/UnexpectedExceptionHandler.cs
 git commit -m "feat: persist maintenance opportunities safely"
 ```
 

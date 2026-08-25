@@ -4,7 +4,7 @@
 
 **Goal:** Replace exceptions and feature-specific status enums used for expected failures with a common typed result contract, centralized HTTP translation, and consistent Blazor feedback.
 
-**Architecture:** `ServiceSync.Application` owns framework-independent `OperationResult` contracts and feature-owned stable error definitions. Application use cases return expected failures explicitly, while `ServiceSync.Web` maps error categories to `ProblemDetails` and Portuguese presentation messages; unexpected exceptions are logged by a global handler or an asynchronous Blazor boundary.
+**Architecture:** `VoltaMarcada.Application` owns framework-independent `OperationResult` contracts and feature-owned stable error definitions. Application use cases return expected failures explicitly, while `VoltaMarcada.Web` maps error categories to `ProblemDetails` and Portuguese presentation messages; unexpected exceptions are logged by a global handler or an asynchronous Blazor boundary.
 
 **Tech Stack:** .NET 10, C#, ASP.NET Core Minimal APIs, Blazor Web App, MudBlazor, Entity Framework Core, PostgreSQL
 
@@ -29,9 +29,9 @@
 ### Task 1: Common Application Result Contract
 
 **Files:**
-- Create: `src/ServiceSync.Application/Abstractions/Operations/OperationErrorType.cs`
-- Create: `src/ServiceSync.Application/Abstractions/Operations/OperationError.cs`
-- Create: `src/ServiceSync.Application/Abstractions/Operations/OperationResult.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Operations/OperationErrorType.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Operations/OperationError.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Operations/OperationResult.cs`
 
 **Interfaces:**
 - Produces: `OperationErrorType`, `OperationError`, `OperationResult`, and `OperationResult<TValue>` for all later tasks.
@@ -39,7 +39,7 @@
 - [x] **Step 1: Define broad error categories**
 
 ```csharp
-namespace ServiceSync.Application.Abstractions.Operations;
+namespace VoltaMarcada.Application.Abstractions.Operations;
 
 public enum OperationErrorType
 {
@@ -53,7 +53,7 @@ public enum OperationErrorType
 - [x] **Step 2: Define a stable error value**
 
 ```csharp
-namespace ServiceSync.Application.Abstractions.Operations;
+namespace VoltaMarcada.Application.Abstractions.Operations;
 
 public sealed record OperationError(
     string Code,
@@ -65,7 +65,7 @@ public sealed record OperationError(
 - [x] **Step 3: Define non-generic and generic results**
 
 ```csharp
-namespace ServiceSync.Application.Abstractions.Operations;
+namespace VoltaMarcada.Application.Abstractions.Operations;
 
 public sealed record OperationResult(bool IsSuccess, IReadOnlyList<OperationError> Errors)
 {
@@ -96,23 +96,23 @@ public sealed record OperationResult<TValue>(
 
 - [x] **Step 4: Perform static contract checks**
 
-Run: `rg -n "namespace|public (sealed record|enum)|throw" src/ServiceSync.Application/Abstractions/Operations`
+Run: `rg -n "namespace|public (sealed record|enum)|throw" src/VoltaMarcada.Application/Abstractions/Operations`
 
 Expected: only the four result types and constructor-misuse guards are present; no ASP.NET Core, EF Core, or MudBlazor reference exists.
 
 ### Task 2: Feature Error Catalogs and Result Values
 
 **Files:**
-- Create: `src/ServiceSync.Application/Customers/CustomerErrors.cs`
-- Create: `src/ServiceSync.Application/Equipment/EquipmentErrors.cs`
-- Create: `src/ServiceSync.Application/Services/ServiceErrors.cs`
-- Create: `src/ServiceSync.Application/Professionals/ProfessionalErrors.cs`
-- Create: `src/ServiceSync.Application/CompanyOnboarding/CompanyOnboardingErrors.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/EmployeeInvitationErrors.cs`
-- Create: `src/ServiceSync.Application/Scheduling/SchedulingErrors.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/WorkOrderErrors.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/EmployeeInvitationOutcome.cs`
-- Create: `src/ServiceSync.Application/WorkOrders/WorkOrderOperationValue.cs`
+- Create: `src/VoltaMarcada.Application/Customers/CustomerErrors.cs`
+- Create: `src/VoltaMarcada.Application/Equipment/EquipmentErrors.cs`
+- Create: `src/VoltaMarcada.Application/Services/ServiceErrors.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/ProfessionalErrors.cs`
+- Create: `src/VoltaMarcada.Application/CompanyOnboarding/CompanyOnboardingErrors.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/EmployeeInvitationErrors.cs`
+- Create: `src/VoltaMarcada.Application/Scheduling/SchedulingErrors.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/WorkOrderErrors.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/EmployeeInvitationOutcome.cs`
+- Create: `src/VoltaMarcada.Application/WorkOrders/WorkOrderOperationValue.cs`
 
 **Interfaces:**
 - Consumes: `OperationError` and `OperationErrorType` from Task 1.
@@ -123,9 +123,9 @@ Expected: only the four result types and constructor-misuse guards are present; 
 Each catalog uses the exact pattern below and includes one definition for every current feature result enum member except `Success`:
 
 ```csharp
-using ServiceSync.Application.Abstractions.Operations;
+using VoltaMarcada.Application.Abstractions.Operations;
 
-namespace ServiceSync.Application.Customers;
+namespace VoltaMarcada.Application.Customers;
 
 public static class CustomerErrors
 {
@@ -147,40 +147,40 @@ Use the same `<Feature>.<Condition>` code convention for all other catalogs. Cla
 - [x] **Step 2: Add multi-value success contracts**
 
 ```csharp
-namespace ServiceSync.Application.EmployeeInvitations;
+namespace VoltaMarcada.Application.EmployeeInvitations;
 
 public sealed record EmployeeInvitationOutcome(string? Token = null, Guid? UserId = null);
 ```
 
 ```csharp
-namespace ServiceSync.Application.WorkOrders;
+namespace VoltaMarcada.Application.WorkOrders;
 
 public sealed record WorkOrderOperationValue(Guid? WorkOrderId = null, Guid? PhotoId = null);
 ```
 
 - [x] **Step 3: Verify code uniqueness and English diagnostics**
 
-Run: `rg -o 'new\("[A-Za-z]+\.[A-Za-z]+' src/ServiceSync.Application -g '*Errors.cs' | Sort-Object | Group-Object | Where-Object Count -gt 1`
+Run: `rg -o 'new\("[A-Za-z]+\.[A-Za-z]+' src/VoltaMarcada.Application -g '*Errors.cs' | Sort-Object | Group-Object | Where-Object Count -gt 1`
 
 Expected: no duplicate code is returned.
 
-Run: `rg -n "[áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]" src/ServiceSync.Application -g '*Errors.cs'`
+Run: `rg -n "[áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]" src/VoltaMarcada.Application -g '*Errors.cs'`
 
 Expected: no output.
 
 ### Task 3: Migrate Application Use Cases
 
 **Files:**
-- Modify: all command use cases under `src/ServiceSync.Application/Customers/`
-- Modify: all command use cases under `src/ServiceSync.Application/Equipment/`
-- Modify: all command use cases under `src/ServiceSync.Application/Services/`
-- Modify: all command use cases under `src/ServiceSync.Application/Professionals/`
-- Modify: `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingUseCase.cs`
-- Modify: command use cases under `src/ServiceSync.Application/EmployeeInvitations/`
-- Modify: `src/ServiceSync.Application/Scheduling/AppointmentUseCases.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/AppointmentChangeUseCases.cs`
-- Modify: `src/ServiceSync.Application/Scheduling/BlockRequestDecisionUseCases.cs`
-- Modify: command use cases under `src/ServiceSync.Application/WorkOrders/`
+- Modify: all command use cases under `src/VoltaMarcada.Application/Customers/`
+- Modify: all command use cases under `src/VoltaMarcada.Application/Equipment/`
+- Modify: all command use cases under `src/VoltaMarcada.Application/Services/`
+- Modify: all command use cases under `src/VoltaMarcada.Application/Professionals/`
+- Modify: `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingUseCase.cs`
+- Modify: command use cases under `src/VoltaMarcada.Application/EmployeeInvitations/`
+- Modify: `src/VoltaMarcada.Application/Scheduling/AppointmentUseCases.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/AppointmentChangeUseCases.cs`
+- Modify: `src/VoltaMarcada.Application/Scheduling/BlockRequestDecisionUseCases.cs`
+- Modify: command use cases under `src/VoltaMarcada.Application/WorkOrders/`
 - Delete after callers migrate: existing `*OperationResult.cs`, `CompleteCompanyOnboardingResult.cs`, `EmployeeInvitationResult.cs`, and result declarations in `SchedulingContracts.cs`
 
 **Interfaces:**
@@ -226,21 +226,21 @@ Delete feature result files only after `rg` shows that no caller references thei
 
 - [x] **Step 6: Verify expected failures are explicit**
 
-Run: `rg -n "OperationResultCode|CompleteCompanyOnboardingResult|EmployeeInvitationResult|SchedulingOperationResult|WorkOrderOperationResult" src/ServiceSync.Application`
+Run: `rg -n "OperationResultCode|CompleteCompanyOnboardingResult|EmployeeInvitationResult|SchedulingOperationResult|WorkOrderOperationResult" src/VoltaMarcada.Application`
 
 Expected: no obsolete feature result reference remains.
 
-Run: `rg -n "catch \((DomainException|Exception)|throw new DomainException" src/ServiceSync.Application`
+Run: `rg -n "catch \((DomainException|Exception)|throw new DomainException" src/VoltaMarcada.Application`
 
 Expected: no catch used for expected control flow and no application-created `DomainException`.
 
 ### Task 4: Centralized Web Mapping and Unexpected Exception Boundary
 
 **Files:**
-- Create: `src/ServiceSync.Web/Errors/OperationErrorMessages.cs`
-- Create: `src/ServiceSync.Web/Errors/OperationResultHttpExtensions.cs`
-- Create: `src/ServiceSync.Web/Errors/UnexpectedExceptionHandler.cs`
-- Modify: `src/ServiceSync.Web/Program.cs`
+- Create: `src/VoltaMarcada.Web/Errors/OperationErrorMessages.cs`
+- Create: `src/VoltaMarcada.Web/Errors/OperationResultHttpExtensions.cs`
+- Create: `src/VoltaMarcada.Web/Errors/UnexpectedExceptionHandler.cs`
+- Modify: `src/VoltaMarcada.Web/Program.cs`
 
 **Interfaces:**
 - Consumes: common application result contracts and stable feature error codes.
@@ -294,22 +294,22 @@ In `Program.cs`, call `AddExceptionHandler<UnexpectedExceptionHandler>()` and `A
 
 - [x] **Step 5: Verify boundary safety**
 
-Run: `rg -n "exception\.Message|Exception\.Message|stack|StackTrace" src/ServiceSync.Web`
+Run: `rg -n "exception\.Message|Exception\.Message|stack|StackTrace" src/VoltaMarcada.Web`
 
 Expected: no exception detail is added to HTTP responses or rendered UI.
 
 ### Task 5: Migrate Minimal API Endpoints
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Endpoints/CompanyOnboardingEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/CustomerEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/EquipmentEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/ServiceEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/ProfessionalEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/EmployeeInvitationEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/AppointmentEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/ScheduleBlockRequestEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/WorkOrderEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/CompanyOnboardingEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/CustomerEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/EquipmentEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/ServiceEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/ProfessionalEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/EmployeeInvitationEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/AppointmentEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/ScheduleBlockRequestEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/WorkOrderEndpoints.cs`
 
 **Interfaces:**
 - Consumes: `OperationResultHttpExtensions` from Task 4 and migrated use-case signatures from Task 3.
@@ -333,16 +333,16 @@ Null request-body and file-size checks may return a shared validation `ProblemDe
 
 - [x] **Step 3: Verify endpoint consistency**
 
-Run: `rg -n "OperationResultCode|Results\.BadRequest\(new \{ error|Results\.Conflict\(new \{ error|GetErrorMessage|UnexpectedResult" src/ServiceSync.Web/Endpoints`
+Run: `rg -n "OperationResultCode|Results\.BadRequest\(new \{ error|Results\.Conflict\(new \{ error|GetErrorMessage|UnexpectedResult" src/VoltaMarcada.Web/Endpoints`
 
 Expected: no old result enums, anonymous error payloads, or duplicated mapping switches remain.
 
 ### Task 6: Migrate Blazor Expected-Error Handling
 
 **Files:**
-- Modify result consumers under `src/ServiceSync.Web/Components/Pages/`
-- Modify result consumers under `src/ServiceSync.Web/Components/Shared/`
-- Create only if at least two identical mappings remain: `src/ServiceSync.Web/Errors/OperationResultUiExtensions.cs`
+- Modify result consumers under `src/VoltaMarcada.Web/Components/Pages/`
+- Modify result consumers under `src/VoltaMarcada.Web/Components/Shared/`
+- Create only if at least two identical mappings remain: `src/VoltaMarcada.Web/Errors/OperationResultUiExtensions.cs`
 
 **Interfaces:**
 - Consumes: common application results and `OperationErrorMessages`.
@@ -373,11 +373,11 @@ Delete feature `GetOperationError` and equivalent methods after all callers use 
 
 - [x] **Step 4: Verify presentation safety**
 
-Run: `rg -n "OperationResultCode|CompleteCompanyOnboardingResultCode|EmployeeInvitationResultCode|SchedulingOperationResultCode|WorkOrderOperationResultCode" src/ServiceSync.Web`
+Run: `rg -n "OperationResultCode|CompleteCompanyOnboardingResultCode|EmployeeInvitationResultCode|SchedulingOperationResultCode|WorkOrderOperationResultCode" src/VoltaMarcada.Web`
 
 Expected: no old result enum remains.
 
-Run: `rg -n "exception\.Message|Exception\.Message" src/ServiceSync.Web/Components`
+Run: `rg -n "exception\.Message|Exception\.Message" src/VoltaMarcada.Web/Components`
 
 Expected: no raw exception text is displayed.
 
@@ -385,7 +385,7 @@ Expected: no raw exception text is displayed.
 
 **Files:**
 - Modify only domain methods where a predictable user-driven failure still lacks an application precondition.
-- Preserve: `src/ServiceSync.Domain/Exceptions/DomainException.cs`
+- Preserve: `src/VoltaMarcada.Domain/Exceptions/DomainException.cs`
 - Modify: `docs/superpowers/plans/2026-08-24-error-handling-implementation.md` checkbox state as work completes.
 
 **Interfaces:**
@@ -394,13 +394,13 @@ Expected: no raw exception text is displayed.
 
 - [x] **Step 1: Audit every domain exception site**
 
-Run: `rg -n -C 2 "throw new DomainException" src/ServiceSync.Domain`
+Run: `rg -n -C 2 "throw new DomainException" src/VoltaMarcada.Domain`
 
 For each guard, confirm at least one of these is true: it protects construction from programmer misuse; it protects an impossible state transition after application prechecks; or an application validator/precondition handles the corresponding user-driven input. Add a missing application precondition when none is true. Do not weaken entity invariants.
 
 - [x] **Step 2: Scan for expected-flow exception handling**
 
-Run: `rg -n "catch \((DomainException|DbUpdateException|Exception)" src/ServiceSync.Application src/ServiceSync.Web`
+Run: `rg -n "catch \((DomainException|DbUpdateException|Exception)" src/VoltaMarcada.Application src/VoltaMarcada.Web`
 
 Expected: only narrow infrastructure translation/cleanup catches and generic UI/HTTP unexpected-failure boundaries remain.
 
