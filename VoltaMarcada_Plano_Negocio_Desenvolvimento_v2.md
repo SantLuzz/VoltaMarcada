@@ -1272,7 +1272,116 @@ Permitir a comercialização inicial do VoltaMarcada sem gateway de pagamento, m
 
 ------------------------------------------------------------------------
 
-# Fase 11 --- SaaS comercial e lançamento
+# Fase 11 --- Regra de cobrança no encerramento da OS
+
+## Objetivo
+
+Quando a empresa habilitar o **Controle de pagamentos**, toda Ordem de
+Serviço com valor deve passar pelo fluxo de cobrança antes de ser
+encerrada. A regra evita que uma OS seja concluída sem o respectivo
+registro financeiro e mantém os valores de **Recebido** e **A Receber**
+confiáveis.
+
+Esta fase registra a situação financeira da OS. Não introduz um gateway
+de pagamento nem substitui a confirmação manual de recebimentos.
+
+## Configuração da empresa
+
+Cada empresa terá a configuração:
+
+``` text
+Controle de pagamentos
+Habilitado / Desabilitado
+```
+
+Com o controle desabilitado, o encerramento da OS continua normalmente,
+sem interferência do módulo financeiro.
+
+Com o controle habilitado, toda OS com valor deve gerar uma cobrança ou
+registrar uma justificativa de **Sem cobrança** antes de poder ser
+encerrada. Toda OS encerrada passa, assim, a ter uma situação financeira
+conhecida.
+
+## Fluxo de encerramento
+
+``` text
+Encerrar serviço
+↓
+Recomendar próxima manutenção
+↓
+Cobrança
+↓
+Encerrar OS
+```
+
+Após a recomendação de manutenção, quando aplicável, o sistema abre o
+modal de cobrança com:
+
+- valor total da OS;
+- forma de pagamento;
+- ações correspondentes à forma selecionada;
+- opção **Sem cobrança**.
+
+Gerar ou compartilhar uma cobrança não confirma o pagamento. A cobrança
+permanece com status `Pending` até que um Owner confirme o recebimento.
+
+## Cobrança via Pix
+
+Ao selecionar Pix, a cobrança deve ser gerada obrigatoriamente com o
+valor total da OS e disponibilizar:
+
+- QR Code Pix para pagamento presencial;
+- Pix Copia e Cola;
+- botão para copiar o código;
+- botão para compartilhar a cobrança pelo WhatsApp.
+
+O Pix compartilhado ou exibido permanece `Pending` enquanto não houver
+confirmação manual do recebimento.
+
+## Papéis e confirmação de recebimento
+
+O **Employee** pode gerar a cobrança, selecionar a forma de pagamento,
+exibir o QR Code, copiar o Pix, compartilhar a cobrança pelo WhatsApp e
+concluir o fluxo com a cobrança em `Pending`. Ele não pode confirmar o
+recebimento nem acessar o Financeiro/Caixa geral.
+
+O **Owner** possui as mesmas ações e pode confirmar manualmente o
+recebimento. Ao confirmar:
+
+``` text
+Status = Paid
+ConfirmationType = Manual
+PaidAt = data/hora atual
+ConfirmedBy = IdUser
+```
+
+Se o cliente informar que pagará posteriormente, a cobrança ainda deve
+ser criada no encerramento da OS e permanecer `Pending`. Não existe a
+opção **Cobrar depois**.
+
+## Exceção: Sem cobrança
+
+A opção **Sem cobrança** atende situações legítimas, como:
+
+- garantia;
+- cortesia;
+- serviço previamente pago;
+- outro motivo justificável.
+
+Ao utilizá-la, o usuário deve informar o motivo. A justificativa deve
+ficar registrada na OS para auditoria e para identificar que o
+encerramento não deixou uma pendência financeira esquecida.
+
+## Resultado esperado
+
+Com o Controle de pagamentos habilitado, uma OS com valor somente pode
+ser encerrada se tiver uma cobrança criada ou uma justificativa válida de
+**Sem cobrança**. Isso mantém o Caixa do VoltaMarcada consistente sem
+impedir que pagamentos pendentes sejam acompanhados posteriormente.
+
+------------------------------------------------------------------------
+
+# Fase 12 --- SaaS comercial e lançamento
 
 ## Cadastro autônomo
 
