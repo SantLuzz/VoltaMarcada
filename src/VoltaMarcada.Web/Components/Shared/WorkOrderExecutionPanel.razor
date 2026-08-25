@@ -32,23 +32,6 @@ else
         <MudText Typo="Typo.h6">Fotos antes @(WorkOrder.RequireBeforePhotos ? "(obrigatória)" : string.Empty)</MudText>
         @if (CanExecute)
         {
-            <MudPaper Outlined="true" Class="pa-4">
-                <MudSwitch @bind-Value="shouldRecommendMaintenance" Color="Color.Primary">Recomendar proxima manutencao?</MudSwitch>
-                @if (shouldRecommendMaintenance)
-                {
-                    <MudGrid Class="mt-2">
-                        <MudItem xs="12" sm="6"><MudSelect T="string" Label="Quando?" Variant="Variant.Outlined" Required="true" @bind-Value="recommendationPeriod"><MudSelectItem Value="30">30 dias</MudSelectItem><MudSelectItem Value="60">60 dias</MudSelectItem><MudSelectItem Value="90">90 dias</MudSelectItem><MudSelectItem Value="180">180 dias</MudSelectItem><MudSelectItem Value="@("custom")">Personalizado</MudSelectItem><MudSelectItem Value="@("date")">Data especifica</MudSelectItem></MudSelect></MudItem>
-                        @if (recommendationPeriod == "custom") { <MudItem xs="12" sm="6"><MudNumericField T="int?" Label="Intervalo em dias" Variant="Variant.Outlined" Required="true" @bind-Value="customIntervalDays" /></MudItem> }
-                        @if (recommendationPeriod == "date") { <MudItem xs="12" sm="6"><MudDatePicker Label="Proxima manutencao" Variant="Variant.Outlined" Required="true" @bind-Date="recommendedDueDate" /></MudItem> }
-                        <MudItem xs="12" sm="6"><MudSelect T="Guid?" Label="Servico recomendado" Variant="Variant.Outlined" Required="true" @bind-Value="recommendedServiceId">@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect></MudItem>
-                        <MudItem xs="12"><MudTextField Label="Observacoes da recomendacao" Variant="Variant.Outlined" Required="true" Lines="3" @bind-Value="recommendationNotes" /></MudItem>
-                    </MudGrid>
-                }
-            </MudPaper>
-        }
-
-        @if (CanExecute)
-        {
             <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.Before))" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
         }
         <div class="work-order-photo-grid">
@@ -119,6 +102,19 @@ else
 
         @if (CanExecute)
         {
+            <MudPaper Outlined="true" Class="pa-4">
+                <MudSwitch @bind-Value="shouldRecommendMaintenance" Color="Color.Primary">Recomendar proxima manutencao?</MudSwitch>
+                @if (shouldRecommendMaintenance)
+                {
+                    <MudGrid Class="mt-2">
+                        <MudItem xs="12" sm="6"><MudSelect T="string" Label="Quando?" Variant="Variant.Outlined" Required="true" @bind-Value="recommendationPeriod"><MudSelectItem T="string" Value="@("30")">30 dias</MudSelectItem><MudSelectItem T="string" Value="@("60")">60 dias</MudSelectItem><MudSelectItem T="string" Value="@("90")">90 dias</MudSelectItem><MudSelectItem T="string" Value="@("180")">180 dias</MudSelectItem><MudSelectItem T="string" Value="@("custom")">Personalizado</MudSelectItem><MudSelectItem T="string" Value="@("date")">Data especifica</MudSelectItem></MudSelect></MudItem>
+                        @if (recommendationPeriod == "custom") { <MudItem xs="12" sm="6"><MudNumericField T="int?" Label="Intervalo em dias" Variant="Variant.Outlined" Required="true" @bind-Value="customIntervalDays" /></MudItem> }
+                        @if (recommendationPeriod == "date") { <MudItem xs="12" sm="6"><MudDatePicker Label="Proxima manutencao" Variant="Variant.Outlined" Required="true" @bind-Date="recommendedDueDate" /></MudItem> }
+                        <MudItem xs="12" sm="6"><MudSelect T="Guid?" Label="Servico recomendado" Variant="Variant.Outlined" Required="true" @bind-Value="recommendedServiceId">@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect></MudItem>
+                        <MudItem xs="12"><MudTextField Label="Observacoes da recomendacao" Variant="Variant.Outlined" Required="true" Lines="3" @bind-Value="recommendationNotes" /></MudItem>
+                    </MudGrid>
+                }
+            </MudPaper>
             <MudStack Row="true">
                 <MudButton OnClick="SaveAsync" Variant="Variant.Outlined" Disabled="@(isSaving || isUploadingPhoto)">Salvar progresso</MudButton>
                 <MudButton OnClick="CompleteAsync" Color="Color.Success" Variant="Variant.Filled" Disabled="@(!CanComplete)">Concluir serviço</MudButton>

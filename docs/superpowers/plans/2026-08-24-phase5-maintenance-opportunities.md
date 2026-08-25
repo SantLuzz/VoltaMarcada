@@ -36,7 +36,7 @@
 - Produces: `MaintenanceOpportunityStatus`, `MaintenanceOpportunity`, and `DbSet<MaintenanceOpportunity> MaintenanceOpportunities`.
 - Consumed by: the repository, completion flow, scheduling flow, and maintenance-center queries.
 
-- [ ] **Step 1: Define the stored commercial status**
+- [x] **Step 1: Define the stored commercial status**
 
 ```csharp
 namespace VoltaMarcada.Domain.Enums;
@@ -54,7 +54,7 @@ public enum MaintenanceOpportunityStatus
 
 Do not add `DueSoon`; urgency is computed from the due date.
 
-- [ ] **Step 2: Implement the protected aggregate**
+- [x] **Step 2: Implement the protected aggregate**
 
 ```csharp
 public sealed class MaintenanceOpportunity : ICompanyScopedEntity
@@ -91,7 +91,7 @@ public sealed class MaintenanceOpportunity : ICompanyScopedEntity
 
 Require every ID, normalize nonempty notes, store UTC timestamps, and throw `DomainException` for invalid transitions. Permit `Pending -> Contacted -> BookingRequested -> Booked -> Completed`; permit `Dismissed` from an open state; make repeated contact idempotent without replacing the first timestamp.
 
-- [ ] **Step 3: Map the entity with company-scoped foreign keys**
+- [x] **Step 3: Map the entity with company-scoped foreign keys**
 
 ```csharp
 builder.ToTable("MaintenanceOpportunities");
@@ -108,13 +108,13 @@ builder.HasIndex(x => new { x.CompanyId, x.CustomerId })
 
 Add restrictive relationships to `Customer`, `Equipment`, `WorkOrder`, and `Service`, each using the principal `(CompanyId, Id)` key. Add the DbSet to `AppDbContext`.
 
-- [ ] **Step 4: Verify the aggregate and mapping statically**
+- [x] **Step 4: Verify the aggregate and mapping statically**
 
 Run: `rg -n "MaintenanceOpportunity|public set;|DateTime\.Now|DateTime\.UtcNow" src/VoltaMarcada.Domain src/VoltaMarcada.Infrastructure/Persistence`
 
 Expected: only private entity state setters and no direct clock call in new Domain/Application code.
 
-- [ ] **Step 5: Commit the isolated change**
+- [x] **Step 5: Commit the isolated change**
 
 ```bash
 git add src/VoltaMarcada.Domain/Enums/MaintenanceOpportunityStatus.cs src/VoltaMarcada.Domain/Entities/MaintenanceOpportunity.cs src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs src/VoltaMarcada.Infrastructure/Persistence/Configurations/MaintenanceOpportunityConfiguration.cs
@@ -140,7 +140,7 @@ git commit -m "feat: add maintenance opportunity aggregate"
 - Produces: owner-scoped opportunity list, summary, and schedule-context contracts.
 - Consumed by: action use cases, the schedule, dashboard, and maintenance center.
 
-- [ ] **Step 1: Define the repository contract and transaction boundary**
+- [x] **Step 1: Define the repository contract and transaction boundary**
 
 ```csharp
 public interface IMaintenanceOpportunityRepository
@@ -160,7 +160,7 @@ public interface IMaintenanceOpportunityTransaction : IAsyncDisposable
 
 The implementation uses the scoped `AppDbContext`. Direct entity loads must filter on both ID and company. List projections join only tenant-filtered customer, equipment, service, and work-order queryables.
 
-- [ ] **Step 2: Define contracts and errors**
+- [x] **Step 2: Define contracts and errors**
 
 ```csharp
 public enum MaintenanceOpportunityUrgency { Overdue, NextSevenDays, NextThirtyDays, Future }
@@ -175,7 +175,7 @@ public sealed record MaintenanceOpportunityScheduleContext(
 
 The list DTO includes opportunity ID, customer name and WhatsApp number, equipment description, prior completion timestamp, service name, due date, notes, status, and urgency. Define `InvalidInput`, `NotFound`, `InvalidStatus`, and `Forbidden` in `MaintenanceOpportunityErrors`, then add safe Portuguese messages.
 
-- [ ] **Step 3: Calculate the business date once**
+- [x] **Step 3: Calculate the business date once**
 
 ```csharp
 var timeZone = TimeZoneInfo.FindSystemTimeZoneById(configuration.DefaultTimeZoneId);
@@ -185,11 +185,11 @@ var today = DateOnly.FromDateTime(
 
 Use the same date in list and summary. Only `Pending`, `Contacted`, `BookingRequested`, and `Booked` are open. Overdue is before today; next seven is today through `today.AddDays(7)`; next thirty is today through `today.AddDays(30)`; later open items are future.
 
-- [ ] **Step 4: Enforce owner authorization before query execution**
+- [x] **Step 4: Enforce owner authorization before query execution**
 
 Implement the authorization helper using the current user, current company, and existing company-membership ownership pattern. Its method returns the company ID only for an owner; every maintenance query returns `Forbidden` otherwise. Apply it to list, summary, and schedule-context use cases.
 
-- [ ] **Step 5: Register and statically verify**
+- [x] **Step 5: Register and statically verify**
 
 Register the repository, authorization helper, and all three query use cases as scoped services.
 
@@ -197,7 +197,7 @@ Run: `rg -n "VoltaMarcada\.Web|GetForCompanyAsync\(|CompanyId" src/VoltaMarcada.
 
 Expected: no Web reference in Application; all entity lookups use the company-filtered repository API.
 
-- [ ] **Step 6: Commit the repository and query layer**
+- [x] **Step 6: Commit the repository and query layer**
 
 ```bash
 git add src/VoltaMarcada.Application/Abstractions/Persistence/IMaintenanceOpportunityRepository.cs src/VoltaMarcada.Application/MaintenanceOpportunities src/VoltaMarcada.Infrastructure/Persistence/Repositories/MaintenanceOpportunityRepository.cs src/VoltaMarcada.Application/DependencyInjection.cs src/VoltaMarcada.Infrastructure/DependencyInjection.cs src/VoltaMarcada.Web/Errors/OperationErrorMessages.cs
@@ -217,7 +217,7 @@ git commit -m "feat: add maintenance opportunity queries"
 - Produces: optional `CompleteWorkOrderCommand` recommendation input and a single transaction for work-order completion plus opportunity creation.
 - Consumes: the Task 2 repository and the existing service, authorization, photo, checklist, and appointment checks.
 
-- [ ] **Step 1: Add the completion request records**
+- [x] **Step 1: Add the completion request records**
 
 ```csharp
 public sealed record MaintenanceRecommendationInput(
@@ -232,11 +232,11 @@ public sealed record CompleteWorkOrderCommand(
 
 Exactly one of interval and date is required when the recommendation exists; interval must be positive; service ID and notes are required. Add `WorkOrderErrors.InvalidMaintenanceRecommendation` and its Portuguese error message.
 
-- [ ] **Step 2: Validate the selected service before state mutation**
+- [x] **Step 2: Validate the selected service before state mutation**
 
 Load the recommended service with `GetForCompanyAsync`; require that it exists and is active. Preserve all current completion validation. Return an explicit invalid-recommendation result for all request-shape and service-selection failures.
 
-- [ ] **Step 3: Persist both aggregate changes atomically**
+- [x] **Step 3: Persist both aggregate changes atomically**
 
 ```csharp
 await using var transaction =
@@ -254,7 +254,7 @@ await transaction.CommitAsync(cancellationToken);
 
 Calculate `dueDate` from the configured business date plus interval, or take the supplied explicit date. Use the old one-save completion path unchanged when no recommendation is supplied.
 
-- [ ] **Step 4: Keep the endpoint body optional**
+- [x] **Step 4: Keep the endpoint body optional**
 
 ```csharp
 group.MapPost("/{workOrderId:guid}/complete", async (
@@ -268,7 +268,7 @@ group.MapPost("/{workOrderId:guid}/complete", async (
 
 Do not alter existing successful response payloads or company-member authorization.
 
-- [ ] **Step 5: Verify the transaction and commit**
+- [x] **Step 5: Verify the transaction and commit**
 
 Run: `rg -n "MaintenanceRecommendation|BeginTransactionAsync|MaintenanceOpportunity\.Create|InvalidMaintenanceRecommendation" src/VoltaMarcada.Application/WorkOrders src/VoltaMarcada.Web/Endpoints/WorkOrderEndpoints.cs`
 
@@ -294,11 +294,11 @@ git commit -m "feat: create maintenance opportunities from work orders"
 - Produces: owner action use cases, owner endpoints, and `CreateAppointmentCommand.MaintenanceOpportunityId`.
 - Consumes: Task 2 repository and existing serializable appointment transaction.
 
-- [ ] **Step 1: Implement focused action use cases**
+- [x] **Step 1: Implement focused action use cases**
 
 Create `MarkMaintenanceOpportunityAsContactedUseCase`, `MarkMaintenanceOpportunityAsBookingRequestedUseCase`, `MarkMaintenanceOpportunityAsBookedUseCase`, `CompleteMaintenanceOpportunityUseCase`, and `DismissMaintenanceOpportunityUseCase`. Each: resolves owner access; loads by ID and company; returns `NotFound` or `Forbidden` explicitly; calls the matching entity method with `TimeProvider.GetUtcNow()`; converts a predictable invalid state to `InvalidStatus`; saves via the shared scoped context.
 
-- [ ] **Step 2: Extend the appointment contract**
+- [x] **Step 2: Extend the appointment contract**
 
 ```csharp
 public sealed record CreateAppointmentCommand(
@@ -309,11 +309,11 @@ public sealed record CreateAppointmentCommand(
 
 Extend the HTTP request by the same nullable ID. When it is present, `CreateAppointmentUseCase` requires owner access, loads the opportunity by company, requires `BookingRequested`, and replaces browser-provided customer/equipment/service values with the stored values.
 
-- [ ] **Step 3: Reuse the existing scheduling transaction for booked state**
+- [x] **Step 3: Reuse the existing scheduling transaction for booked state**
 
 Inject `IMaintenanceOpportunityRepository` into `CreateAppointmentUseCase`. After the existing slot revalidation and appointment add, call `opportunity.MarkAsBooked(timeProvider.GetUtcNow())` before `TrySaveAppointmentChangesAsync`. The shared scoped DbContext persists both changes in `BeginSchedulingTransactionAsync`. A conflict or unavailable slot returns before booking and leaves the opportunity in `BookingRequested`.
 
-- [ ] **Step 4: Create owner endpoints**
+- [x] **Step 4: Create owner endpoints**
 
 ```csharp
 var group = endpoints.MapGroup("/maintenance-opportunities")
@@ -346,7 +346,7 @@ group.MapPost("/{opportunityId:guid}/dismiss", async (Guid opportunityId,
 
 Register `MapMaintenanceOpportunityEndpoints()` in `Program.cs`.
 
-- [ ] **Step 5: Verify scheduling ownership and commit**
+- [x] **Step 5: Verify scheduling ownership and commit**
 
 Run: `rg -n "MaintenanceOpportunityId|BookingRequested|MarkAsBooked|BeginSchedulingTransactionAsync|CompanyOwner" src/VoltaMarcada.Application/Scheduling src/VoltaMarcada.Web/Endpoints`
 
@@ -371,11 +371,11 @@ git commit -m "feat: schedule maintenance opportunities"
 - Produces: optional completion recommendation, owner center, secure schedule prefill, dashboard counts, navigation, and a reusable WhatsApp formatter.
 - Consumes: all Task 2–4 use cases and DTOs.
 
-- [ ] **Step 1: Add the optional recommendation panel**
+- [x] **Step 1: Add the optional recommendation panel**
 
 Use `MudSwitch` labelled “Recomendar próxima manutenção?”. When it is enabled, render a required `MudRadioGroup` for 30/60/90/180/custom/date, exactly one required `MudNumericField<int>` or `MudDatePicker`, a required outlined service `MudSelect<Guid>`, and required outlined multiline `MudTextField` for notes. Load active services via `GetServicesUseCase`; default to `WorkOrder.ServiceId`. Build `CompleteWorkOrderCommand` only after local validation; retain server validation as the authority. Preserve progress flushing, action loading, and current success/error handling.
 
-- [ ] **Step 2: Create the owner-protected central page**
+- [x] **Step 2: Create the owner-protected central page**
 
 ```razor
 @page "/manutencoes"
@@ -389,7 +389,7 @@ Use `MudSwitch` labelled “Recomendar próxima manutenção?”. When it is ena
 
 Load summary and list together. Use MudBlazor cards for “Vencidas”, “Nos próximos 7 dias”, and “Nos próximos 30 dias”; use status and urgency filters; show loading, empty, and responsive data states. Each item displays customer, equipment, previous maintenance, due date, recommended service, and a state chip. Render only valid actions; disable actions while saving; confirm dismissal with `MudDialog`; reload rows and counts after success.
 
-- [ ] **Step 3: Isolate the WhatsApp URL construction**
+- [x] **Step 3: Isolate the WhatsApp URL construction**
 
 ```csharp
 public static class MaintenanceOpportunityWhatsAppLinkBuilder
@@ -401,15 +401,15 @@ public static class MaintenanceOpportunityWhatsAppLinkBuilder
 
 The page first calls `MarkMaintenanceOpportunityAsContactedUseCase`, refreshes state, then opens the generated link with `IJSRuntime.InvokeVoidAsync("open", link, "_blank")`. Build the Portuguese message from safe loaded DTO data; do not normalize phones or URL-encode in Razor.
 
-- [ ] **Step 4: Prefill the existing schedule without trusting query values**
+- [x] **Step 4: Prefill the existing schedule without trusting query values**
 
 Add `[SupplyParameterFromQuery(Name = "maintenanceOpportunityId")] public Guid? MaintenanceOpportunityId { get; set; }` to `Schedule.razor`. When present, load `GetMaintenanceOpportunityForSchedulingUseCase`; populate and lock customer/equipment/service; clear work-order selection; leave professional, date, and slot selection editable. On creation, pass only `MaintenanceOpportunityId` to the command. On the central’s schedule action, await the booking-request use case then navigate to `/agenda?maintenanceOpportunityId={id}`.
 
-- [ ] **Step 5: Add owner dashboard and menu visibility**
+- [x] **Step 5: Add owner dashboard and menu visibility**
 
 Add “Manutenções” to the owner branch in `MainLayout`. In the owner dashboard, load the summary with existing operational counts and show one compact linked MudBlazor block leading to `/manutencoes`. Do not alter the employee dashboard.
 
-- [ ] **Step 6: Verify UI requirements and commit**
+- [x] **Step 6: Verify UI requirements and commit**
 
 Run: `rg -n "@page \"/manutencoes\"|CompanyOwner|Mud(Dialog|Switch|RadioGroup|Select|DatePicker)|maintenanceOpportunityId|window.open" src/VoltaMarcada.Web/Components src/VoltaMarcada.Web/MaintenanceOpportunities`
 
@@ -432,7 +432,7 @@ git commit -m "feat: add maintenance opportunity center"
 **Interfaces:**
 - Produces: reversible database schema and generic RFC 7807 HTTP 500 responses for unexpected failures in every environment.
 
-- [ ] **Step 1: Write the descriptive EF migration manually**
+- [x] **Step 1: Write the descriptive EF migration manually**
 
 ```csharp
 migrationBuilder.CreateTable(
@@ -471,7 +471,7 @@ migrationBuilder.CreateIndex("IX_MaintenanceOpportunities_CompanyId_CustomerId",
 
 Write `Down` as `migrationBuilder.DropTable(name: "MaintenanceOpportunities");`. Update both the designer and snapshot to match the final configuration exactly. Do not execute a migration generator or a migration.
 
-- [ ] **Step 2: Activate the registered exception handler middleware unconditionally**
+- [x] **Step 2: Activate the registered exception handler middleware unconditionally**
 
 ```csharp
 app.UseExceptionHandler();
@@ -484,7 +484,7 @@ if (!app.Environment.IsDevelopment())
 
 Place this before normal request middleware. Keep `AddExceptionHandler<UnexpectedExceptionHandler>()` and `AddProblemDetails()`. Confirm the handler logs the exception with trace ID, returns a generic Portuguese `ProblemDetails` title and `traceId` with status 500, and returns false for `OperationCanceledException`.
 
-- [ ] **Step 3: Perform final static verification**
+- [x] **Step 3: Perform final static verification**
 
 Run: `git diff --check`
 
@@ -498,7 +498,7 @@ Run: `rg -n "MaintenanceOpportunity.*CompanyId|GetForCompanyAsync\(" src/VoltaMa
 
 Expected: opportunity entity reads are tenant-filtered and no request model exposes a company selector.
 
-- [ ] **Step 4: Commit schema and exception boundary**
+- [x] **Step 4: Commit schema and exception boundary**
 
 ```bash
 git add src/VoltaMarcada.Infrastructure/Persistence/Migrations src/VoltaMarcada.Web/Program.cs src/VoltaMarcada.Web/Errors/UnexpectedExceptionHandler.cs
@@ -507,7 +507,7 @@ git commit -m "feat: persist maintenance opportunities safely"
 
 ## Plan Review Checklist
 
-- [ ] The plan implements every approved requirement: aggregate, mandatory optional recommendation, urgency counts, owner-only center/actions, WhatsApp, internal scheduling, dashboard, safe error boundary, and migration.
-- [ ] Cross-task contracts agree on `MaintenanceOpportunity`, `MaintenanceOpportunityStatus`, `MaintenanceRecommendationInput`, `MaintenanceOpportunityId`, and `IMaintenanceOpportunityRepository`.
-- [ ] No task introduces unapproved scope or requires a prohibited execution command.
-- [ ] No task authorizes changes to unrelated local work.
+- [x] The plan implements every approved requirement: aggregate, mandatory optional recommendation, urgency counts, owner-only center/actions, WhatsApp, internal scheduling, dashboard, safe error boundary, and migration.
+- [x] Cross-task contracts agree on `MaintenanceOpportunity`, `MaintenanceOpportunityStatus`, `MaintenanceRecommendationInput`, `MaintenanceOpportunityId`, and `IMaintenanceOpportunityRepository`.
+- [x] No task introduces unapproved scope or requires a prohibited execution command.
+- [x] No task authorizes changes to unrelated local work.

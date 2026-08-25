@@ -38,7 +38,7 @@
 - Produces: immutable contact record with `Prepare` and `MarkAsSent` state behavior, `DbSet<CustomerContact> CustomerContacts`, and the `CustomerContacts` table.
 - Consumed by: contact repository, maintenance opportunity query projection, contact action use cases, and the maintenance-center history UI.
 
-- [ ] **Step 1: Define the channel and lifecycle enums**
+- [x] **Step 1: Define the channel and lifecycle enums**
 
 ```csharp
 namespace VoltaMarcada.Domain.Enums;
@@ -57,7 +57,7 @@ public enum CustomerContactStatus
 
 Do not add future Cloud API, delivered, read, failed, or received states in this phase.
 
-- [ ] **Step 2: Write the protected customer-contact entity**
+- [x] **Step 2: Write the protected customer-contact entity**
 
 ```csharp
 public sealed class CustomerContact : ICompanyScopedEntity
@@ -83,7 +83,7 @@ public sealed class CustomerContact : ICompanyScopedEntity
 
 Require non-empty IDs and a trimmed message no longer than 2,000 characters. `Prepare` stores a UTC timestamp and `Prepared` status. `MarkAsSent` only permits `Prepared`; it writes UTC `SentAtUtc` and changes status to `Sent`, otherwise throws `DomainException`.
 
-- [ ] **Step 3: Map tenant-scoped relationships and indexes**
+- [x] **Step 3: Map tenant-scoped relationships and indexes**
 
 ```csharp
 builder.ToTable("CustomerContacts");
@@ -98,17 +98,17 @@ builder.HasIndex(x => new { x.CompanyId, x.CustomerId, x.CreatedAtUtc })
 
 Map restrictive foreign keys to `Company`, `Customer` through `(CompanyId, Id)`, and `MaintenanceOpportunity` through its existing `(CompanyId, Id)` alternate key. Add the `DbSet` to `AppDbContext`.
 
-- [ ] **Step 4: Write the reversible manual migration and matching snapshot**
+- [x] **Step 4: Write the reversible manual migration and matching snapshot**
 
 Create `CustomerContacts` with UUID identifiers, `varchar(2000)` message, integer enum columns, UTC timestamp columns, the three restrictive foreign keys, and the two named indexes. `Down` drops only `CustomerContacts`. Add the identical entity properties, indexes, and relationships to `AppDbContextModelSnapshot`.
 
-- [ ] **Step 5: Perform static schema verification**
+- [x] **Step 5: Perform static schema verification**
 
 Run: `rg -n "CustomerContact|CustomerContacts|IX_CustomerContacts|public set;|DateTime\.(Now|UtcNow)" src/VoltaMarcada.Domain src/VoltaMarcada.Infrastructure/Persistence`
 
 Expected: the new entity has private setters, no direct domain/application clock calls, and configuration, migration, and snapshot use the same table/index names.
 
-- [ ] **Step 6: Commit the aggregate and schema**
+- [x] **Step 6: Commit the aggregate and schema**
 
 ```bash
 git add src/VoltaMarcada.Domain/Enums/CustomerContactChannel.cs src/VoltaMarcada.Domain/Enums/CustomerContactStatus.cs src/VoltaMarcada.Domain/Entities/CustomerContact.cs src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs src/VoltaMarcada.Infrastructure/Persistence/Configurations/CustomerContactConfiguration.cs src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260824160000_AddCustomerContacts.cs src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs
@@ -131,7 +131,7 @@ git commit -m "feat: add customer contact history"
 - Produces: `ICustomerContactRepository`, `IWhatsAppLinkBuilder`, contact context, and history DTOs returned with every maintenance-opportunity item.
 - Consumed by: contact preparation/confirmation use cases and `/manutencoes`.
 
-- [ ] **Step 1: Define the contact repository and communication contracts**
+- [x] **Step 1: Define the contact repository and communication contracts**
 
 ```csharp
 public interface ICustomerContactRepository
@@ -150,7 +150,7 @@ public interface IWhatsAppLinkBuilder
 
 `TryBuild` must return `false` rather than throw for blank/non-numeric phone data. It normalizes the phone to digits and URL-encodes the message in the Infrastructure implementation. No Razor component formats a WhatsApp URL.
 
-- [ ] **Step 2: Add contact-context and history contracts**
+- [x] **Step 2: Add contact-context and history contracts**
 
 ```csharp
 public sealed record MaintenanceOpportunityContactContext(
@@ -167,13 +167,13 @@ public sealed record PreparedWhatsAppContact(Guid ContactId, string Link);
 
 Extend `MaintenanceOpportunityListItem` with `IReadOnlyList<CustomerContactHistoryItem> Contacts`. Keep its existing scalar fields unchanged so the maintenance center preserves all previous display behavior.
 
-- [ ] **Step 3: Implement tenant-filtered repository queries**
+- [x] **Step 3: Implement tenant-filtered repository queries**
 
 Add `GetContactContextAsync(Guid opportunityId, Guid companyId, CancellationToken)` to `IMaintenanceOpportunityRepository`; it joins only company-filtered opportunity, customer, equipment, and service data. Return no result if any related record is outside the tenant.
 
 In `GetListAsync`, fetch contacts in a second company-filtered query for the selected opportunity IDs, group them by `OpportunityId`, order each group by `CreatedAtUtc` descending, and attach the projected `CustomerContactHistoryItem` collection to each result. Do not issue one database query per list row.
 
-- [ ] **Step 4: Register implementations and verify query isolation**
+- [x] **Step 4: Register implementations and verify query isolation**
 
 Register `ICustomerContactRepository` and `IWhatsAppLinkBuilder` as scoped services in Infrastructure. Preserve the shared scoped `AppDbContext` so one `SaveChangesAsync` can persist the contact and opportunity mutations together.
 
@@ -181,7 +181,7 @@ Run: `rg -n "GetContactContextAsync|CustomerContacts|CompanyId == companyId|wa\.
 
 Expected: every contact query has a company predicate and WhatsApp URL formatting appears only in `WhatsAppLinkBuilder`.
 
-- [ ] **Step 5: Commit persistence and communication infrastructure**
+- [x] **Step 5: Commit persistence and communication infrastructure**
 
 ```bash
 git add src/VoltaMarcada.Application/Abstractions/Persistence/ICustomerContactRepository.cs src/VoltaMarcada.Application/Abstractions/Communication/IWhatsAppLinkBuilder.cs src/VoltaMarcada.Application/Abstractions/Persistence/IMaintenanceOpportunityRepository.cs src/VoltaMarcada.Application/MaintenanceOpportunities/MaintenanceOpportunityDtos.cs src/VoltaMarcada.Infrastructure/Persistence/Repositories/CustomerContactRepository.cs src/VoltaMarcada.Infrastructure/Persistence/Repositories/MaintenanceOpportunityRepository.cs src/VoltaMarcada.Infrastructure/Communication/WhatsAppLinkBuilder.cs src/VoltaMarcada.Infrastructure/DependencyInjection.cs
@@ -201,7 +201,7 @@ git commit -m "feat: add customer contact persistence"
 - Produces: `PrepareMaintenanceOpportunityWhatsAppContactUseCase` and `ConfirmMaintenanceOpportunityContactSentUseCase`, plus owner endpoints that return the prepared link and accept a contact ID for confirmation.
 - Consumed by: the maintenance-center WhatsApp and confirmation actions.
 
-- [ ] **Step 1: Define expected contact failures**
+- [x] **Step 1: Define expected contact failures**
 
 ```csharp
 public static class CustomerContactErrors
@@ -223,7 +223,7 @@ public static class CustomerContactErrors
 
 Add safe Portuguese messages to `OperationErrorMessages`; never return a raw phone number or message in an error response.
 
-- [ ] **Step 2: Prepare the record and link before opening WhatsApp**
+- [x] **Step 2: Prepare the record and link before opening WhatsApp**
 
 ```csharp
 public sealed class PrepareMaintenanceOpportunityWhatsAppContactUseCase(
@@ -240,7 +240,7 @@ public sealed class PrepareMaintenanceOpportunityWhatsAppContactUseCase(
 
 Resolve owner company access first. Load the tenant-filtered contact context, then require the opportunity state to be `Pending` or `Contacted`. Generate one Portuguese message from customer name, equipment description, recommended service, and due date context. Build the link before adding the entity; return `WhatsAppUnavailable` if it cannot be built. Then create `CustomerContact.Prepare(...)`, save it, and return its ID and link.
 
-- [ ] **Step 3: Confirm sending and update the commercial state atomically**
+- [x] **Step 3: Confirm sending and update the commercial state atomically**
 
 ```csharp
 public sealed class ConfirmMaintenanceOpportunityContactSentUseCase(
@@ -256,7 +256,7 @@ public sealed class ConfirmMaintenanceOpportunityContactSentUseCase(
 
 Require non-empty identifiers and owner access. Load both aggregates using the resolved `CompanyId`; reject a contact whose `OpportunityId` differs. Require `Prepared` and the opportunity state `Pending` or `Contacted`. Call `contact.MarkAsSent(now)` then `opportunity.MarkAsContacted(now)` and invoke one repository `SaveChangesAsync`. Invalid state returns `CustomerContact.InvalidStatus`; unexpected exceptions remain for the global handler.
 
-- [ ] **Step 4: Add owner-only endpoint contracts**
+- [x] **Step 4: Add owner-only endpoint contracts**
 
 ```csharp
 group.MapPost("/{opportunityId:guid}/contacts/whatsapp", async (
@@ -277,7 +277,7 @@ group.MapPost("/{opportunityId:guid}/contacts/{contactId:guid}/sent", async (
 
 Keep these routes inside the existing owner-only maintenance group. Remove the old untracked `/contact` route once the UI is migrated.
 
-- [ ] **Step 5: Register and statically verify the workflow**
+- [x] **Step 5: Register and statically verify the workflow**
 
 Register both use cases as scoped services.
 
@@ -285,7 +285,7 @@ Run: `rg -n "PrepareMaintenanceOpportunityWhatsAppContactUseCase|ConfirmMaintena
 
 Expected: preparation persists before link return; confirmation is the only new path that changes an opportunity to contacted; both endpoints require owner authorization through their route group.
 
-- [ ] **Step 6: Commit the contact workflow**
+- [x] **Step 6: Commit the contact workflow**
 
 ```bash
 git add src/VoltaMarcada.Application/MaintenanceOpportunities/CustomerContactErrors.cs src/VoltaMarcada.Application/MaintenanceOpportunities/MaintenanceOpportunityContactUseCases.cs src/VoltaMarcada.Application/DependencyInjection.cs src/VoltaMarcada.Web/Errors/OperationErrorMessages.cs src/VoltaMarcada.Web/Endpoints/MaintenanceOpportunityEndpoints.cs
@@ -301,11 +301,11 @@ git commit -m "feat: track maintenance WhatsApp contacts"
 - Consumes: `MaintenanceOpportunityListItem.Contacts`, `PrepareMaintenanceOpportunityWhatsAppContactUseCase`, and `ConfirmMaintenanceOpportunityContactSentUseCase`.
 - Produces: assisted WhatsApp preparation, explicit send confirmation, and visible per-opportunity history.
 
-- [ ] **Step 1: Inject the new use cases and remove the bypass action**
+- [x] **Step 1: Inject the new use cases and remove the bypass action**
 
 Replace `MarkMaintenanceOpportunityAsContactedUseCase` injection and its `ContactAsync` helper with the preparation and confirmation use cases. Remove the visible **Marcar contato** button so a WhatsApp contact cannot transition without a saved contact record.
 
-- [ ] **Step 2: Prepare a link, refresh state, then open it**
+- [x] **Step 2: Prepare a link, refresh state, then open it**
 
 ```csharp
 private async Task PrepareWhatsAppAsync(Guid opportunityId)
@@ -324,19 +324,19 @@ private async Task PrepareWhatsAppAsync(Guid opportunityId)
 
 Use the existing item action loading state to prevent duplicate preparation. The component does not construct messages, normalize phone numbers, or encode URLs.
 
-- [ ] **Step 3: Render the contact timeline and explicit send confirmation**
+- [x] **Step 3: Render the contact timeline and explicit send confirmation**
 
 Add a MudBlazor expansion panel named **Historico de contatos** below the opportunity’s action row. For every `item.Contacts` entry, display the channel label, prepared/sent status, creation timestamp, sent timestamp when present, and the immutable message. For every `Prepared` entry, show **Confirmar envio**, invoking `ConfirmMaintenanceOpportunityContactSentUseCase.ExecuteAsync(item.Id, contact.Id)`. Refresh list and summary on success.
 
 Only render the WhatsApp preparation button for `Pending` or `Contacted`. Keep schedule, complete, and dismissal conditions exactly as in Phase 5.
 
-- [ ] **Step 4: Verify the component’s allowed paths**
+- [x] **Step 4: Verify the component’s allowed paths**
 
 Run: `rg -n "PrepareWhatsAppAsync|Confirmar envio|Historico de contatos|CustomerContactStatus\.Prepared|MarkContactedUseCase|wa\.me|EscapeDataString" src/VoltaMarcada.Web/Components/Pages/MaintenanceOpportunities.razor`
 
 Expected: history and confirmation exist; the old direct contact action and client-side WhatsApp URL construction are absent.
 
-- [ ] **Step 5: Commit the UI migration**
+- [x] **Step 5: Commit the UI migration**
 
 ```bash
 git add src/VoltaMarcada.Web/Components/Pages/MaintenanceOpportunities.razor
@@ -351,7 +351,7 @@ git commit -m "feat: show maintenance contact history"
 **Interfaces:**
 - Verifies: approved Phase 6 behavior, tenant isolation, state transitions, schema consistency, and the absence of unapproved WhatsApp automation.
 
-- [ ] **Step 1: Run repository consistency checks**
+- [x] **Step 1: Run repository consistency checks**
 
 Run: `git diff --check`
 
@@ -361,7 +361,7 @@ Run: `rg -n "CustomerContact|WhatsAppCloudApi|wa\.me|IWhatsAppLinkBuilder|Compan
 
 Expected: `WhatsAppCloudApi` appears only as future-facing documentation if at all; the link builder is the sole URL construction location; repository paths query contacts by company.
 
-- [ ] **Step 2: Inspect all changes against the approved specification**
+- [x] **Step 2: Inspect all changes against the approved specification**
 
 Confirm manually that:
 

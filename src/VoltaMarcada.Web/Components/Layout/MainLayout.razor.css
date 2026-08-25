@@ -3,15 +3,24 @@
 }
 
 .main-drawer {
+    background-color: var(--servicesync-navy);
     border-right: 1px solid var(--servicesync-border);
     max-width: calc(100vw - 16px);
 }
 
+::deep .main-drawer .mud-drawer-content {
+    background-color: var(--servicesync-navy);
+}
+
 .drawer-content {
-    background: var(--servicesync-primary);
+    background: var(--servicesync-navy);
     display: flex;
     flex-direction: column;
     height: 100%;
+    inset: 0;
+    min-height: 0;
+    overflow: hidden;
+    position: absolute;
 }
 
 .drawer-brand {
@@ -30,9 +39,27 @@
 }
 
 .drawer-navigation {
-    background: var(--servicesync-primary);
-    flex: 1;
+    background: var(--servicesync-navy);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: scroll;
     padding: 16px 8px;
+    scrollbar-color: rgb(255 255 255 / 45%) var(--servicesync-navy);
+    scrollbar-gutter: stable;
+}
+
+.drawer-navigation::-webkit-scrollbar {
+    width: 12px;
+}
+
+.drawer-navigation::-webkit-scrollbar-thumb {
+    background-color: rgb(255 255 255 / 45%);
+    border: 3px solid var(--servicesync-navy);
+    border-radius: 999px;
+}
+
+.drawer-navigation::-webkit-scrollbar-track {
+    background-color: var(--servicesync-navy);
 }
 
 ::deep .drawer-navigation .mud-nav-link {
@@ -56,23 +83,18 @@
 .drawer-footer {
     border-top: 1px solid rgb(255 255 255 / 24%);
     display: grid;
+    flex: 0 0 auto;
     gap: 8px;
     margin-top: auto;
     padding: 16px;
 }
 
-.company-name,
 .app-bar-company-name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.company-name {
-    font-weight: 600;
-}
-
-::deep .drawer-footer .mud-typography,
 ::deep .drawer-footer .mud-button-root {
     color: #FFFFFF;
 }
@@ -84,15 +106,8 @@
 .logout-form { margin: 0; }
 
 @media (max-width: 599.95px) {
-    .drawer-content {
-        height: 100%;
-        min-height: 0;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
     .drawer-navigation {
-        flex: 0 0 auto;
+        -webkit-overflow-scrolling: touch;
     }
 }
 

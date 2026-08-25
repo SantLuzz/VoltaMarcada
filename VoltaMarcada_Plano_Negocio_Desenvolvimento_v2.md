@@ -1387,6 +1387,8 @@ impedir que pagamentos pendentes sejam acompanhados posteriormente.
 
 Manter o modelo self-service.
 
+Ajustar todo o layout e validar espaçamentos.
+
 ``` text
 Site
 ↓

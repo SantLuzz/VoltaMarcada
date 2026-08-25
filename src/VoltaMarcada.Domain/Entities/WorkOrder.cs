@@ -47,9 +47,36 @@ public sealed class WorkOrder : ICompanyScopedEntity
     public void UpdatePendingDetails(Guid customerId, Guid equipmentId, Guid serviceId, Guid? professionalId, WorkOrderPriority priority, string? reportedProblem, IReadOnlyCollection<WorkOrderItemDefinition> items, IReadOnlyCollection<WorkOrderChecklistItemDefinition> checklistItems, DateTimeOffset now)
     {
         EnsurePending(); RequireId(customerId, "Customer"); RequireId(equipmentId, "Equipment"); RequireId(serviceId, "Service");
+        if (serviceId != ServiceId) throw new DomainException("Work order service cannot be changed.");
+        if (items is null) throw new DomainException("Work order items are required.");
+        var existingServiceItem = _items.Single(item => item.Type == WorkOrderItemType.Service);
+        var submittedServiceItem = items.SingleOrDefault(item => item.Type == WorkOrderItemType.Service);
+        if (submittedServiceItem is null ||
+            !string.Equals(submittedServiceItem.Description.Trim(), existingServiceItem.Description, StringComparison.Ordinal) ||
+            submittedServiceItem.Quantity != existingServiceItem.Quantity ||
+            submittedServiceItem.UnitPrice != existingServiceItem.UnitPrice)
+        {
+            throw new DomainException("Work order service item cannot be changed.");
+        }
         if (!Enum.IsDefined(priority)) throw new DomainException("Work order priority is invalid.");
         CustomerId = customerId; EquipmentId = equipmentId; ServiceId = serviceId; ProfessionalId = professionalId; Priority = priority; ReportedProblem = NormalizeOptionalText(reportedProblem);
         ReplaceItems(items, now); ReplaceChecklistItems(checklistItems); UpdatedAtUtc = now.ToUniversalTime();
+    }
+
+    public void UpdateAdditionalItems(IReadOnlyCollection<WorkOrderItemDefinition> additionalItems, DateTimeOffset now)
+    {
+        if (Status is WorkOrderStatus.Completed or WorkOrderStatus.Cancelled) throw new DomainException("Additional items cannot be updated for a closed work order.");
+        if (additionalItems is null || additionalItems.Any(item => item.Type != WorkOrderItemType.Additional)) throw new DomainException("Only additional work order items can be updated.");
+
+        _items.RemoveAll(item => item.Type == WorkOrderItemType.Additional);
+        var utcNow = now.ToUniversalTime();
+        var displayOrder = _items.Count;
+        foreach (var item in additionalItems)
+        {
+            _items.Add(WorkOrderItem.Create(CompanyId, Id, item, displayOrder++, utcNow));
+        }
+
+        UpdatedAtUtc = utcNow;
     }
 
     public void AssignProfessional(Guid? professionalId, DateTimeOffset now)

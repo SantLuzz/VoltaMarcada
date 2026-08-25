@@ -17,6 +17,7 @@
 @inject GetProfessionalsUseCase GetProfessionalsUseCase
 @inject CreateWorkOrderUseCase CreateWorkOrderUseCase
 @inject UpdateWorkOrderUseCase UpdateWorkOrderUseCase
+@inject UpdateWorkOrderAdditionalItemsUseCase UpdateWorkOrderAdditionalItemsUseCase
 @inject CancelWorkOrderUseCase CancelWorkOrderUseCase
 @inject CreateCustomerUseCase CreateCustomerUseCase
 @inject CreateEquipmentUseCase CreateEquipmentUseCase
@@ -80,7 +81,7 @@ else
                         </MudStack>
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudSelect T="Guid?" Label="Serviço" Placeholder="Selecione um serviço" @bind-Value="serviceId" @bind-Value:after="OnServiceChangedAsync" Disabled="@(!CanEdit)">
+                        <MudSelect T="Guid?" Label="Serviço" Placeholder="Selecione um serviço" @bind-Value="serviceId" @bind-Value:after="OnServiceChangedAsync" Disabled="@(WorkOrderId is not null || !CanEdit)">
                             @foreach (var service in services)
                             {
                                 <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem>
@@ -134,7 +135,8 @@ else
                                               ServiceName="@GetSelectedServiceName()"
                                               @bind-ServiceUnitPrice="serviceUnitPrice"
                                               IsServicePriceFixed="@IsServicePriceFixed"
-                                              ReadOnly="@(!CanEdit)" />
+                                              IsServicePriceReadOnly="@(WorkOrderId is not null)"
+                                              ReadOnly="@(!CanManageAdditionalItems)" />
                     </MudItem>
                     @if (detail is not null)
                     {
@@ -142,12 +144,12 @@ else
                             <MudChip T="string" Color="@GetStatusColor(detail.Status)">@GetStatusName(detail.Status)</MudChip>
                         </MudItem>
                     }
-                    @if (CanEdit)
+                    @if (CanEdit || CanManageAdditionalItems)
                     {
                         <MudItem xs="12">
                             <MudStack Row="true">
-                                <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveAsync">@(WorkOrderId is null ? "Criar OS" : "Salvar alterações")</MudButton>
-                                @if (WorkOrderId is not null)
+                                <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveAsync">@(CanEdit ? (WorkOrderId is null ? "Criar OS" : "Salvar alterações") : "Salvar itens")</MudButton>
+                                @if (WorkOrderId is not null && CanEdit)
                                 {
                                     <MudButton Color="Color.Error" Variant="Variant.Outlined" OnClick="CancelAsync">Cancelar OS</MudButton>
                                 }
@@ -259,6 +261,7 @@ else
     private string? newEquipmentModel;
 
     private bool CanEdit => WorkOrderId is null || detail?.Capabilities.CanEdit == true;
+    private bool CanManageAdditionalItems => WorkOrderId is null || detail?.Capabilities.CanManageAdditionalItems == true;
     private bool CanAssignProfessional => WorkOrderId is null ? isOwner : detail?.Capabilities.CanAssignProfessional == true;
     private bool IsServicePriceFixed => GetSelectedService()?.PriceType == ServicePriceType.Fixed;
     private string ReturnButtonText => isPhotoUploading
@@ -459,6 +462,33 @@ else
 
     private async Task SaveAsync()
     {
+        if (WorkOrderId is { } workOrderId && !CanEdit)
+        {
+            if (!CanManageAdditionalItems)
+            {
+                return;
+            }
+
+            if (items.Any(item => string.IsNullOrWhiteSpace(item.Description) || item.Quantity <= 0 || item.UnitPrice < 0))
+            {
+                Snackbar.Add("Revise os itens e valores da OS.", Severity.Warning);
+                return;
+            }
+
+            var additionalItemsResult = await UpdateWorkOrderAdditionalItemsUseCase.ExecuteAsync(
+                workOrderId,
+                new UpdateWorkOrderAdditionalItemsCommand(items));
+            if (additionalItemsResult.IsSuccess)
+            {
+                Snackbar.Add("Itens da OS atualizados.", Severity.Success);
+                await LoadAsync();
+                return;
+            }
+
+            ShowOperationError(additionalItemsResult.Error?.Code);
+            return;
+        }
+
         if (customerId is null || equipmentId is null || serviceId is null)
         {
             Snackbar.Add("Informe cliente, equipamento e serviço.", Severity.Warning);

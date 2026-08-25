@@ -27,7 +27,7 @@
                                         Required="@(!IsServicePriceFixed)"
                                         RequiredError="Informe o valor do serviço."
                                         Variant="Variant.Text"
-                                        Disabled="@(ReadOnly || IsServicePriceFixed)" />
+                                        Disabled="@(IsServicePriceReadOnly || ReadOnly || IsServicePriceFixed)" />
             </MudItem>
             <MudItem xs="12" sm="3">
                 <MudText>Subtotal: @ServiceSubtotal.ToString("C")</MudText>
@@ -96,6 +96,9 @@
 
     [Parameter]
     public bool IsServicePriceFixed { get; set; }
+
+    [Parameter]
+    public bool IsServicePriceReadOnly { get; set; }
 
     private decimal ServiceSubtotal => ServiceUnitPrice ?? 0m;
 

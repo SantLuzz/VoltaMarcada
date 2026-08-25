@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<GetWorkOrdersUseCase>();
         services.AddScoped<GetWorkOrderDetailsUseCase>();
         services.AddScoped<UpdateWorkOrderUseCase>();
+        services.AddScoped<UpdateWorkOrderAdditionalItemsUseCase>();
         services.AddScoped<CancelWorkOrderUseCase>();
         services.AddScoped<StartWorkOrderUseCase>();
         services.AddScoped<SaveWorkOrderChecklistProgressUseCase>();

@@ -2,8 +2,10 @@
 
 :root {
     --servicesync-primary: #0969F0;
+    --servicesync-navy: #071D49;
     --servicesync-background: #F6F8FC;
     --servicesync-surface: #FFFFFF;
+    --servicesync-auth-card-background: #F1F7FF;
     --servicesync-border: #E2E8F0;
     --servicesync-text: #172033;
     --servicesync-text-secondary: #64748B;
@@ -26,10 +28,12 @@ a { color: var(--servicesync-primary); }
 }
 
 .auth-layout { align-items: center; display: flex; justify-content: center; min-height: 100vh; padding: 24px; }
-.auth-card { border: 1px solid var(--servicesync-border); max-width: 460px; padding: 32px; width: 100%; }
+.auth-card { background-color: var(--servicesync-auth-card-background); border: 1px solid var(--servicesync-border); max-width: 460px; padding: 32px; width: 100%; }
 .auth-card-wide { max-width: 760px; }
 .auth-card:has(.onboarding-content) { max-width: 760px; }
 .auth-logo { display: block; height: auto; margin: 0 auto 32px; max-width: 300px; width: min(300px, 100%); }
+.main-drawer .drawer-brand { align-items: center; box-sizing: border-box; display: flex; height: 170px; justify-content: center; overflow: hidden; padding: 20px 24px; }
+.main-drawer .drawer-logo { display: block; height: 130px; max-height: 130px; max-width: 100%; object-fit: contain; width: 130px; }
 .auth-page-header { margin-bottom: 24px; }
 .auth-form, .onboarding-form, .onboarding-section { display: grid; gap: 16px; }
 

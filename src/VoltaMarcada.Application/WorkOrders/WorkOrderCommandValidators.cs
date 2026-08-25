@@ -32,6 +32,20 @@ public sealed class UpdateWorkOrderCommandValidator : AbstractValidator<UpdateWo
     }
 }
 
+public sealed class UpdateWorkOrderAdditionalItemsCommandValidator : AbstractValidator<UpdateWorkOrderAdditionalItemsCommand>
+{
+    public UpdateWorkOrderAdditionalItemsCommandValidator()
+    {
+        RuleFor(x => x.AdditionalItems).NotNull().Must(items => items.Count <= 100);
+        RuleForEach(x => x.AdditionalItems).ChildRules(item =>
+        {
+            item.RuleFor(x => x.Description).NotEmpty().MaximumLength(500);
+            item.RuleFor(x => x.Quantity).GreaterThan(0);
+            item.RuleFor(x => x.UnitPrice).GreaterThanOrEqualTo(0);
+        });
+    }
+}
+
 public sealed class SaveWorkOrderChecklistProgressCommandValidator : AbstractValidator<SaveWorkOrderChecklistProgressCommand>
 {
     public SaveWorkOrderChecklistProgressCommandValidator()
