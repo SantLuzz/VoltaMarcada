@@ -1,0 +1,265 @@
+@page "/clientes"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@using VoltaMarcada.Application.Customers
+@inject GetCustomersUseCase GetCustomersUseCase
+@inject DeleteCustomerUseCase DeleteCustomerUseCase
+@inject ISnackbar Snackbar
+@inject ILogger<Customers> Logger
+
+<PageTitle>Clientes | VoltaMarcada</PageTitle>
+
+<PageHeader Title="Clientes" Description="Gerencie os clientes da sua empresa." />
+
+<MudPaper Class="customer-list-surface" Elevation="0" Outlined="true">
+    <div class="customer-list-toolbar">
+        <div class="customer-filter-fields">
+            <MudTextField @bind-Value="searchFilter"
+                          @bind-Value:after="LoadCustomersAsync"
+                          Variant="Variant.Outlined"
+                          Placeholder="insira o nome ou documento do cliente"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Clearable="true"
+                          Immediate="true" />
+        </div>
+
+        <AuthorizeView Policy="@AuthorizationPolicies.CompanyOwner">
+            <Authorized Context="authorizationState">
+        <MudButton Href="/clientes/registro"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add">
+            Novo cliente
+        </MudButton>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    }
+    else if (loadError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+            <MudText Typo="Typo.body2">@loadError</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="LoadCustomersAsync">Tentar novamente</MudButton>
+        </MudAlert>
+    }
+    else if (customers.Count == 0)
+    {
+        <EmptyState Icon="@Icons.Material.Filled.PeopleOutline"
+                    Title="Nenhum cliente encontrado"
+                    Description="Ajuste os filtros ou cadastre um novo cliente para começar." />
+    }
+    else
+    {
+        <MudTable Items="@customers" Class="servicesync-data-grid" Hover="true" Breakpoint="Breakpoint.Md">
+            <HeaderContent>
+                <MudTh>Nome</MudTh>
+                <MudTh>Documento</MudTh>
+                <MudTh>Telefone</MudTh>
+                <MudTh>Endereço</MudTh>
+                <MudTh aria-label="Ações"></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Nome"><GridTextCell Value="@context.Name" /></MudTd>
+                <MudTd DataLabel="Documento"><GridTextCell Value="@FormatDocument(context.Document)" /></MudTd>
+                <MudTd DataLabel="Telefone"><GridTextCell Value="@context.WhatsApp" /></MudTd>
+                <MudTd DataLabel="Endereço"><GridTextCell Value="@GetPrimaryAddress(context)" /></MudTd>
+                <AuthorizeView Policy="@AuthorizationPolicies.CompanyOwner">
+                    <Authorized Context="authorizationState">
+                <MudTd DataLabel="Ações" Class="customer-actions">
+                    <MudTooltip Text="Editar cliente">
+                        <MudIconButton Href="@GetCustomerRegistrationUrl(context.Id)"
+                                       Icon="@Icons.Material.Filled.Edit"
+                                       Color="Color.Primary"
+                                       aria-label="Editar cliente" />
+                    </MudTooltip>
+                    <MudTooltip Text="Inativar cliente">
+                        <MudIconButton Icon="@Icons.Material.Filled.Block"
+                                       Color="Color.Error"
+                                       aria-label="Inativar cliente"
+                                       OnClick="@(() => OpenDeleteDialog(context))" />
+                    </MudTooltip>
+                </MudTd>
+                    </Authorized>
+                </AuthorizeView>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudPaper>
+
+<MudDialog @bind-Visible="isDeleteDialogOpen" Options="deleteDialogOptions">
+    <TitleContent>
+                        <MudText Typo="Typo.h6">Inativar cliente</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>
+            Tem certeza que deseja inativar o cliente <strong>@customerPendingDeletion?.Name</strong>?
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+            O cliente deixará de aparecer em novos vínculos operacionais.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CloseDeleteDialog" Disabled="@isDeleting">
+            Cancelar
+        </MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Error"
+                   StartIcon="@Icons.Material.Filled.Block"
+                   OnClick="DeleteCustomerAsync"
+                   Disabled="@isDeleting">
+            @(isDeleting ? "Inativando..." : "Inativar cliente")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private readonly DialogOptions deleteDialogOptions = new()
+    {
+        CloseButton = true,
+        MaxWidth = MaxWidth.ExtraSmall,
+        FullWidth = true
+    };
+
+    private IReadOnlyList<CustomerDto> customers = [];
+    private CustomerDto? customerPendingDeletion;
+    private string? searchFilter;
+    private string? loadError;
+    private bool isLoading = true;
+    private bool isDeleteDialogOpen;
+    private bool isDeleting;
+    private int loadVersion;
+
+    protected override Task OnInitializedAsync() => LoadCustomersAsync();
+
+    private async Task LoadCustomersAsync()
+    {
+        var currentLoadVersion = ++loadVersion;
+        isLoading = true;
+        loadError = null;
+
+        try
+        {
+            var result = await GetCustomersUseCase.ExecuteAsync(
+                new GetCustomersQuery(searchFilter));
+
+            if (currentLoadVersion == loadVersion)
+            {
+                customers = result;
+            }
+        }
+        catch (Exception exception)
+        {
+            if (currentLoadVersion != loadVersion)
+            {
+                return;
+            }
+
+            Logger.LogError(exception, "Unable to load customers for the current company");
+            loadError = "Não foi possível carregar os clientes. Tente novamente.";
+        }
+        finally
+        {
+            if (currentLoadVersion == loadVersion)
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private void OpenDeleteDialog(CustomerDto customer)
+    {
+        customerPendingDeletion = customer;
+        isDeleteDialogOpen = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        isDeleteDialogOpen = false;
+        customerPendingDeletion = null;
+    }
+
+    private async Task DeleteCustomerAsync()
+    {
+        if (customerPendingDeletion is null)
+        {
+            return;
+        }
+
+        isDeleting = true;
+        var customer = customerPendingDeletion;
+
+        try
+        {
+            var result = await DeleteCustomerUseCase.ExecuteAsync(customer.Id);
+            if (result.IsSuccess)
+            {
+                customers = customers.Where(item => item.Id != customer.Id).ToArray();
+                Snackbar.Add("Cliente inativado com sucesso.", Severity.Success);
+                CloseDeleteDialog();
+                return;
+            }
+
+            Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
+            CloseDeleteDialog();
+            await LoadCustomersAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to delete customer {CustomerId}", customer.Id);
+            Snackbar.Add("Não foi possível excluir o cliente. Tente novamente.", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private static string GetCustomerRegistrationUrl(Guid customerId) =>
+        $"/clientes/registro?id={customerId}";
+
+    private static string FormatDocument(string document)
+    {
+        var digits = new string(document.Where(char.IsDigit).Take(14).ToArray());
+        return digits.Length <= 11 ? FormatCpf(digits) : FormatCnpj(digits);
+    }
+
+    private static string FormatCpf(string value) => value.Length switch
+    {
+        <= 3 => value,
+        <= 6 => $"{value[..3]}.{value[3..]}",
+        <= 9 => $"{value[..3]}.{value[3..6]}.{value[6..]}",
+        _ => $"{value[..3]}.{value[3..6]}.{value[6..9]}-{value[9..]}"
+    };
+
+    private static string FormatCnpj(string value) => value.Length switch
+    {
+        <= 2 => value,
+        <= 5 => $"{value[..2]}.{value[2..]}",
+        <= 8 => $"{value[..2]}.{value[2..5]}.{value[5..]}",
+        <= 12 => $"{value[..2]}.{value[2..5]}.{value[5..8]}/{value[8..]}",
+        _ => $"{value[..2]}.{value[2..5]}.{value[5..8]}/{value[8..12]}-{value[12..]}"
+    };
+
+    private static string GetPrimaryAddress(CustomerDto customer)
+    {
+        var address = customer.Addresses.FirstOrDefault(item => item.IsPrimary)
+            ?? customer.Addresses.FirstOrDefault();
+
+        if (address is null)
+        {
+            return "Não informado";
+        }
+
+        var streetAddress = $"{address.Street}, {address.Number}";
+        if (!string.IsNullOrWhiteSpace(address.Complement))
+        {
+            streetAddress += $" - {address.Complement}";
+        }
+
+        return $"{streetAddress} - {address.CityName}/{address.StateAbbreviation}";
+    }
+}

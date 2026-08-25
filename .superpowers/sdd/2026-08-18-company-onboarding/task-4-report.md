@@ -2,14 +2,14 @@
 
 ## Changed Files
 
-- `src/ServiceSync.Web/Identity/CurrentUser.cs`
-- `src/ServiceSync.Web/Identity/CurrentCompany.cs`
-- `src/ServiceSync.Web/Endpoints/AccountEndpoints.cs`
-- `src/ServiceSync.Web/Endpoints/CompanyOnboardingEndpoints.cs`
-- `src/ServiceSync.Web/Program.cs`
-- `src/ServiceSync.Infrastructure/Persistence/Migrations/20260818124912_AddCompanyOnboarding.cs`
-- `src/ServiceSync.Infrastructure/Persistence/Migrations/20260818124912_AddCompanyOnboarding.Designer.cs`
-- `src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- `src/VoltaMarcada.Web/Identity/CurrentUser.cs`
+- `src/VoltaMarcada.Web/Identity/CurrentCompany.cs`
+- `src/VoltaMarcada.Web/Endpoints/AccountEndpoints.cs`
+- `src/VoltaMarcada.Web/Endpoints/CompanyOnboardingEndpoints.cs`
+- `src/VoltaMarcada.Web/Program.cs`
+- `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260818124912_AddCompanyOnboarding.cs`
+- `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260818124912_AddCompanyOnboarding.Designer.cs`
+- `src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
 - `.superpowers/sdd/2026-08-18-company-onboarding/task-4-report.md`
 
 ## Current Context and Dependency Injection
@@ -38,7 +38,7 @@ The current UI pages are supplied by the following task; these handlers provide 
 Command run after the migration was generated:
 
 ```text
-dotnet build ServiceSync.sln --no-restore
+dotnet build VoltaMarcada.sln --no-restore
 ```
 
 Result: exit code `0`.
@@ -58,7 +58,7 @@ Available global EF tooling was checked first. The installed `dotnet-ef` is `9.0
 The required command was then run exactly:
 
 ```text
-dotnet ef migrations add AddCompanyOnboarding --project src/ServiceSync.Infrastructure --startup-project src/ServiceSync.Web --output-dir Persistence/Migrations
+dotnet ef migrations add AddCompanyOnboarding --project src/VoltaMarcada.Infrastructure --startup-project src/VoltaMarcada.Web --output-dir Persistence/Migrations
 ```
 
 Result: exit code `0`.

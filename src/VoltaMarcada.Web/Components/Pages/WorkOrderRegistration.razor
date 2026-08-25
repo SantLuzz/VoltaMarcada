@@ -1,0 +1,608 @@
+@page "/ordens-servico/registro"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@using Microsoft.EntityFrameworkCore
+@using VoltaMarcada.Application.Customers
+@using VoltaMarcada.Application.Equipment
+@using VoltaMarcada.Application.Professionals
+@using VoltaMarcada.Application.Services
+@using VoltaMarcada.Application.Scheduling
+@using VoltaMarcada.Application.WorkOrders
+@using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Infrastructure.Persistence
+@inject GetWorkOrderDetailsUseCase GetWorkOrderDetailsUseCase
+@inject WorkOrderAuthorization WorkOrderAuthorization
+@inject GetCustomersUseCase GetCustomersUseCase
+@inject GetCustomerEquipmentUseCase GetCustomerEquipmentUseCase
+@inject GetServicesUseCase GetServicesUseCase
+@inject GetProfessionalsUseCase GetProfessionalsUseCase
+@inject CreateWorkOrderUseCase CreateWorkOrderUseCase
+@inject UpdateWorkOrderUseCase UpdateWorkOrderUseCase
+@inject UpdateWorkOrderAdditionalItemsUseCase UpdateWorkOrderAdditionalItemsUseCase
+@inject CancelWorkOrderUseCase CancelWorkOrderUseCase
+@inject CreateCustomerUseCase CreateCustomerUseCase
+@inject CreateEquipmentUseCase CreateEquipmentUseCase
+@inject GetAvailableAppointmentSlotsUseCase GetAvailableAppointmentSlotsUseCase
+@inject IDbContextFactory<AppDbContext> DbContextFactory
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Ordem de serviço | VoltaMarcada</PageTitle>
+
+@if (isLoading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (WorkOrderId is not null && detail is null)
+{
+    <MudAlert Severity="Severity.Warning">Ordem de serviço não encontrada.</MudAlert>
+}
+else
+{
+    <PageHeader Title="@(WorkOrderId is null ? "Nova ordem de serviço" : "Ordem de serviço")" Description="Registre os dados, itens e a execução do atendimento.">
+        <Actions>
+            <MudButton OnClick="ReturnToListAsync" Variant="Variant.Outlined" Color="Color.Default" Disabled="@(isExecutionSaving || isPhotoUploading || isReturningToList)">@ReturnButtonText</MudButton>
+        </Actions>
+    </PageHeader>
+
+    <MudTabs>
+        <MudTabPanel Text="Dados e itens">
+            <MudPaper Class="pa-4 work-order-tab-content">
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudStack Row="true" AlignItems="AlignItems.End" Class="work-order-selection-row">
+                            <MudTooltip Text="@GetCustomerTooltip()" Class="work-order-selection-tooltip">
+                                <MudSelect T="Guid?" Label="Cliente" Placeholder="Selecione um cliente" @bind-Value="customerId" @bind-Value:after="LoadEquipmentAsync" Disabled="@(!CanEdit)" Class="work-order-selection-control">
+                                    @foreach (var customer in customers)
+                                    {
+                                        <MudSelectItem Value="@((Guid?)customer.Id)">@customer.Name</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudTooltip>
+                            @if (CanEdit)
+                            {
+                                <MudButton Class="work-order-selection-action" OnClick="@(() => customerDialogOpen = true)">Novo cliente</MudButton>
+                            }
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudStack Row="true" AlignItems="AlignItems.End" Class="work-order-selection-row">
+                            <MudTooltip Text="@GetEquipmentTooltip()" Class="work-order-selection-tooltip">
+                                <MudSelect T="Guid?" Label="Equipamento" Placeholder="Selecione um equipamento" @bind-Value="equipmentId" Disabled="@(!CanEdit)" Class="work-order-selection-control">
+                                    @foreach (var equipmentOption in equipment)
+                                    {
+                                        <MudSelectItem Value="@((Guid?)equipmentOption.Id)">@equipmentOption.Type @equipmentOption.Manufacturer @equipmentOption.Model</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudTooltip>
+                            @if (CanEdit)
+                            {
+                                <MudButton Class="work-order-selection-action" Disabled="@(customerId is null)" OnClick="@(() => equipmentDialogOpen = true)">Novo equipamento</MudButton>
+                            }
+                        </MudStack>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="Guid?" Label="Serviço" Placeholder="Selecione um serviço" @bind-Value="serviceId" @bind-Value:after="OnServiceChangedAsync" Disabled="@(WorkOrderId is not null || !CanEdit)">
+                            @foreach (var service in services)
+                            {
+                                <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" md="3">
+                        <MudSelect T="WorkOrderPriority" Label="Prioridade" @bind-Value="priority" Disabled="@(!CanEdit)">
+                            @foreach (var value in Enum.GetValues<WorkOrderPriority>())
+                            {
+                                <MudSelectItem Value="@value">@GetPriorityName(value)</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                    @if (isOwner)
+                    {
+                        <MudItem xs="12" md="3">
+                            <MudSelect T="Guid?" Label="Profissional" Placeholder="Selecione um profissional" @bind-Value="professionalId" @bind-Value:after="LoadNewWorkOrderAppointmentSlotsAsync" Clearable="true" Disabled="@(!CanAssignProfessional)">
+                                @foreach (var professional in professionals)
+                                {
+                                    <MudSelectItem Value="@((Guid?)professional.Id)">@professional.CompanyMemberName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                    }
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="reportedProblem" Label="Problema relatado" Lines="3" Disabled="@(!CanEdit)" />
+                    </MudItem>
+                    @if (WorkOrderId is null)
+                    {
+                        <MudItem xs="12">
+                            <MudSwitch T="bool" @bind-Value="createAppointment" @bind-Value:after="LoadNewWorkOrderAppointmentSlotsAsync" Color="Color.Primary" Disabled="@(!CanEdit)">Agendar atendimento para esta OS</MudSwitch>
+                        </MudItem>
+                        @if (createAppointment)
+                        {
+                            <MudItem xs="12" sm="6">
+                                <MudDatePicker Label="Data do atendimento" @bind-Date="newAppointmentDate" @bind-Date:after="LoadNewWorkOrderAppointmentSlotsAsync" Disabled="@(!CanEdit)" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudSelect T="TimeOnly?" Label="Horário" Placeholder="Selecione um horário" @bind-Value="newAppointmentStartTime" Disabled="@(!CanEdit || newAppointmentSlots.Count == 0)">
+                                    @foreach (var slot in newAppointmentSlots)
+                                    {
+                                        <MudSelectItem Value="@((TimeOnly?)slot.StartTime)">@slot.StartTime.ToString("HH:mm")</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                        }
+                    }
+                    <MudItem xs="12">
+                        <WorkOrderItemsEditor @bind-Items="items"
+                                              ServiceName="@GetSelectedServiceName()"
+                                              @bind-ServiceUnitPrice="serviceUnitPrice"
+                                              IsServicePriceFixed="@IsServicePriceFixed"
+                                              IsServicePriceReadOnly="@(WorkOrderId is not null)"
+                                              ReadOnly="@(!CanManageAdditionalItems)" />
+                    </MudItem>
+                    @if (detail is not null)
+                    {
+                        <MudItem xs="12">
+                            <MudChip T="string" Color="@GetStatusColor(detail.Status)">@GetStatusName(detail.Status)</MudChip>
+                        </MudItem>
+                    }
+                    @if (CanEdit || CanManageAdditionalItems)
+                    {
+                        <MudItem xs="12">
+                            <MudStack Row="true">
+                                <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveAsync">@(CanEdit ? (WorkOrderId is null ? "Criar OS" : "Salvar alterações") : "Salvar itens")</MudButton>
+                                @if (WorkOrderId is not null && CanEdit)
+                                {
+                                    <MudButton Color="Color.Error" Variant="Variant.Outlined" OnClick="CancelAsync">Cancelar OS</MudButton>
+                                }
+                            </MudStack>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        </MudTabPanel>
+        @if (detail is not null)
+        {
+            <MudTabPanel Text="Execução">
+                <WorkOrderExecutionPanel @ref="executionPanel" WorkOrder="detail" OnChanged="LoadAsync" OnSavingChanged="SetExecutionSavingAsync" OnPhotoUploadChanged="SetPhotoUploadStateAsync" />
+            </MudTabPanel>
+            <MudTabPanel Text="Agendamentos">
+                <WorkOrderAppointmentsPanel WorkOrderId="@detail.Id"
+                                           IsOwner="@isOwner"
+                                           CanCreateAppointments="@(isOwner || currentProfessionalId is { } currentProfessionalIdValue && detail.ProfessionalId == currentProfessionalIdValue)" />
+            </MudTabPanel>
+        }
+    </MudTabs>
+}
+
+<MudDialog @bind-Visible="customerDialogOpen" Class="work-order-customer-dialog" ClassContent="work-order-customer-dialog-content">
+    <TitleContent><MudText Typo="Typo.h6">Novo cliente</MudText></TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="newCustomerName" Label="Nome" Required="true" RequiredError="Informe o nome." />
+        <BrazilianDocumentInput @bind-Value="newCustomerDocument" Id="work-order-customer-document" Name="workOrderCustomerDocument" Required="true" />
+        <BrazilianPhoneInput @bind-Value="newCustomerWhatsApp" Id="work-order-customer-whatsapp" Name="workOrderCustomerWhatsApp" Required="true" />
+        <BrazilianPostalCodeInput @bind-Value="newCustomerPostalCode" Id="work-order-customer-postal-code" Name="workOrderCustomerPostalCode" Required="true" />
+        <MudTextField @bind-Value="newCustomerStreet" Label="Logradouro" Required="true" RequiredError="Informe o logradouro." />
+        <MudTextField @bind-Value="newCustomerNumber" Label="Número" Required="true" RequiredError="Informe o número." />
+        <MudSelect T="Guid" Label="Estado" @bind-Value="newCustomerStateId" @bind-Value:after="LoadCustomerCitiesAsync" Required="true" RequiredError="Selecione o estado.">
+            <MudSelectItem Value="@Guid.Empty">Selecione o estado</MudSelectItem>
+            @foreach (var state in states)
+            {
+                <MudSelectItem Value="@state.Id">@state.Abbreviation - @state.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect T="Guid" Label="Cidade" @bind-Value="newCustomerCityId" Required="true" RequiredError="Selecione a cidade." Disabled="@(newCustomerStateId == Guid.Empty)">
+            <MudSelectItem Value="@Guid.Empty">Selecione a cidade</MudSelectItem>
+            @foreach (var city in customerCities)
+            {
+                <MudSelectItem Value="@city.Id">@city.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => customerDialogOpen = false)">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" OnClick="CreateCustomerAsync">Salvar cliente</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="equipmentDialogOpen">
+    <TitleContent><MudText Typo="Typo.h6">Novo equipamento</MudText></TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="newEquipmentType" Label="Tipo de equipamento" Required="true" RequiredError="Informe o tipo de equipamento." />
+        <MudTextField @bind-Value="newEquipmentManufacturer" Label="Fabricante" />
+        <MudTextField @bind-Value="newEquipmentModel" Label="Modelo" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => equipmentDialogOpen = false)">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" OnClick="CreateEquipmentAsync">Salvar equipamento</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [SupplyParameterFromQuery(Name = "id")]
+    public Guid? WorkOrderId { get; set; }
+
+    private WorkOrderDetailDto? detail;
+    private IReadOnlyList<CustomerDto> customers = [];
+    private IReadOnlyList<EquipmentDto> equipment = [];
+    private IReadOnlyList<ServiceDto> services = [];
+    private IReadOnlyList<ProfessionalDto> professionals = [];
+    private List<WorkOrderItemInput> items = [];
+    private Guid? customerId;
+    private Guid? equipmentId;
+    private Guid? serviceId;
+    private Guid? professionalId;
+    private Guid? currentProfessionalId;
+    private decimal? serviceUnitPrice;
+    private WorkOrderPriority priority = WorkOrderPriority.Normal;
+    private string reportedProblem = string.Empty;
+    private bool createAppointment;
+    private DateTime? newAppointmentDate;
+    private TimeOnly? newAppointmentStartTime;
+    private IReadOnlyList<AppointmentSlotDto> newAppointmentSlots = [];
+    private bool isOwner;
+    private bool isLoading = true;
+    private bool isExecutionSaving;
+    private bool isPhotoUploading;
+    private bool isReturningToList;
+    private WorkOrderExecutionPanel? executionPanel;
+    private bool customerDialogOpen;
+    private bool equipmentDialogOpen;
+    private string newCustomerName = string.Empty;
+    private string newCustomerDocument = string.Empty;
+    private string newCustomerWhatsApp = string.Empty;
+    private string newCustomerPostalCode = string.Empty;
+    private string newCustomerStreet = string.Empty;
+    private string newCustomerNumber = string.Empty;
+    private Guid newCustomerStateId;
+    private Guid newCustomerCityId;
+    private IReadOnlyList<StateOption> states = [];
+    private IReadOnlyList<CityOption> customerCities = [];
+    private string newEquipmentType = string.Empty;
+    private string? newEquipmentManufacturer;
+    private string? newEquipmentModel;
+
+    private bool CanEdit => WorkOrderId is null || detail?.Capabilities.CanEdit == true;
+    private bool CanManageAdditionalItems => WorkOrderId is null || detail?.Capabilities.CanManageAdditionalItems == true;
+    private bool CanAssignProfessional => WorkOrderId is null ? isOwner : detail?.Capabilities.CanAssignProfessional == true;
+    private bool IsServicePriceFixed => GetSelectedService()?.PriceType == ServicePriceType.Fixed;
+    private string ReturnButtonText => isPhotoUploading
+        ? "Enviando foto..."
+        : isExecutionSaving || isReturningToList
+            ? "Salvando progresso..."
+            : "Voltar";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var scope = await WorkOrderAuthorization.GetAccessScopeAsync();
+        isOwner = scope.IsOwner;
+        currentProfessionalId = scope.ProfessionalId;
+        customers = await GetCustomersUseCase.ExecuteAsync();
+        services = (await GetServicesUseCase.ExecuteAsync()).Where(x => x.IsActive).ToArray();
+        await using (var dbContext = await DbContextFactory.CreateDbContextAsync())
+        {
+            states = await dbContext.States.AsNoTracking()
+                .OrderBy(state => state.Abbreviation)
+                .Select(state => new StateOption(state.Id, state.Name, state.Abbreviation))
+                .ToArrayAsync();
+        }
+        await LoadAsync();
+        isLoading = false;
+    }
+
+    private async Task LoadAsync()
+    {
+        detail = WorkOrderId is { } id ? await GetWorkOrderDetailsUseCase.ExecuteAsync(id) : null;
+        if (detail is null)
+        {
+            return;
+        }
+
+        customerId = detail.CustomerId;
+        equipmentId = detail.EquipmentId;
+        serviceId = detail.ServiceId;
+        professionalId = detail.ProfessionalId;
+        priority = detail.Priority;
+        reportedProblem = detail.ReportedProblem ?? string.Empty;
+        serviceUnitPrice = detail.Items.SingleOrDefault(item => item.Type == WorkOrderItemType.Service)?.UnitPrice
+            ?? (GetSelectedService()?.PriceType == ServicePriceType.Fixed ? GetSelectedService()?.BasePrice : null);
+        items = detail.Items.Where(item => item.Type == WorkOrderItemType.Additional).Select(item => new WorkOrderItemInput(item.Description, item.Quantity, item.UnitPrice)).ToList();
+        await LoadEquipmentAsync(false);
+        await LoadProfessionalOptions();
+        await LoadNewWorkOrderAppointmentSlotsAsync();
+    }
+
+    private async Task LoadEquipmentAsync() => await LoadEquipmentAsync(true);
+
+    private async Task LoadEquipmentAsync(bool clearSelection)
+    {
+        if (clearSelection)
+        {
+            equipmentId = null;
+        }
+
+        equipment = customerId is null ? [] : await GetCustomerEquipmentUseCase.ExecuteAsync(customerId.Value);
+    }
+
+    private async Task LoadProfessionalOptions()
+    {
+        if (!isOwner || serviceId is null)
+        {
+            professionals = [];
+            return;
+        }
+
+        professionals = (await GetProfessionalsUseCase.ExecuteAsync())
+            .Where(professional => professional.IsActive && professional.ServiceIds.Contains(serviceId.Value))
+            .ToArray();
+
+        if (professionalId is { } selectedId && professionals.All(professional => professional.Id != selectedId))
+        {
+            professionalId = null;
+        }
+    }
+
+    private async Task OnServiceChangedAsync()
+    {
+        var selectedService = GetSelectedService();
+        serviceUnitPrice = selectedService?.PriceType is ServicePriceType.Fixed or ServicePriceType.StartingAt
+            ? selectedService.BasePrice
+            : null;
+        await LoadProfessionalOptions();
+        await LoadNewWorkOrderAppointmentSlotsAsync();
+    }
+
+    private async Task LoadNewWorkOrderAppointmentSlotsAsync()
+    {
+        newAppointmentStartTime = null;
+        newAppointmentSlots = [];
+        if (!createAppointment || newAppointmentDate is null || GetSelectedService() is not { } service || (isOwner ? professionalId : currentProfessionalId) is not { } appointmentProfessionalId)
+        {
+            return;
+        }
+
+        newAppointmentSlots = await GetAvailableAppointmentSlotsUseCase.ExecuteAsync(
+            appointmentProfessionalId,
+            DateOnly.FromDateTime(newAppointmentDate.Value),
+            service.DurationMinutes);
+    }
+
+    private async Task ReturnToListAsync()
+    {
+        if (isExecutionSaving || isPhotoUploading || isReturningToList)
+        {
+            return;
+        }
+
+        isReturningToList = true;
+        try
+        {
+            if (executionPanel is not null && !await executionPanel.SavePendingChangesAsync())
+            {
+                return;
+            }
+
+            NavigationManager.NavigateTo("/ordens-servico");
+        }
+        finally
+        {
+            isReturningToList = false;
+        }
+    }
+
+    private Task SetExecutionSavingAsync(bool value)
+    {
+        isExecutionSaving = value;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task SetPhotoUploadStateAsync(bool value)
+    {
+        isPhotoUploading = value;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CreateCustomerAsync()
+    {
+        var address = new CustomerAddressInput(
+            CustomerAddressType.Residence,
+            true,
+            newCustomerStreet,
+            newCustomerNumber,
+            newCustomerPostalCode,
+            null,
+            newCustomerStateId,
+            newCustomerCityId);
+        var result = await CreateCustomerUseCase.ExecuteAsync(new CreateCustomerCommand(newCustomerName, newCustomerDocument, newCustomerWhatsApp, null, null, [address]));
+        if (!result.IsSuccess || result.Value is not { } id)
+        {
+            Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
+            return;
+        }
+
+        customers = await GetCustomersUseCase.ExecuteAsync();
+        customerId = id;
+        customerDialogOpen = false;
+        await LoadEquipmentAsync();
+    }
+
+    private async Task LoadCustomerCitiesAsync()
+    {
+        newCustomerCityId = Guid.Empty;
+        if (newCustomerStateId == Guid.Empty)
+        {
+            customerCities = [];
+            return;
+        }
+
+        await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+        customerCities = await dbContext.Cities.AsNoTracking()
+            .Where(city => city.StateId == newCustomerStateId)
+            .OrderBy(city => city.Name)
+            .Select(city => new CityOption(city.Id, city.Name))
+            .ToArrayAsync();
+    }
+
+    private async Task CreateEquipmentAsync()
+    {
+        if (customerId is null)
+        {
+            return;
+        }
+
+        var result = await CreateEquipmentUseCase.ExecuteAsync(new CreateEquipmentCommand(customerId.Value, newEquipmentType, newEquipmentManufacturer, newEquipmentModel, null, null, null, null, null));
+        if (!result.IsSuccess || result.Value is not { } id)
+        {
+            Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
+            return;
+        }
+
+        await LoadEquipmentAsync(false);
+        equipmentId = id;
+        equipmentDialogOpen = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (WorkOrderId is { } workOrderId && !CanEdit)
+        {
+            if (!CanManageAdditionalItems)
+            {
+                return;
+            }
+
+            if (items.Any(item => string.IsNullOrWhiteSpace(item.Description) || item.Quantity <= 0 || item.UnitPrice < 0))
+            {
+                Snackbar.Add("Revise os itens e valores da OS.", Severity.Warning);
+                return;
+            }
+
+            var additionalItemsResult = await UpdateWorkOrderAdditionalItemsUseCase.ExecuteAsync(
+                workOrderId,
+                new UpdateWorkOrderAdditionalItemsCommand(items));
+            if (additionalItemsResult.IsSuccess)
+            {
+                Snackbar.Add("Itens da OS atualizados.", Severity.Success);
+                await LoadAsync();
+                return;
+            }
+
+            ShowOperationError(additionalItemsResult.Error?.Code);
+            return;
+        }
+
+        if (customerId is null || equipmentId is null || serviceId is null)
+        {
+            Snackbar.Add("Informe cliente, equipamento e serviço.", Severity.Warning);
+            return;
+        }
+
+        if (!IsServicePriceFixed && serviceUnitPrice is null)
+        {
+            Snackbar.Add("Informe o valor do serviço.", Severity.Warning);
+            return;
+        }
+
+        if (items.Any(item => string.IsNullOrWhiteSpace(item.Description) || item.Quantity <= 0 || item.UnitPrice < 0))
+        {
+            Snackbar.Add("Revise os itens e valores da OS.", Severity.Warning);
+            return;
+        }
+
+        if (WorkOrderId is null)
+        {
+            if (createAppointment && (newAppointmentDate is null || newAppointmentStartTime is null))
+            {
+                Snackbar.Add("Selecione a data e o horário do atendimento.", Severity.Warning);
+                return;
+            }
+
+            var appointment = createAppointment
+                ? new WorkOrderAppointmentInput(DateOnly.FromDateTime(newAppointmentDate!.Value), newAppointmentStartTime!.Value)
+                : null;
+            var result = await CreateWorkOrderUseCase.ExecuteAsync(new CreateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items, appointment));
+            if (result.IsSuccess && result.Value?.WorkOrderId is { } createdId)
+            {
+                NavigationManager.NavigateTo($"/ordens-servico/registro?id={createdId}");
+                return;
+            }
+
+            ShowOperationError(result.Error?.Code);
+            return;
+        }
+
+        var updateResult = await UpdateWorkOrderUseCase.ExecuteAsync(WorkOrderId.Value, new UpdateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items));
+        if (updateResult.IsSuccess)
+        {
+            Snackbar.Add("OS atualizada.", Severity.Success);
+            await LoadAsync();
+            return;
+        }
+
+        ShowOperationError(updateResult.Error?.Code);
+    }
+
+    private async Task CancelAsync()
+    {
+        if (WorkOrderId is not { } id)
+        {
+            return;
+        }
+
+        var result = await CancelWorkOrderUseCase.ExecuteAsync(id);
+        if (result.IsSuccess)
+        {
+            Snackbar.Add("OS cancelada.", Severity.Success);
+            await LoadAsync();
+            return;
+        }
+
+        ShowOperationError(result.Error?.Code);
+    }
+
+    private void ShowOperationError(string? code)
+    {
+        Snackbar.Add(OperationErrorMessages.GetMessage(code), Severity.Warning);
+    }
+
+    private static string GetPriorityName(WorkOrderPriority value) => value switch
+    {
+        WorkOrderPriority.Low => "Baixa",
+        WorkOrderPriority.High => "Alta",
+        WorkOrderPriority.Urgent => "Urgente",
+        _ => "Normal"
+    };
+
+    private static string GetStatusName(WorkOrderStatus value) => value switch
+    {
+        WorkOrderStatus.InProgress => "Em execução",
+        WorkOrderStatus.Completed => "Concluída",
+        WorkOrderStatus.Cancelled => "Cancelada",
+        _ => "Pendente"
+    };
+
+    private static Color GetStatusColor(WorkOrderStatus value) => value switch
+    {
+        WorkOrderStatus.InProgress => Color.Info,
+        WorkOrderStatus.Completed => Color.Success,
+        WorkOrderStatus.Cancelled => Color.Error,
+        _ => Color.Warning
+    };
+
+    private ServiceDto? GetSelectedService() => serviceId is { } id
+        ? services.SingleOrDefault(service => service.Id == id)
+        : null;
+
+    private string GetSelectedServiceName() => GetSelectedService()?.Name ?? string.Empty;
+
+    private string GetCustomerTooltip() => customerId is { } id
+        ? customers.SingleOrDefault(customer => customer.Id == id)?.Name ?? "Selecione um cliente"
+        : "Selecione um cliente";
+
+    private string GetEquipmentTooltip() => equipmentId is { } id
+        ? equipment.SingleOrDefault(item => item.Id == id) is { } selected
+            ? $"{selected.Type} {selected.Manufacturer} {selected.Model}".Trim()
+            : "Selecione um equipamento"
+        : "Selecione um equipamento";
+
+    private sealed record StateOption(Guid Id, string Name, string Abbreviation);
+    private sealed record CityOption(Guid Id, string Name);
+}

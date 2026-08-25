@@ -1,14 +1,14 @@
 ### Task 3: Persist the model, constraints, and transaction
 
 **Files:**
-- Modify: `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Configurations/CompanyConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/CompanyUserConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Repositories/CompanyOnboardingRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/DependencyInjection.cs`
-- Modify: `src/ServiceSync.Infrastructure/Identity/ApplicationUser.cs`
-- Modify: `src/ServiceSync.Infrastructure/Identity/ApplicationUserConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/*AddCompanyOnboarding.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/CompanyConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/CompanyUserConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/CompanyOnboardingRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/DependencyInjection.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Identity/ApplicationUser.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Identity/ApplicationUserConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/*AddCompanyOnboarding.cs`
 
 **Consumes:** `ICompanyOnboardingRepository`, `Company`, and `CompanyUser`.
 
@@ -16,8 +16,8 @@
 - [ ] Map `CompanyUser` with required restrictive FKs to Identity user and Company, and a named unique index on `(UserId, CompanyId)`.
 - [ ] Remove `CompanyId` and `Company` from `ApplicationUser`, then remove its direct-company mapping so membership remains the only source of truth.
 - [ ] Implement repository persistence inside an EF transaction. Add company and owner membership, save, commit, and map known PostgreSQL unique-constraint names to the explicit duplicate outcomes. Re-throw unexpected database failures.
-- [ ] Register the repository, scaffold `AddCompanyOnboarding` with `dotnet ef migrations add AddCompanyOnboarding --project src/ServiceSync.Infrastructure --startup-project src/ServiceSync.Web --output-dir Persistence/Migrations`, and inspect that it creates `CompanyUsers`, expands `Companies`, drops old `CompanyId`, and creates all three unique indexes.
-- [ ] Run `dotnet build ServiceSync.sln`; expect exit code 0.
+- [ ] Register the repository, scaffold `AddCompanyOnboarding` with `dotnet ef migrations add AddCompanyOnboarding --project src/VoltaMarcada.Infrastructure --startup-project src/VoltaMarcada.Web --output-dir Persistence/Migrations`, and inspect that it creates `CompanyUsers`, expands `Companies`, drops old `CompanyId`, and creates all three unique indexes.
+- [ ] Run `dotnet build VoltaMarcada.sln`; expect exit code 0.
 
 ## Prior ruling that binds this task
 

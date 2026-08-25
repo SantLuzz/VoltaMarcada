@@ -1,23 +1,23 @@
-Abaixo está um plano de negócio que também funciona como **documento norteador do desenvolvimento**: sempre que surgir uma feature nova, você pode verificar se ela fortalece o ciclo principal do ServiceSync ou se é algo para depois do MVP. 
+Abaixo está um plano de negócio que também funciona como **documento norteador do desenvolvimento**: sempre que surgir uma feature nova, você pode verificar se ela fortalece o ciclo principal do VoltaMarcada ou se é algo para depois do MVP. 
 
-# ServiceSync
+# VoltaMarcada
 ## Plano de Negócio e Desenvolvimento do Produto
 
 **Versão:** 1.0  
-**Produto:** ServiceSync  
+**Produto:** VoltaMarcada  
 **Modelo:** SaaS B2B para prestadores de serviços técnicos
 
 ---
 
 # 1. Resumo executivo
 
-O **ServiceSync** é uma plataforma SaaS voltada para empresas e profissionais que realizam serviços técnicos, manutenções, instalações e atendimentos recorrentes.
+O **VoltaMarcada** é uma plataforma SaaS voltada para empresas e profissionais que realizam serviços técnicos, manutenções, instalações e atendimentos recorrentes.
 
 O sistema nasce para resolver um problema simples, mas de alto impacto:
 
 > Empresas realizam serviços nos clientes, porém frequentemente não possuem um processo organizado para saber quando aquele equipamento precisará de manutenção novamente e acabam perdendo oportunidades de retorno.
 
-O ServiceSync não será apenas um sistema de Ordem de Serviço.
+O VoltaMarcada não será apenas um sistema de Ordem de Serviço.
 
 Seu objetivo será acompanhar todo o ciclo de relacionamento entre empresa, cliente e equipamento:
 
@@ -60,7 +60,7 @@ O cliente somente procura novamente a empresa quando percebe algum problema — 
 
 # 3. Proposta de valor
 
-A principal proposta do ServiceSync será:
+A principal proposta do VoltaMarcada será:
 
 > **Transformar serviços realizados hoje em oportunidades futuras de atendimento.**
 
@@ -68,7 +68,7 @@ Ao finalizar uma OS, o profissional poderá informar:
 
 **Próxima manutenção recomendada: 90 dias.**
 
-O ServiceSync passa a acompanhar essa previsão.
+O VoltaMarcada passa a acompanhar essa previsão.
 
 Quando a data estiver próxima, o sistema informa à empresa:
 
@@ -88,7 +88,7 @@ Isso cria um ciclo recorrente.
 
 ---
 
-# 4. O ciclo ServiceSync
+# 4. O ciclo VoltaMarcada
 
 O principal ciclo do produto será:
 
@@ -121,7 +121,7 @@ NOVA PREVISÃO
    ↺
 ```
 
-Este deverá ser considerado o **Core Business do ServiceSync**.
+Este deverá ser considerado o **Core Business do VoltaMarcada**.
 
 ---
 
@@ -161,7 +161,7 @@ Após validar o modelo, o produto poderá ser adaptado para outros prestadores.
 
 # 6. Princípio fundamental do produto
 
-O ServiceSync **não deverá obrigar a empresa a seguir um único fluxo**.
+O VoltaMarcada **não deverá obrigar a empresa a seguir um único fluxo**.
 
 Nem todo cliente chegará pelo site.
 
@@ -332,7 +332,7 @@ João da Silva
 
 # 10. Equipamentos
 
-Equipamentos serão uma parte importante do ServiceSync.
+Equipamentos serão uma parte importante do VoltaMarcada.
 
 Um cliente poderá possuir vários equipamentos.
 
@@ -542,7 +542,7 @@ Exemplo:
 19/08 — 10:00
 ```
 
-O ServiceSync deverá guardar histórico.
+O VoltaMarcada deverá guardar histórico.
 
 ### Histórico
 
@@ -647,7 +647,7 @@ O PDF continuará disponível.
 
 No MVP não será necessária integração automática com a API oficial.
 
-O ServiceSync poderá possuir botões como:
+O VoltaMarcada poderá possuir botões como:
 
 **Enviar orçamento pelo WhatsApp**
 
@@ -663,7 +663,7 @@ Isso reduz custo e complexidade inicial.
 
 # 22. Manutenção prevista
 
-Esta será uma das principais funcionalidades do ServiceSync.
+Esta será uma das principais funcionalidades do VoltaMarcada.
 
 Ao finalizar uma OS:
 
@@ -808,7 +808,7 @@ A empresa decide o que fazer.
 
 O link enviado para uma manutenção não deverá ser simplesmente o link genérico da empresa.
 
-O ServiceSync poderá gerar um token contextualizado.
+O VoltaMarcada poderá gerar um token contextualizado.
 
 O sistema já conhecerá:
 
@@ -1043,13 +1043,13 @@ Stack inicial recomendada:
 Arquitetura:
 
 ```text
-ServiceSync.Domain
+VoltaMarcada.Domain
 
-ServiceSync.Application
+VoltaMarcada.Application
 
-ServiceSync.Infrastructure
+VoltaMarcada.Infrastructure
 
-ServiceSync.Web
+VoltaMarcada.Web
 ```
 
 ### Domain
@@ -1198,7 +1198,7 @@ Desenvolver:
 
 ### Objetivo
 
-Empresa já consegue utilizar ServiceSync como sistema básico de OS.
+Empresa já consegue utilizar VoltaMarcada como sistema básico de OS.
 
 ---
 
@@ -1217,7 +1217,7 @@ Desenvolver:
 
 ### Objetivo
 
-Empresa passa a controlar atendimentos através do ServiceSync.
+Empresa passa a controlar atendimentos através do VoltaMarcada.
 
 ---
 
@@ -1241,7 +1241,7 @@ Desenvolver:
 
 ### Objetivo
 
-ServiceSync passa a lembrar a empresa de oportunidades futuras.
+VoltaMarcada passa a lembrar a empresa de oportunidades futuras.
 
 Aqui o produto começa realmente a demonstrar seu diferencial.
 
@@ -1360,7 +1360,7 @@ Finaliza
 ↓
 Informa próxima manutenção
 ↓
-ServiceSync lembra
+VoltaMarcada lembra
 ↓
 Empresa contata cliente
 ↓
@@ -1442,7 +1442,7 @@ A resposta dessas perguntas deverá orientar o roadmap.
 
 ---
 
-# 47. Métrica principal do ServiceSync
+# 47. Métrica principal do VoltaMarcada
 
 Uma das métricas mais importantes não deverá ser simplesmente:
 
@@ -1478,7 +1478,7 @@ Isso demonstra claramente valor financeiro.
 
 Uma futura seção poderá mostrar:
 
-## Receita recuperada pelo ServiceSync
+## Receita recuperada pelo VoltaMarcada
 
 ```text
 Este mês
@@ -1501,15 +1501,15 @@ Evitar posicionar o produto simplesmente como:
 
 > Sistema de Ordem de Serviço.
 
-Isso coloca o ServiceSync competindo diretamente com dezenas de sistemas genéricos.
+Isso coloca o VoltaMarcada competindo diretamente com dezenas de sistemas genéricos.
 
 Uma mensagem mais alinhada ao produto seria:
 
-> **ServiceSync organiza seus atendimentos e ajuda sua empresa a trazer seus clientes de volta no momento certo.**
+> **VoltaMarcada organiza seus atendimentos e ajuda sua empresa a trazer seus clientes de volta no momento certo.**
 
 Ou:
 
-> **Faça o serviço hoje. O ServiceSync lembra quando é hora de trazer o cliente de volta.**
+> **Faça o serviço hoje. O VoltaMarcada lembra quando é hora de trazer o cliente de volta.**
 
 A OS é uma funcionalidade.
 
@@ -1533,7 +1533,7 @@ Caso não responda positivamente a nenhuma delas, provavelmente não pertence ao
 
 # 51. Visão final
 
-O ServiceSync deverá funcionar como uma memória operacional e comercial da empresa.
+O VoltaMarcada deverá funcionar como uma memória operacional e comercial da empresa.
 
 O profissional não precisa lembrar:
 
@@ -1559,4 +1559,4 @@ Registra uma nova previsão.
 
 E o ciclo recomeça.
 
-Esse deverá ser o princípio central utilizado para orientar produto, arquitetura e desenvolvimento do ServiceSync.
+Esse deverá ser o princípio central utilizado para orientar produto, arquitetura e desenvolvimento do VoltaMarcada.

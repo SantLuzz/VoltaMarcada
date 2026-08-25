@@ -2,7 +2,7 @@
 
 ## Goal
 
-Allow a company owner to view company information, pre-register employees, and share secure invitation links that let employees create their ServiceSync account and join the company with the `Employee` role.
+Allow a company owner to view company information, pre-register employees, and share secure invitation links that let employees create their VoltaMarcada account and join the company with the `Employee` role.
 
 ## Scope
 

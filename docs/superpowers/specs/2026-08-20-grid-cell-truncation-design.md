@@ -2,7 +2,7 @@
 
 ## Goal
 
-Prevent horizontal scrolling in ServiceSync data grids while keeping every cell value accessible.
+Prevent horizontal scrolling in VoltaMarcada data grids while keeping every cell value accessible.
 
 ## Shared Component
 

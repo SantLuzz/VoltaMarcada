@@ -18,35 +18,35 @@
 - Fixed and StartingAt require a nonnegative value; QuoteRequired and Hidden do not accept a value.
 - DurationMinutes is a positive whole number represented by int and labelled in minutes in the UI.
 - Checklist requiredness belongs to ServiceChecklistItem.IsRequired; no service-wide checklist-required flag may be introduced.
-- Use MudBlazor for all interactive controls and follow src/ServiceSync.Web/AGENTS.md.
+- Use MudBlazor for all interactive controls and follow src/VoltaMarcada.Web/AGENTS.md.
 - Automated tests, builds, test runs, and application launches are outside this MVP request. Validate by static inspection only.
 
 ---
 
 ## File Structure
 
-- src/ServiceSync.Domain/Enums/ServicePriceType.cs: price display semantics.
-- src/ServiceSync.Domain/Entities/Service.cs: company-scoped aggregate and checklist lifecycle.
-- src/ServiceSync.Domain/Entities/ServiceChecklistItem.cs: text, requiredness, and display order for one checklist row.
-- src/ServiceSync.Application/Services/: commands, DTOs, validation, operation result, and CRUD use cases.
-- src/ServiceSync.Application/Abstractions/Persistence/IServiceRepository.cs: tenant-safe persistence contract.
-- src/ServiceSync.Infrastructure/Persistence/Configurations/ServiceConfiguration.cs: service mapping.
-- src/ServiceSync.Infrastructure/Persistence/Configurations/ServiceChecklistItemConfiguration.cs: checklist mapping.
-- src/ServiceSync.Infrastructure/Persistence/Repositories/ServiceRepository.cs: EF implementation.
-- src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs and dependency-injection files: composition.
-- src/ServiceSync.Infrastructure/Persistence/Migrations/20260820130000_AddServices.cs and model snapshot: schema.
-- src/ServiceSync.Web/Endpoints/ServiceEndpoints.cs and Program.cs: HTTP contract/mapping.
-- src/ServiceSync.Web/Components/Pages/Services.razor: list/search/delete page.
-- src/ServiceSync.Web/Components/Pages/ServiceRegistration.razor: registration/edit page.
-- src/ServiceSync.Web/Components/Layout/MainLayout.razor and wwwroot/app.css: menu and shared layout styling.
+- src/VoltaMarcada.Domain/Enums/ServicePriceType.cs: price display semantics.
+- src/VoltaMarcada.Domain/Entities/Service.cs: company-scoped aggregate and checklist lifecycle.
+- src/VoltaMarcada.Domain/Entities/ServiceChecklistItem.cs: text, requiredness, and display order for one checklist row.
+- src/VoltaMarcada.Application/Services/: commands, DTOs, validation, operation result, and CRUD use cases.
+- src/VoltaMarcada.Application/Abstractions/Persistence/IServiceRepository.cs: tenant-safe persistence contract.
+- src/VoltaMarcada.Infrastructure/Persistence/Configurations/ServiceConfiguration.cs: service mapping.
+- src/VoltaMarcada.Infrastructure/Persistence/Configurations/ServiceChecklistItemConfiguration.cs: checklist mapping.
+- src/VoltaMarcada.Infrastructure/Persistence/Repositories/ServiceRepository.cs: EF implementation.
+- src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs and dependency-injection files: composition.
+- src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260820130000_AddServices.cs and model snapshot: schema.
+- src/VoltaMarcada.Web/Endpoints/ServiceEndpoints.cs and Program.cs: HTTP contract/mapping.
+- src/VoltaMarcada.Web/Components/Pages/Services.razor: list/search/delete page.
+- src/VoltaMarcada.Web/Components/Pages/ServiceRegistration.razor: registration/edit page.
+- src/VoltaMarcada.Web/Components/Layout/MainLayout.razor and wwwroot/app.css: menu and shared layout styling.
 
 ### Task 1: Define the Services Domain Aggregate
 
 **Files:**
 
-- Create: src/ServiceSync.Domain/Enums/ServicePriceType.cs
-- Create: src/ServiceSync.Domain/Entities/Service.cs
-- Create: src/ServiceSync.Domain/Entities/ServiceChecklistItem.cs
+- Create: src/VoltaMarcada.Domain/Enums/ServicePriceType.cs
+- Create: src/VoltaMarcada.Domain/Entities/Service.cs
+- Create: src/VoltaMarcada.Domain/Entities/ServiceChecklistItem.cs
 
 **Interfaces:**
 
@@ -74,7 +74,7 @@ Verify no public setter exists, timestamps use no direct system clock, Fixed/Sta
 - [ ] **Step 5: Commit**
 
 ~~~powershell
-git add src/ServiceSync.Domain/Enums/ServicePriceType.cs src/ServiceSync.Domain/Entities/Service.cs src/ServiceSync.Domain/Entities/ServiceChecklistItem.cs
+git add src/VoltaMarcada.Domain/Enums/ServicePriceType.cs src/VoltaMarcada.Domain/Entities/Service.cs src/VoltaMarcada.Domain/Entities/ServiceChecklistItem.cs
 git commit -m "feat: add services domain model"
 ~~~
 
@@ -82,20 +82,20 @@ git commit -m "feat: add services domain model"
 
 **Files:**
 
-- Create: src/ServiceSync.Application/Services/ServiceChecklistItemInput.cs
-- Create: src/ServiceSync.Application/Services/CreateServiceCommand.cs
-- Create: src/ServiceSync.Application/Services/UpdateServiceCommand.cs
-- Create: src/ServiceSync.Application/Services/ServiceCommandValidator.cs
-- Create: src/ServiceSync.Application/Services/ServiceDto.cs
-- Create: src/ServiceSync.Application/Services/GetServicesQuery.cs
-- Create: src/ServiceSync.Application/Services/ServiceOperationResult.cs
-- Create: src/ServiceSync.Application/Services/CreateServiceUseCase.cs
-- Create: src/ServiceSync.Application/Services/GetServicesUseCase.cs
-- Create: src/ServiceSync.Application/Services/GetServiceForEditUseCase.cs
-- Create: src/ServiceSync.Application/Services/UpdateServiceUseCase.cs
-- Create: src/ServiceSync.Application/Services/DeleteServiceUseCase.cs
-- Create: src/ServiceSync.Application/Abstractions/Persistence/IServiceRepository.cs
-- Modify: src/ServiceSync.Application/DependencyInjection.cs
+- Create: src/VoltaMarcada.Application/Services/ServiceChecklistItemInput.cs
+- Create: src/VoltaMarcada.Application/Services/CreateServiceCommand.cs
+- Create: src/VoltaMarcada.Application/Services/UpdateServiceCommand.cs
+- Create: src/VoltaMarcada.Application/Services/ServiceCommandValidator.cs
+- Create: src/VoltaMarcada.Application/Services/ServiceDto.cs
+- Create: src/VoltaMarcada.Application/Services/GetServicesQuery.cs
+- Create: src/VoltaMarcada.Application/Services/ServiceOperationResult.cs
+- Create: src/VoltaMarcada.Application/Services/CreateServiceUseCase.cs
+- Create: src/VoltaMarcada.Application/Services/GetServicesUseCase.cs
+- Create: src/VoltaMarcada.Application/Services/GetServiceForEditUseCase.cs
+- Create: src/VoltaMarcada.Application/Services/UpdateServiceUseCase.cs
+- Create: src/VoltaMarcada.Application/Services/DeleteServiceUseCase.cs
+- Create: src/VoltaMarcada.Application/Abstractions/Persistence/IServiceRepository.cs
+- Modify: src/VoltaMarcada.Application/DependencyInjection.cs
 
 **Interfaces:**
 
@@ -131,7 +131,7 @@ Trace every command field to its validator and domain call. Confirm CompanyId ne
 - [ ] **Step 7: Commit**
 
 ~~~powershell
-git add src/ServiceSync.Application/Services src/ServiceSync.Application/Abstractions/Persistence/IServiceRepository.cs src/ServiceSync.Application/DependencyInjection.cs
+git add src/VoltaMarcada.Application/Services src/VoltaMarcada.Application/Abstractions/Persistence/IServiceRepository.cs src/VoltaMarcada.Application/DependencyInjection.cs
 git commit -m "feat: add service management use cases"
 ~~~
 
@@ -139,14 +139,14 @@ git commit -m "feat: add service management use cases"
 
 **Files:**
 
-- Create: src/ServiceSync.Infrastructure/Persistence/Configurations/ServiceConfiguration.cs
-- Create: src/ServiceSync.Infrastructure/Persistence/Configurations/ServiceChecklistItemConfiguration.cs
-- Create: src/ServiceSync.Infrastructure/Persistence/Repositories/ServiceRepository.cs
-- Modify: src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs
-- Modify: src/ServiceSync.Infrastructure/DependencyInjection.cs
-- Create: src/ServiceSync.Infrastructure/Persistence/Migrations/20260820130000_AddServices.cs
-- Create: src/ServiceSync.Infrastructure/Persistence/Migrations/20260820130000_AddServices.Designer.cs
-- Modify: src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs
+- Create: src/VoltaMarcada.Infrastructure/Persistence/Configurations/ServiceConfiguration.cs
+- Create: src/VoltaMarcada.Infrastructure/Persistence/Configurations/ServiceChecklistItemConfiguration.cs
+- Create: src/VoltaMarcada.Infrastructure/Persistence/Repositories/ServiceRepository.cs
+- Modify: src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs
+- Modify: src/VoltaMarcada.Infrastructure/DependencyInjection.cs
+- Create: src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260820130000_AddServices.cs
+- Create: src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260820130000_AddServices.Designer.cs
+- Modify: src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs
 
 **Interfaces:**
 
@@ -176,7 +176,7 @@ Compare configurations, migration, and snapshot. Confirm child ordering is retai
 - [ ] **Step 6: Commit**
 
 ~~~powershell
-git add src/ServiceSync.Infrastructure/Persistence src/ServiceSync.Infrastructure/DependencyInjection.cs
+git add src/VoltaMarcada.Infrastructure/Persistence src/VoltaMarcada.Infrastructure/DependencyInjection.cs
 git commit -m "feat: persist services and checklist items"
 ~~~
 
@@ -184,8 +184,8 @@ git commit -m "feat: persist services and checklist items"
 
 **Files:**
 
-- Create: src/ServiceSync.Web/Endpoints/ServiceEndpoints.cs
-- Modify: src/ServiceSync.Web/Program.cs
+- Create: src/VoltaMarcada.Web/Endpoints/ServiceEndpoints.cs
+- Modify: src/VoltaMarcada.Web/Program.cs
 
 **Interfaces:**
 
@@ -211,7 +211,7 @@ Confirm authorization is attached to the group, CompanyId is absent from all pub
 - [ ] **Step 5: Commit**
 
 ~~~powershell
-git add src/ServiceSync.Web/Endpoints/ServiceEndpoints.cs src/ServiceSync.Web/Program.cs
+git add src/VoltaMarcada.Web/Endpoints/ServiceEndpoints.cs src/VoltaMarcada.Web/Program.cs
 git commit -m "feat: add service endpoints"
 ~~~
 
@@ -219,10 +219,10 @@ git commit -m "feat: add service endpoints"
 
 **Files:**
 
-- Create: src/ServiceSync.Web/Components/Pages/Services.razor
-- Create: src/ServiceSync.Web/Components/Pages/ServiceRegistration.razor
-- Modify: src/ServiceSync.Web/Components/Layout/MainLayout.razor
-- Modify: src/ServiceSync.Web/wwwroot/app.css
+- Create: src/VoltaMarcada.Web/Components/Pages/Services.razor
+- Create: src/VoltaMarcada.Web/Components/Pages/ServiceRegistration.razor
+- Modify: src/VoltaMarcada.Web/Components/Layout/MainLayout.razor
+- Modify: src/VoltaMarcada.Web/wwwroot/app.css
 
 **Interfaces:**
 
@@ -256,7 +256,7 @@ Add only necessary styles for consistent form spacing, checklist row layout, too
 - [ ] **Step 7: Commit**
 
 ~~~powershell
-git add src/ServiceSync.Web/Components/Pages/Services.razor src/ServiceSync.Web/Components/Pages/ServiceRegistration.razor src/ServiceSync.Web/Components/Layout/MainLayout.razor src/ServiceSync.Web/wwwroot/app.css
+git add src/VoltaMarcada.Web/Components/Pages/Services.razor src/VoltaMarcada.Web/Components/Pages/ServiceRegistration.razor src/VoltaMarcada.Web/Components/Layout/MainLayout.razor src/VoltaMarcada.Web/wwwroot/app.css
 git commit -m "feat: add services management pages"
 ~~~
 

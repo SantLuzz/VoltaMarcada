@@ -21,13 +21,13 @@
 ### Task 1: Add Protected Service Financial Items
 
 **Files:**
-- Create: `src/ServiceSync.Domain/Enums/WorkOrderItemType.cs`
-- Modify: `src/ServiceSync.Domain/ValueObjects/WorkOrderItemDefinition.cs`
-- Modify: `src/ServiceSync.Domain/Entities/WorkOrderItem.cs`
-- Modify: `src/ServiceSync.Domain/Entities/WorkOrder.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Configurations/WorkOrderItemConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/<timestamp>_AddServiceWorkOrderItems.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- Create: `src/VoltaMarcada.Domain/Enums/WorkOrderItemType.cs`
+- Modify: `src/VoltaMarcada.Domain/ValueObjects/WorkOrderItemDefinition.cs`
+- Modify: `src/VoltaMarcada.Domain/Entities/WorkOrderItem.cs`
+- Modify: `src/VoltaMarcada.Domain/Entities/WorkOrder.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/WorkOrderItemConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/<timestamp>_AddServiceWorkOrderItems.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
 
 - [ ] Add `WorkOrderItemType { Additional, Service }`; persist it on `WorkOrderItem` and include it in `WorkOrderItemDefinition`.
 - [ ] Require exactly one service item in `WorkOrder.ReplaceItems`; reject duplicate service items and any non-additional secondary line.
@@ -37,12 +37,12 @@
 ### Task 2: Resolve Service Price Server-Side
 
 **Files:**
-- Modify: `src/ServiceSync.Application/WorkOrders/WorkOrderCommands.cs`
-- Modify: `src/ServiceSync.Application/WorkOrders/WorkOrderCommandValidators.cs`
-- Modify: `src/ServiceSync.Application/WorkOrders/CreateWorkOrderUseCase.cs`
-- Modify: `src/ServiceSync.Application/WorkOrders/UpdateWorkOrderUseCase.cs`
-- Modify: `src/ServiceSync.Application/WorkOrders/WorkOrderDtos.cs`
-- Modify: `src/ServiceSync.Application/WorkOrders/GetWorkOrderDetailsUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/WorkOrders/WorkOrderCommands.cs`
+- Modify: `src/VoltaMarcada.Application/WorkOrders/WorkOrderCommandValidators.cs`
+- Modify: `src/VoltaMarcada.Application/WorkOrders/CreateWorkOrderUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/WorkOrders/UpdateWorkOrderUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/WorkOrders/WorkOrderDtos.cs`
+- Modify: `src/VoltaMarcada.Application/WorkOrders/GetWorkOrderDetailsUseCase.cs`
 
 - [ ] Replace browser-submitted generic items with `ServiceUnitPrice` plus `AdditionalItems` in create/update contracts.
 - [ ] After tenant-scoped service lookup, construct the service line from service name and price type. Use catalog price for fixed services; reject a null amount otherwise.
@@ -52,9 +52,9 @@
 ### Task 3: Update Work-Order Forms and Financial Editor
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Components/Pages/WorkOrderRegistration.razor`
-- Modify: `src/ServiceSync.Web/Components/Shared/WorkOrderItemsEditor.razor`
-- Modify: `src/ServiceSync.Web/wwwroot/app.css`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/WorkOrderRegistration.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Shared/WorkOrderItemsEditor.razor`
+- Modify: `src/VoltaMarcada.Web/wwwroot/app.css`
 
 - [ ] Remove `ReportedProblem` required UI and client save check.
 - [ ] Add explicit empty entries/placeholders to all current GUID dropdowns, including the embedded customer modal and professional registration controls.

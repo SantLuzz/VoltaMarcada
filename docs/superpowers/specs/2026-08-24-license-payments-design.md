@@ -2,7 +2,7 @@
 
 ## Objective
 
-Phase 10 introduces one monthly ServiceSync license plan, manual PIX payment submission, manual payment approval, and license-aware access control. It lets a company owner renew through a PIX QR code and copy-and-paste payload, upload a mandatory proof of payment, and wait for a platform administrator to approve the renewal.
+Phase 10 introduces one monthly VoltaMarcada license plan, manual PIX payment submission, manual payment approval, and license-aware access control. It lets a company owner renew through a PIX QR code and copy-and-paste payload, upload a mandatory proof of payment, and wait for a platform administrator to approve the renewal.
 
 The feature must preserve tenant isolation and use explicit operation results for expected business conditions. It must not use exceptions to represent expired trials, overdue licenses, pending payment submissions, or denied write access.
 

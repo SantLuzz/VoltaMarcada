@@ -1,0 +1,221 @@
+@page "/servicos"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@using System.Globalization
+@using VoltaMarcada.Application.Services
+@using VoltaMarcada.Domain.Enums
+@inject GetServicesUseCase GetServicesUseCase
+@inject DeleteServiceUseCase DeleteServiceUseCase
+@inject ISnackbar Snackbar
+@inject ILogger<Services> Logger
+
+<PageTitle>Serviços | VoltaMarcada</PageTitle>
+
+<PageHeader Title="Serviços" Description="Cadastre e gerencie os serviços oferecidos pela sua empresa." />
+
+<MudPaper Class="service-list-surface" Elevation="0" Outlined="true">
+    <div class="service-list-toolbar">
+        <MudTextField @bind-Value="searchFilter"
+                      @bind-Value:after="LoadServicesAsync"
+                      Variant="Variant.Outlined"
+                      Placeholder="Pesquise por nome ou descrição"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Clearable="true"
+                      Immediate="true" />
+
+        <AuthorizeView Policy="@AuthorizationPolicies.CompanyOwner">
+            <Authorized Context="authorizationState">
+        <MudButton Href="/servicos/registro"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add">
+            Novo serviço
+        </MudButton>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (isLoading)
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
+    }
+    else if (loadError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+            <MudText Typo="Typo.body2">@loadError</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="LoadServicesAsync">Tentar novamente</MudButton>
+        </MudAlert>
+    }
+    else if (services.Count == 0)
+    {
+        <EmptyState Icon="@Icons.Material.Filled.DesignServices"
+                    Title="Nenhum serviço encontrado"
+                    Description="Cadastre um serviço para começar a organizar seus atendimentos." />
+    }
+    else
+    {
+        <MudTable Items="@services" Class="servicesync-data-grid" Hover="true" Breakpoint="Breakpoint.Md">
+            <HeaderContent>
+                <MudTh>Serviço</MudTh>
+                <MudTh>Duração</MudTh>
+                <MudTh>Preço</MudTh>
+                <MudTh>Solicitação online</MudTh>
+                <MudTh aria-label="Ações"></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Serviço"><GridTextCell Value="@context.Name" /></MudTd>
+                <MudTd DataLabel="Duração">@context.DurationMinutes min</MudTd>
+                <MudTd DataLabel="Preço">@GetPriceLabel(context)</MudTd>
+                <MudTd DataLabel="Solicitação online">@(context.AllowOnlineBooking ? "Permitida" : "Não permitida")</MudTd>
+                <AuthorizeView Policy="@AuthorizationPolicies.CompanyOwner">
+                    <Authorized Context="authorizationState">
+                <MudTd DataLabel="Ações" Class="service-actions">
+                    <MudTooltip Text="Editar serviço">
+                        <MudIconButton Href="@GetRegistrationUrl(context.Id)"
+                                       Icon="@Icons.Material.Filled.Edit"
+                                       Color="Color.Primary"
+                                       aria-label="Editar serviço" />
+                    </MudTooltip>
+                    <MudTooltip Text="Inativar serviço">
+                        <MudIconButton Icon="@Icons.Material.Filled.Block"
+                                       Color="Color.Error"
+                                       aria-label="Inativar serviço"
+                                       OnClick="@(() => OpenDeleteDialog(context))" />
+                    </MudTooltip>
+                </MudTd>
+                    </Authorized>
+                </AuthorizeView>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudPaper>
+
+<MudDialog @bind-Visible="isDeleteDialogOpen" Options="deleteDialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Inativar serviço</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Tem certeza que deseja inativar o serviço <strong>@servicePendingDeletion?.Name</strong>?</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">Esta ação não poderá ser desfeita.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CloseDeleteDialog" Disabled="@isDeleting">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Block" OnClick="DeleteServiceAsync" Disabled="@isDeleting">
+            @(isDeleting ? "Inativando..." : "Inativar serviço")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private readonly DialogOptions deleteDialogOptions = new()
+    {
+        CloseButton = true,
+        MaxWidth = MaxWidth.ExtraSmall,
+        FullWidth = true
+    };
+
+    private IReadOnlyList<ServiceDto> services = [];
+    private ServiceDto? servicePendingDeletion;
+    private string? searchFilter;
+    private string? loadError;
+    private bool isLoading = true;
+    private bool isDeleteDialogOpen;
+    private bool isDeleting;
+    private int loadVersion;
+
+    protected override Task OnInitializedAsync() => LoadServicesAsync();
+
+    private async Task LoadServicesAsync()
+    {
+        var currentLoadVersion = ++loadVersion;
+        isLoading = true;
+        loadError = null;
+
+        try
+        {
+            var result = await GetServicesUseCase.ExecuteAsync(new GetServicesQuery(searchFilter));
+            if (currentLoadVersion == loadVersion)
+            {
+                services = result;
+            }
+        }
+        catch (Exception exception)
+        {
+            if (currentLoadVersion != loadVersion)
+            {
+                return;
+            }
+
+            Logger.LogError(exception, "Unable to load services for the current company");
+            loadError = "Não foi possível carregar os serviços. Tente novamente.";
+        }
+        finally
+        {
+            if (currentLoadVersion == loadVersion)
+            {
+                isLoading = false;
+            }
+        }
+    }
+
+    private void OpenDeleteDialog(ServiceDto service)
+    {
+        servicePendingDeletion = service;
+        isDeleteDialogOpen = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        isDeleteDialogOpen = false;
+        servicePendingDeletion = null;
+    }
+
+    private async Task DeleteServiceAsync()
+    {
+        if (servicePendingDeletion is null)
+        {
+            return;
+        }
+
+        isDeleting = true;
+        var service = servicePendingDeletion;
+
+        try
+        {
+            var result = await DeleteServiceUseCase.ExecuteAsync(service.Id);
+            if (result.IsSuccess)
+            {
+                services = services.Where(item => item.Id != service.Id).ToArray();
+                Snackbar.Add("Serviço inativado com sucesso.", Severity.Success);
+                CloseDeleteDialog();
+                return;
+            }
+
+            Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
+            CloseDeleteDialog();
+            await LoadServicesAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to delete service {ServiceId}", service.Id);
+            Snackbar.Add("Não foi possível excluir o serviço. Tente novamente.", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private static string GetRegistrationUrl(Guid serviceId) =>
+        $"/servicos/registro?id={serviceId}";
+
+    private static string GetPriceLabel(ServiceDto service) =>
+        service.PriceType switch
+        {
+            ServicePriceType.Fixed when service.BasePrice is { } price => $"R$ {price.ToString("N2", CultureInfo.GetCultureInfo("pt-BR"))}",
+            ServicePriceType.StartingAt when service.BasePrice is { } price => $"A partir de R$ {price.ToString("N2", CultureInfo.GetCultureInfo("pt-BR"))}",
+            ServicePriceType.QuoteRequired => "Sob orçamento",
+            ServicePriceType.Hidden => "Não exibir preço",
+            _ => "Não informado"
+        };
+}

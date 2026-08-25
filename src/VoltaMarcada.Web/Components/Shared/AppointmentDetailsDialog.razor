@@ -1,0 +1,124 @@
+@using VoltaMarcada.Application.Scheduling
+@inject GetAppointmentDetailsUseCase GetAppointmentDetailsUseCase
+
+<MudDialog Visible="Visible" VisibleChanged="SetVisibleAsync">
+    <TitleContent><MudText Typo="Typo.h6">Detalhes do atendimento</MudText></TitleContent>
+    <DialogContent>
+        @if (isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (appointmentDetails is not null)
+        {
+            <MudStack Spacing="2">
+                <div>
+                    <MudText Typo="Typo.overline">Horário</MudText>
+                    <MudText>@AppointmentCalendarTime.ToLocalDateTime(appointmentDetails.StartAtUtc, appointmentDetails.ProfessionalTimeZoneId).ToString("dd/MM/yyyy HH:mm") às @AppointmentCalendarTime.ToLocalDateTime(appointmentDetails.EndAtUtc, appointmentDetails.ProfessionalTimeZoneId).ToString("HH:mm")</MudText>
+                </div>
+                <div>
+                    <MudText Typo="Typo.overline">Status</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(appointmentDetails.Status)">@GetStatusName(appointmentDetails.Status)</MudChip>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(appointmentDetails.Notes))
+                {
+                    <div>
+                        <MudText Typo="Typo.overline">Observações</MudText>
+                        <MudText>@appointmentDetails.Notes</MudText>
+                    </div>
+                }
+                @if (appointmentDetails.Customer is { } customer)
+                {
+                    <MudDivider />
+                    <div>
+                        <MudText Typo="Typo.h6">Cliente</MudText>
+                        <MudText>@customer.Name</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@customer.WhatsApp</MudText>
+                        @if (!string.IsNullOrWhiteSpace(customer.Email))
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@customer.Email</MudText>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(customer.PrimaryAddress))
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@customer.PrimaryAddress</MudText>
+                        }
+                    </div>
+                }
+            </MudStack>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Warning">Atendimento não encontrado ou indisponível.</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (appointmentDetails?.WorkOrderId is { } workOrderId)
+        {
+            <MudButton Href="@($"/ordens-servico/registro?id={workOrderId}")" Color="Color.Primary" Variant="Variant.Filled">Abrir OS</MudButton>
+        }
+        <MudButton OnClick="CloseAsync">Fechar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public Guid? AppointmentId { get; set; }
+
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    private Guid? loadedAppointmentId;
+    private bool isLoading;
+    private AppointmentDetailsDto? appointmentDetails;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!Visible || AppointmentId is null || loadedAppointmentId == AppointmentId)
+        {
+            return;
+        }
+
+        isLoading = true;
+        appointmentDetails = null;
+        try
+        {
+            appointmentDetails = await GetAppointmentDetailsUseCase.ExecuteAsync(AppointmentId.Value);
+            loadedAppointmentId = AppointmentId;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private Task CloseAsync() => SetVisibleAsync(false);
+
+    private async Task SetVisibleAsync(bool visible)
+    {
+        if (!visible)
+        {
+            appointmentDetails = null;
+            loadedAppointmentId = null;
+        }
+
+        await VisibleChanged.InvokeAsync(visible);
+    }
+
+    private static Color GetStatusColor(VoltaMarcada.Domain.Enums.AppointmentStatus status) => status switch
+    {
+        VoltaMarcada.Domain.Enums.AppointmentStatus.Completed => Color.Success,
+        VoltaMarcada.Domain.Enums.AppointmentStatus.Cancelled => Color.Error,
+        VoltaMarcada.Domain.Enums.AppointmentStatus.InProgress => Color.Info,
+        _ => Color.Primary
+    };
+
+    private static string GetStatusName(VoltaMarcada.Domain.Enums.AppointmentStatus status) => status switch
+    {
+        VoltaMarcada.Domain.Enums.AppointmentStatus.Completed => "Concluído",
+        VoltaMarcada.Domain.Enums.AppointmentStatus.Cancelled => "Cancelado",
+        VoltaMarcada.Domain.Enums.AppointmentStatus.InProgress => "Em andamento",
+        _ => "Agendado"
+    };
+}

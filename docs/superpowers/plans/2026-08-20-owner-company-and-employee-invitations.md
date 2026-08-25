@@ -26,12 +26,12 @@
 ### Task 1: Add the employee invitation domain model and EF Core schema
 
 **Files:**
-- Create: `src/ServiceSync.Domain/Entities/EmployeeInvitation.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/EmployeeInvitationConfiguration.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/<timestamp>_AddEmployeeInvitations.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/<timestamp>_AddEmployeeInvitations.Designer.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/EmployeeInvitation.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/EmployeeInvitationConfiguration.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/<timestamp>_AddEmployeeInvitations.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/<timestamp>_AddEmployeeInvitations.Designer.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
 
 **Interfaces:**
 - Consumes: `BrazilianDocument.TryNormalize`, `DomainException`, and `ICompanyScopedEntity` from the Domain project.
@@ -93,20 +93,20 @@
 ### Task 2: Define application contracts, token handling, validation, and invitation use cases
 
 **Files:**
-- Create: `src/ServiceSync.Application/Abstractions/Identity/IEmployeeInvitationAccountService.cs`
-- Create: `src/ServiceSync.Application/Abstractions/Persistence/IEmployeeInvitationRepository.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/EmployeeInvitationToken.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/CreateEmployeeInvitationCommand.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/CreateEmployeeInvitationCommandValidator.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/CreateEmployeeInvitationResult.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/CreateEmployeeInvitationUseCase.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/GetOwnerCompanyOverviewUseCase.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/RenewEmployeeInvitationUseCase.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/RevokeEmployeeInvitationUseCase.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/GetEmployeeInvitationForAcceptanceUseCase.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/AcceptEmployeeInvitationUseCase.cs`
-- Create: `src/ServiceSync.Application/EmployeeInvitations/EmployeeInvitationDtos.cs`
-- Modify: `src/ServiceSync.Application/DependencyInjection.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Identity/IEmployeeInvitationAccountService.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Persistence/IEmployeeInvitationRepository.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/EmployeeInvitationToken.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/CreateEmployeeInvitationCommand.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/CreateEmployeeInvitationCommandValidator.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/CreateEmployeeInvitationResult.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/CreateEmployeeInvitationUseCase.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/GetOwnerCompanyOverviewUseCase.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/RenewEmployeeInvitationUseCase.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/RevokeEmployeeInvitationUseCase.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/GetEmployeeInvitationForAcceptanceUseCase.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/AcceptEmployeeInvitationUseCase.cs`
+- Create: `src/VoltaMarcada.Application/EmployeeInvitations/EmployeeInvitationDtos.cs`
+- Modify: `src/VoltaMarcada.Application/DependencyInjection.cs`
 
 **Interfaces:**
 - Consumes: `EmployeeInvitation`, `ICurrentCompany`, `ICurrentUser`, `TimeProvider`, and FluentValidation.
@@ -183,9 +183,9 @@
 ### Task 3: Implement EF Core repository, transactional Identity acceptance, and dependency injection
 
 **Files:**
-- Create: `src/ServiceSync.Infrastructure/Persistence/Repositories/EmployeeInvitationRepository.cs`
-- Create: `src/ServiceSync.Infrastructure/Identity/EmployeeInvitationAccountService.cs`
-- Modify: `src/ServiceSync.Infrastructure/DependencyInjection.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/EmployeeInvitationRepository.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Identity/EmployeeInvitationAccountService.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/DependencyInjection.cs`
 
 **Interfaces:**
 - Consumes: the interfaces and DTOs from Task 2, `AppDbContext`, `ApplicationUser`, and `UserManager<ApplicationUser>`.
@@ -214,10 +214,10 @@
 ### Task 4: Add an owner authorization policy and expose it in the application shell
 
 **Files:**
-- Create: `src/ServiceSync.Web/Authorization/CompanyOwnerAuthorizationHandler.cs`
-- Modify: `src/ServiceSync.Web/Authorization/AuthorizationPolicies.cs`
-- Modify: `src/ServiceSync.Web/Program.cs`
-- Modify: `src/ServiceSync.Web/Components/Layout/MainLayout.razor`
+- Create: `src/VoltaMarcada.Web/Authorization/CompanyOwnerAuthorizationHandler.cs`
+- Modify: `src/VoltaMarcada.Web/Authorization/AuthorizationPolicies.cs`
+- Modify: `src/VoltaMarcada.Web/Program.cs`
+- Modify: `src/VoltaMarcada.Web/Components/Layout/MainLayout.razor`
 
 **Interfaces:**
 - Consumes: `CompanyUser`, `CompanyUserRole.Owner`, the authenticated name-identifier claim, and `AppDbContext`.
@@ -242,8 +242,8 @@
 ### Task 5: Build the owner company and invitation management page
 
 **Files:**
-- Create: `src/ServiceSync.Web/Components/Pages/Company.razor`
-- Modify: `src/ServiceSync.Web/wwwroot/app.css`
+- Create: `src/VoltaMarcada.Web/Components/Pages/Company.razor`
+- Modify: `src/VoltaMarcada.Web/wwwroot/app.css`
 
 **Interfaces:**
 - Consumes: `AuthorizationPolicies.CompanyOwner`, `GetOwnerCompanyOverviewUseCase`, `CreateEmployeeInvitationUseCase`, `RenewEmployeeInvitationUseCase`, and `RevokeEmployeeInvitationUseCase`.
@@ -276,9 +276,9 @@
 ### Task 6: Add the anonymous public invitation completion page and endpoint
 
 **Files:**
-- Create: `src/ServiceSync.Web/Components/Pages/EmployeeInvitationAcceptance.razor`
-- Create: `src/ServiceSync.Web/Endpoints/EmployeeInvitationEndpoints.cs`
-- Modify: `src/ServiceSync.Web/Program.cs`
+- Create: `src/VoltaMarcada.Web/Components/Pages/EmployeeInvitationAcceptance.razor`
+- Create: `src/VoltaMarcada.Web/Endpoints/EmployeeInvitationEndpoints.cs`
+- Modify: `src/VoltaMarcada.Web/Program.cs`
 
 **Interfaces:**
 - Consumes: `GetEmployeeInvitationForAcceptanceUseCase`, `AcceptEmployeeInvitationUseCase`, `PasswordInput`, `SignInManager<ApplicationUser>`, and `EmployeeInvitationAccountOutcome` result mapping.

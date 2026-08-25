@@ -1,0 +1,699 @@
+@using System.Globalization
+@using VoltaMarcada.Application.Professionals
+@using VoltaMarcada.Domain.Enums
+@inject GetProfessionalAvailabilityUseCase GetProfessionalAvailabilityUseCase
+@inject SaveProfessionalAvailabilityUseCase SaveProfessionalAvailabilityUseCase
+@inject CreateScheduleBlockUseCase CreateScheduleBlockUseCase
+@inject DeleteScheduleBlockUseCase DeleteScheduleBlockUseCase
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject ILogger<ProfessionalAvailabilityPanel> Logger
+
+@if (isLoading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (loadError is not null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@loadError</MudAlert>
+}
+else
+{
+    <MudStack Spacing="3">
+        <MudPaper Elevation="0" Outlined="true" Class="service-form-section">
+            <MudText Typo="Typo.h6">Horários de trabalho</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Defina horários diferentes para cada dia e copie um dia para os demais quando necessário.
+            </MudText>
+
+            @if (ReadOnly)
+            {
+                @if (availability?.DailySchedules is not { Count: > 0 } dailySchedules)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
+                        Os horários de trabalho ainda não foram configurados.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudStack Spacing="1" Class="mt-4">
+                        @foreach (var scheduleGroup in GroupDailySchedules(dailySchedules))
+                        {
+                            <MudText Typo="Typo.body2">
+                                <strong>@scheduleGroup.Label:</strong> @FormatDailySchedule(scheduleGroup.Schedule)
+                            </MudText>
+                        }
+                    </MudStack>
+                }
+            }
+            else
+            {
+                @if (scheduleError is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mt-4">@scheduleError</MudAlert>
+                }
+
+                <MudStack Spacing="2" Class="mt-4">
+                    @foreach (var schedule in scheduleRows)
+                    {
+                        <MudPaper Elevation="0" Outlined="true" Class="pa-3">
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" md="2">
+                                    <MudCheckBox T="bool" @bind-Value="schedule.IsEnabled" Color="Color.Primary" Disabled="@isSavingSchedule">
+                                        @schedule.Label
+                                    </MudCheckBox>
+                                </MudItem>
+                                <MudItem xs="12" sm="6" md="2">
+                                    <MudTimePicker @bind-Time="schedule.EntryTime" Label="Entrada" Variant="Variant.Outlined"
+                                                   AmPm="false" Disabled="@(isSavingSchedule || !schedule.IsEnabled)" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6" md="2">
+                                    <MudTimePicker @bind-Time="schedule.ExitTime" Label="Saída" Variant="Variant.Outlined"
+                                                   AmPm="false" Disabled="@(isSavingSchedule || !schedule.IsEnabled)" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6" md="2">
+                                    <MudSwitch T="bool" @bind-Value="schedule.HasLunchBreak" Color="Color.Primary"
+                                               Disabled="@(isSavingSchedule || !schedule.IsEnabled)">
+                                        Possui intervalo
+                                    </MudSwitch>
+                                </MudItem>
+                                @if (schedule.HasLunchBreak)
+                                {
+                                    <MudItem xs="12" sm="6" md="2">
+                                        <MudTimePicker @bind-Time="schedule.LunchStartTime" Label="Início do intervalo" Variant="Variant.Outlined"
+                                                       AmPm="false" Disabled="@(isSavingSchedule || !schedule.IsEnabled)" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6" md="2">
+                                        <MudTimePicker @bind-Time="schedule.LunchEndTime" Label="Fim do intervalo" Variant="Variant.Outlined"
+                                                       AmPm="false" Disabled="@(isSavingSchedule || !schedule.IsEnabled)" />
+                                    </MudItem>
+                                }
+                                <MudItem xs="12">
+                                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                               OnClick="@(() => ApplyToOtherActiveDays(schedule))"
+                                               Disabled="@(isSavingSchedule || !schedule.IsEnabled)">
+                                        Aplicar aos demais dias ativos
+                                    </MudButton>
+                                </MudItem>
+                            </MudGrid>
+                        </MudPaper>
+                    }
+                </MudStack>
+
+                <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save"
+                               OnClick="SaveScheduleAsync" Disabled="@isSavingSchedule">
+                        @(isSavingSchedule ? "Salvando..." : "Salvar horários")
+                    </MudButton>
+                </MudStack>
+            }
+        </MudPaper>
+
+        <MudPaper Elevation="0" Outlined="true" Class="service-form-section">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <div>
+                    <MudText Typo="Typo.h6">Indisponibilidades</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Férias, folgas, compromissos, treinamentos, ausências e bloqueios manuais.
+                    </MudText>
+                </div>
+                @if (!ReadOnly && !showBlockForm)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="ShowBlockForm">
+                        Adicionar indisponibilidade
+                    </MudButton>
+                }
+            </MudStack>
+
+            @if (!ReadOnly && showBlockForm)
+            {
+                <MudPaper Elevation="0" Outlined="true" Class="pa-4 mt-4">
+                    <MudText Typo="Typo.subtitle1">Nova indisponibilidade</MudText>
+                    @if (blockError is not null)
+                    {
+                        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mt-3">@blockError</MudAlert>
+                    }
+                    <MudGrid Spacing="2" Class="mt-1">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="ScheduleBlockType" @bind-Value="blockForm.Type" Label="Tipo"
+                                       Variant="Variant.Outlined" FullWidth="true" Disabled="@isCreatingBlock">
+                                @foreach (var type in Enum.GetValues<ScheduleBlockType>())
+                                {
+                                    <MudSelectItem Value="@type">@GetBlockTypeLabel(type)</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSwitch T="bool" @bind-Value="blockForm.IsFullDay" Color="Color.Primary" Disabled="@isCreatingBlock">
+                                Dia inteiro
+                            </MudSwitch>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker @bind-Date="blockForm.StartDate" Label="Data inicial" Variant="Variant.Outlined"
+                                           DateFormat="dd/MM/yyyy" Disabled="@isCreatingBlock" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker @bind-Date="blockForm.EndDate" Label="Data final" Variant="Variant.Outlined"
+                                           DateFormat="dd/MM/yyyy" Disabled="@isCreatingBlock" />
+                        </MudItem>
+                        @if (!blockForm.IsFullDay)
+                        {
+                            <MudItem xs="12" sm="6">
+                                <MudTimePicker @bind-Time="blockForm.StartTime" Label="Horário inicial" Variant="Variant.Outlined"
+                                               AmPm="false" Disabled="@isCreatingBlock" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTimePicker @bind-Time="blockForm.EndTime" Label="Horário final" Variant="Variant.Outlined"
+                                               AmPm="false" Disabled="@isCreatingBlock" />
+                            </MudItem>
+                        }
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="blockForm.Notes" Label="Observações" Variant="Variant.Outlined"
+                                          FullWidth="true" Lines="3" MaxLength="1000" Disabled="@isCreatingBlock" />
+                        </MudItem>
+                    </MudGrid>
+                    <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2" Class="mt-4">
+                        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="CancelBlockForm" Disabled="@isCreatingBlock">
+                            Cancelar
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                                   OnClick="CreateBlockAsync" Disabled="@isCreatingBlock">
+                            @(isCreatingBlock ? "Adicionando..." : "Adicionar")
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+            }
+
+            @if (availability is null || availability.ScheduleBlocks.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
+                    Nenhuma indisponibilidade cadastrada.
+                </MudAlert>
+            }
+            else
+            {
+                <MudTable Items="@availability.ScheduleBlocks" Class="servicesync-data-grid mt-4" Hover="true" Breakpoint="Breakpoint.Md">
+                    <HeaderContent>
+                        <MudTh>Tipo</MudTh>
+                        <MudTh>Período</MudTh>
+                        <MudTh>Observações</MudTh>
+                        @if (!ReadOnly)
+                        {
+                            <MudTh aria-label="Ações"></MudTh>
+                        }
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Tipo"><GridTextCell Value="@GetBlockTypeLabel(context.Type)" /></MudTd>
+                        <MudTd DataLabel="Período"><GridTextCell Value="@FormatBlockPeriod(context)" /></MudTd>
+                        <MudTd DataLabel="Observações"><GridTextCell Value="@(context.Notes ?? "—")" /></MudTd>
+                        @if (!ReadOnly)
+                        {
+                            <MudTd DataLabel="Ações">
+                                <MudTooltip Text="Remover indisponibilidade">
+                                    <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline" Color="Color.Error"
+                                                   aria-label="Remover indisponibilidade"
+                                                   Disabled="@(deletingBlockId == context.Id)"
+                                                   OnClick="@(() => DeleteBlockAsync(context))" />
+                                </MudTooltip>
+                            </MudTd>
+                        }
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    </MudStack>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public Guid ProfessionalId { get; set; }
+
+    [Parameter]
+    public bool ReadOnly { get; set; }
+
+    private ProfessionalAvailabilityDto? availability;
+    private readonly List<DailyScheduleFormModel> scheduleRows = [];
+    private ScheduleBlockFormModel blockForm = ScheduleBlockFormModel.CreateDefault();
+    private Guid? loadedProfessionalId;
+    private Guid? deletingBlockId;
+    private bool isLoading = true;
+    private bool isSavingSchedule;
+    private bool isCreatingBlock;
+    private bool showBlockForm;
+    private string? loadError;
+    private string? scheduleError;
+    private string? blockError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedProfessionalId == ProfessionalId)
+        {
+            return;
+        }
+
+        loadedProfessionalId = ProfessionalId;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        loadError = null;
+        try
+        {
+            availability = await GetProfessionalAvailabilityUseCase.ExecuteAsync(ProfessionalId);
+            if (availability is null)
+            {
+                loadError = "Não foi possível localizar a disponibilidade deste profissional.";
+                return;
+            }
+
+            LoadScheduleRows(availability.DailySchedules);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to load availability for professional {ProfessionalId}", ProfessionalId);
+            loadError = "Não foi possível carregar a disponibilidade. Tente novamente.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveScheduleAsync()
+    {
+        scheduleError = ValidateSchedule();
+        if (scheduleError is not null)
+        {
+            return;
+        }
+
+        isSavingSchedule = true;
+        try
+        {
+            var result = await SaveProfessionalAvailabilityUseCase.ExecuteAsync(
+                ProfessionalId,
+                new SaveProfessionalAvailabilityCommand(
+                    scheduleRows
+                        .Where(schedule => schedule.IsEnabled)
+                        .Select(schedule => new SaveProfessionalDailyScheduleCommand(
+                            schedule.Weekday,
+                            TimeOnly.FromTimeSpan(schedule.EntryTime!.Value),
+                            TimeOnly.FromTimeSpan(schedule.ExitTime!.Value),
+                            schedule.HasLunchBreak ? TimeOnly.FromTimeSpan(schedule.LunchStartTime!.Value) : null,
+                            schedule.HasLunchBreak ? TimeOnly.FromTimeSpan(schedule.LunchEndTime!.Value) : null))
+                        .ToArray()));
+            if (!result.IsSuccess)
+            {
+                scheduleError = OperationErrorMessages.GetMessage(result.Error?.Code);
+                return;
+            }
+
+            if (!await ReloadAvailabilityAsync())
+            {
+                scheduleError = "O profissional não está mais disponível.";
+                return;
+            }
+
+            Snackbar.Add("Horário do profissional salvo com sucesso.", Severity.Success);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to save availability for professional {ProfessionalId}", ProfessionalId);
+            scheduleError = "Não foi possível salvar o horário. Tente novamente.";
+        }
+        finally
+        {
+            isSavingSchedule = false;
+        }
+    }
+
+    private string? ValidateSchedule()
+    {
+        var enabledSchedules = scheduleRows.Where(schedule => schedule.IsEnabled).ToArray();
+        if (enabledSchedules.Length == 0)
+        {
+            return "Selecione ao menos um dia de trabalho.";
+        }
+
+        foreach (var schedule in enabledSchedules)
+        {
+            if (schedule.EntryTime is null || schedule.ExitTime is null)
+            {
+                return $"Informe a entrada e a saída de {schedule.Label.ToLowerInvariant()}.";
+            }
+
+            if (schedule.EntryTime >= schedule.ExitTime)
+            {
+                return $"A entrada de {schedule.Label.ToLowerInvariant()} deve ser anterior à saída.";
+            }
+
+            if (!schedule.HasLunchBreak)
+            {
+                continue;
+            }
+
+            if (schedule.LunchStartTime is null || schedule.LunchEndTime is null)
+            {
+                return $"Informe o intervalo de {schedule.Label.ToLowerInvariant()}.";
+            }
+
+            if (schedule.EntryTime >= schedule.LunchStartTime ||
+                schedule.LunchStartTime >= schedule.LunchEndTime ||
+                schedule.LunchEndTime >= schedule.ExitTime)
+            {
+                return $"O intervalo de {schedule.Label.ToLowerInvariant()} deve estar dentro do expediente.";
+            }
+        }
+
+        return null;
+    }
+
+    private void ApplyToOtherActiveDays(DailyScheduleFormModel source)
+    {
+        foreach (var schedule in scheduleRows.Where(schedule => schedule.IsEnabled && schedule != source))
+        {
+            schedule.EntryTime = source.EntryTime;
+            schedule.ExitTime = source.ExitTime;
+            schedule.HasLunchBreak = source.HasLunchBreak;
+            schedule.LunchStartTime = source.LunchStartTime;
+            schedule.LunchEndTime = source.LunchEndTime;
+        }
+    }
+
+    private void ShowBlockForm()
+    {
+        blockError = null;
+        blockForm = ScheduleBlockFormModel.CreateDefault();
+        showBlockForm = true;
+    }
+
+    private void CancelBlockForm()
+    {
+        blockError = null;
+        showBlockForm = false;
+    }
+
+    private async Task CreateBlockAsync()
+    {
+        blockError = ValidateBlock();
+        if (blockError is not null)
+        {
+            return;
+        }
+
+        isCreatingBlock = true;
+        try
+        {
+            var startDate = DateOnly.FromDateTime(blockForm.StartDate!.Value);
+            var endDate = DateOnly.FromDateTime(blockForm.EndDate!.Value);
+            var result = await CreateScheduleBlockUseCase.ExecuteAsync(
+                ProfessionalId,
+                new CreateScheduleBlockCommand(
+                    blockForm.Type,
+                    startDate,
+                    endDate,
+                    blockForm.IsFullDay,
+                    blockForm.IsFullDay ? null : TimeOnly.FromTimeSpan(blockForm.StartTime!.Value),
+                    blockForm.IsFullDay ? null : TimeOnly.FromTimeSpan(blockForm.EndTime!.Value),
+                    blockForm.Notes));
+            if (!result.IsSuccess)
+            {
+                blockError = OperationErrorMessages.GetMessage(result.Error?.Code);
+                return;
+            }
+
+            if (!await ReloadAvailabilityAsync())
+            {
+                blockError = "O profissional não está mais disponível.";
+                return;
+            }
+
+            showBlockForm = false;
+            blockForm = ScheduleBlockFormModel.CreateDefault();
+            Snackbar.Add("Indisponibilidade adicionada com sucesso.", Severity.Success);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to create schedule block for professional {ProfessionalId}", ProfessionalId);
+            blockError = "Não foi possível adicionar a indisponibilidade. Tente novamente.";
+        }
+        finally
+        {
+            isCreatingBlock = false;
+        }
+    }
+
+    private string? ValidateBlock()
+    {
+        if (blockForm.StartDate is null || blockForm.EndDate is null)
+        {
+            return "Informe a data inicial e a data final.";
+        }
+
+        if (blockForm.EndDate.Value.Date < blockForm.StartDate.Value.Date)
+        {
+            return "A data final não pode ser anterior à data inicial.";
+        }
+
+        if (blockForm.IsFullDay)
+        {
+            return null;
+        }
+
+        if (blockForm.StartDate.Value.Date != blockForm.EndDate.Value.Date)
+        {
+            return "Indisponibilidades com horário devem ocorrer em um único dia.";
+        }
+
+        if (blockForm.StartTime is null || blockForm.EndTime is null || blockForm.StartTime >= blockForm.EndTime)
+        {
+            return "Informe um horário inicial anterior ao horário final.";
+        }
+
+        return null;
+    }
+
+    private async Task DeleteBlockAsync(ScheduleBlockDto block)
+    {
+        var confirmed = await DialogService.ShowMessageBoxAsync(
+            "Remover indisponibilidade",
+            $"Deseja remover {GetBlockTypeLabel(block.Type).ToLowerInvariant()} de {FormatBlockPeriod(block)}?",
+            "Remover",
+            null,
+            "Cancelar");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        deletingBlockId = block.Id;
+        try
+        {
+            var result = await DeleteScheduleBlockUseCase.ExecuteAsync(ProfessionalId, block.Id);
+            if (!result.IsSuccess)
+            {
+                Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
+                return;
+            }
+
+            if (!await ReloadAvailabilityAsync())
+            {
+                Snackbar.Add("O profissional não está mais disponível.", Severity.Error);
+                return;
+            }
+
+            Snackbar.Add("Indisponibilidade removida.", Severity.Success);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Unable to delete schedule block {ScheduleBlockId} for professional {ProfessionalId}",
+                block.Id,
+                ProfessionalId);
+            Snackbar.Add("Não foi possível remover a indisponibilidade.", Severity.Error);
+        }
+        finally
+        {
+            deletingBlockId = null;
+        }
+    }
+
+    private async Task<bool> ReloadAvailabilityAsync()
+    {
+        availability = await GetProfessionalAvailabilityUseCase.ExecuteAsync(ProfessionalId);
+        if (availability is null)
+        {
+            return false;
+        }
+
+        LoadScheduleRows(availability.DailySchedules);
+        return true;
+    }
+
+    private void LoadScheduleRows(IReadOnlyList<DailyScheduleDto>? dailySchedules)
+    {
+        scheduleRows.Clear();
+        foreach (var weekday in GetWeekdaysInDisplayOrder())
+        {
+            var savedSchedule = dailySchedules?.SingleOrDefault(schedule => schedule.Weekday == weekday);
+            var isDefaultWorkday = weekday is >= DayOfWeek.Monday and <= DayOfWeek.Friday;
+            scheduleRows.Add(new DailyScheduleFormModel
+            {
+                Weekday = weekday,
+                Label = GetWeekdayLabel(weekday),
+                IsEnabled = savedSchedule is not null || dailySchedules is null && isDefaultWorkday,
+                EntryTime = savedSchedule?.EntryTime.ToTimeSpan() ?? new TimeSpan(8, 0, 0),
+                ExitTime = savedSchedule?.ExitTime.ToTimeSpan() ?? new TimeSpan(18, 0, 0),
+                HasLunchBreak = savedSchedule?.LunchStartTime is not null || dailySchedules is null && isDefaultWorkday,
+                LunchStartTime = savedSchedule?.LunchStartTime?.ToTimeSpan() ?? new TimeSpan(12, 0, 0),
+                LunchEndTime = savedSchedule?.LunchEndTime?.ToTimeSpan() ?? new TimeSpan(13, 0, 0)
+            });
+        }
+    }
+
+    private static IReadOnlyList<DailyScheduleDisplayGroup> GroupDailySchedules(IReadOnlyList<DailyScheduleDto> dailySchedules)
+    {
+        var groups = new List<DailyScheduleDisplayGroup>();
+        var orderedSchedules = dailySchedules
+            .OrderBy(schedule => ((int)schedule.Weekday + 6) % 7)
+            .ToArray();
+        if (orderedSchedules.Length == 0)
+        {
+            return groups;
+        }
+
+        var firstWeekday = orderedSchedules[0].Weekday;
+        var lastWeekday = firstWeekday;
+        var currentSchedule = orderedSchedules[0];
+
+        foreach (var schedule in orderedSchedules.Skip(1))
+        {
+            if (HaveSameHours(schedule, currentSchedule) && IsNextDisplayWeekday(lastWeekday, schedule.Weekday))
+            {
+                lastWeekday = schedule.Weekday;
+                continue;
+            }
+
+            groups.Add(new DailyScheduleDisplayGroup(FormatWeekdayRange(firstWeekday, lastWeekday), currentSchedule));
+            firstWeekday = schedule.Weekday;
+            lastWeekday = schedule.Weekday;
+            currentSchedule = schedule;
+        }
+
+        groups.Add(new DailyScheduleDisplayGroup(FormatWeekdayRange(firstWeekday, lastWeekday), currentSchedule));
+        return groups;
+    }
+
+    private static bool IsNextDisplayWeekday(DayOfWeek previousWeekday, DayOfWeek weekday) =>
+        weekday == (previousWeekday == DayOfWeek.Saturday
+            ? DayOfWeek.Sunday
+            : (DayOfWeek)((int)previousWeekday + 1));
+
+    private static bool HaveSameHours(DailyScheduleDto first, DailyScheduleDto second) =>
+        first.EntryTime == second.EntryTime &&
+        first.ExitTime == second.ExitTime &&
+        first.LunchStartTime == second.LunchStartTime &&
+        first.LunchEndTime == second.LunchEndTime;
+
+    private static IEnumerable<DayOfWeek> GetWeekdaysInDisplayOrder() =>
+    [
+        DayOfWeek.Monday,
+        DayOfWeek.Tuesday,
+        DayOfWeek.Wednesday,
+        DayOfWeek.Thursday,
+        DayOfWeek.Friday,
+        DayOfWeek.Saturday,
+        DayOfWeek.Sunday
+    ];
+
+    private static string FormatWeekdayRange(DayOfWeek firstWeekday, DayOfWeek lastWeekday) =>
+        firstWeekday == lastWeekday
+            ? GetWeekdayLabel(firstWeekday)
+            : $"{GetWeekdayLabel(firstWeekday)} a {GetWeekdayLabel(lastWeekday)}";
+
+    private static string GetWeekdayLabel(DayOfWeek weekday) =>
+        weekday switch
+        {
+            DayOfWeek.Monday => "Segunda-feira",
+            DayOfWeek.Tuesday => "Terça-feira",
+            DayOfWeek.Wednesday => "Quarta-feira",
+            DayOfWeek.Thursday => "Quinta-feira",
+            DayOfWeek.Friday => "Sexta-feira",
+            DayOfWeek.Saturday => "Sábado",
+            DayOfWeek.Sunday => "Domingo",
+            _ => "Dia inválido"
+        };
+
+    private static string FormatDailySchedule(DailyScheduleDto schedule) =>
+        schedule.LunchStartTime is { } lunchStartTime && schedule.LunchEndTime is { } lunchEndTime
+            ? $"{schedule.EntryTime:HH:mm} às {lunchStartTime:HH:mm} e {lunchEndTime:HH:mm} às {schedule.ExitTime:HH:mm}"
+            : $"{schedule.EntryTime:HH:mm} às {schedule.ExitTime:HH:mm}";
+
+    private static string FormatBlockPeriod(ScheduleBlockDto block)
+    {
+        var startDate = block.StartDate.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+        if (!block.IsFullDay && block.StartTime is { } startTime && block.EndTime is { } endTime)
+        {
+            return $"{startDate}, {startTime:HH:mm} às {endTime:HH:mm}";
+        }
+
+        if (block.StartDate == block.EndDate)
+        {
+            return $"{startDate}, dia inteiro";
+        }
+
+        return $"{startDate} a {block.EndDate.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)}, dias inteiros";
+    }
+
+    private static string GetBlockTypeLabel(ScheduleBlockType type) =>
+        type switch
+        {
+            ScheduleBlockType.TimeOff => "Folga",
+            ScheduleBlockType.Vacation => "Férias",
+            ScheduleBlockType.Appointment => "Compromisso",
+            ScheduleBlockType.Training => "Treinamento",
+            ScheduleBlockType.Absence => "Ausência",
+            ScheduleBlockType.Manual => "Bloqueio manual",
+            _ => "Indisponibilidade"
+        };
+
+    private sealed class DailyScheduleFormModel
+    {
+        public DayOfWeek Weekday { get; set; }
+        public string Label { get; set; } = string.Empty;
+        public bool IsEnabled { get; set; }
+        public TimeSpan? EntryTime { get; set; }
+        public TimeSpan? ExitTime { get; set; }
+        public bool HasLunchBreak { get; set; }
+        public TimeSpan? LunchStartTime { get; set; }
+        public TimeSpan? LunchEndTime { get; set; }
+    }
+
+    private sealed record DailyScheduleDisplayGroup(string Label, DailyScheduleDto Schedule);
+
+    private sealed class ScheduleBlockFormModel
+    {
+        public ScheduleBlockType Type { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public bool IsFullDay { get; set; }
+        public TimeSpan? StartTime { get; set; }
+        public TimeSpan? EndTime { get; set; }
+        public string? Notes { get; set; }
+
+        public static ScheduleBlockFormModel CreateDefault()
+        {
+            return new ScheduleBlockFormModel
+            {
+                Type = ScheduleBlockType.Vacation,
+                IsFullDay = true,
+                StartTime = new TimeSpan(8, 0, 0),
+                EndTime = new TimeSpan(18, 0, 0)
+            };
+        }
+    }
+}

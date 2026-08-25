@@ -1,0 +1,14 @@
+@page "/not-found"
+@attribute [Authorize]
+@layout MainLayout
+
+<PageTitle>Página não encontrada | VoltaMarcada</PageTitle>
+
+<section class="status-page" aria-labelledby="not-found-title">
+    <MudPaper Class="status-surface" Elevation="0" Outlined="true">
+        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Color="Color.Primary" Size="Size.Large" aria-hidden="true" />
+        <MudText id="not-found-title" Typo="Typo.h4">Página não encontrada</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">Não foi possível encontrar o conteúdo que você procura.</MudText>
+        <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary">Voltar ao painel</MudButton>
+    </MudPaper>
+</section>

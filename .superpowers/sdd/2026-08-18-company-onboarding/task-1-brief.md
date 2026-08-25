@@ -1,10 +1,10 @@
 ### Task 1: Create the domain tenant and membership model
 
 **Files:**
-- Create: `src/ServiceSync.Domain/Entities/CompanyUser.cs`
-- Create: `src/ServiceSync.Domain/Enums/CompanyUserRole.cs`
-- Create: `src/ServiceSync.Domain/ValueObjects/BrazilianDocument.cs`
-- Modify: `src/ServiceSync.Domain/Entities/Company.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/CompanyUser.cs`
+- Create: `src/VoltaMarcada.Domain/Enums/CompanyUserRole.cs`
+- Create: `src/VoltaMarcada.Domain/ValueObjects/BrazilianDocument.cs`
+- Modify: `src/VoltaMarcada.Domain/Entities/Company.cs`
 
 **Produces:**
 
@@ -20,4 +20,4 @@ public static bool BrazilianDocument.TryNormalize(string? value, out string norm
 - [ ] Add `CompanyUserRole` with `Owner = 1` and `Employee = 2`, then add a membership entity with private setters/EF constructor and invariant validation for non-empty IDs and defined role.
 - [ ] Implement `BrazilianDocument.TryNormalize`: retain digits only, reject repeated sequences, and validate either CPF or CNPJ check digits without infrastructure dependencies.
 - [ ] Expand `Company` to `LegalName`, `TradeName`, `Document`, `Phone`, `WhatsApp`, `City`, `State`, optional `LogoKey`, `Slug`, `CreatedAtUtc`, and `UpdatedAtUtc`. Trim text, require all non-logo values, require a normalized valid document, and assign timestamps from `now`.
-- [ ] Run `dotnet build ServiceSync.sln`; expect exit code 0.
+- [ ] Run `dotnet build VoltaMarcada.sln`; expect exit code 0.

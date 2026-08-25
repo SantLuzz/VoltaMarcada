@@ -2,11 +2,11 @@
 
 ## Scope
 
-Refactor every currently implemented ServiceSync Web screen and its shared presentation primitives. The work covers the authenticated application shell, dashboard, authentication, company onboarding, shared inputs, fallback pages, global styling, and component providers. It does not add Phase Two business modules or change endpoint contracts.
+Refactor every currently implemented VoltaMarcada Web screen and its shared presentation primitives. The work covers the authenticated application shell, dashboard, authentication, company onboarding, shared inputs, fallback pages, global styling, and component providers. It does not add Phase Two business modules or change endpoint contracts.
 
 ## Objectives
 
-- Establish the mandatory MudBlazor-based ServiceSync UI system.
+- Establish the mandatory MudBlazor-based VoltaMarcada UI system.
 - Remove Bootstrap-era and raw HTML presentation patterns where MudBlazor provides an equivalent.
 - Centralize the brand palette, typography, component defaults, spacing, and semantic colors in a `MudTheme`.
 - Make the existing application work coherently on desktop, tablet, and mobile.
@@ -39,7 +39,7 @@ Login, registration, and company onboarding share the canonical logo, centered c
 
 ### Authenticated Application
 
-The shell uses the ServiceSync logo, a responsive drawer, clear active navigation, compact company context, and a MudBlazor-compatible logout action. The dashboard gains a consistent page header and a helpful Phase Two operational empty state, rather than a placeholder card.
+The shell uses the VoltaMarcada logo, a responsive drawer, clear active navigation, compact company context, and a MudBlazor-compatible logout action. The dashboard gains a consistent page header and a helpful Phase Two operational empty state, rather than a placeholder card.
 
 ### Fallback and Transitional Screens
 

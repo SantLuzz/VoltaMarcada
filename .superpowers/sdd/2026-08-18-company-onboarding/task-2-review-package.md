@@ -4,15 +4,15 @@ Git metadata is unavailable, so no commit diff can be generated.
 
 ## Changed-file review scope
 
-- `src/ServiceSync.Application/Abstractions/Identity/ICurrentUser.cs`
-- `src/ServiceSync.Application/Abstractions/Tenancy/ICurrentCompany.cs`
-- `src/ServiceSync.Application/Abstractions/Persistence/ICompanyOnboardingRepository.cs`
-- `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingCommand.cs`
-- `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingResult.cs`
-- `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingCommandValidator.cs`
-- `src/ServiceSync.Application/CompanyOnboarding/CompanySlugGenerator.cs`
-- `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingUseCase.cs`
-- `src/ServiceSync.Application/DependencyInjection.cs`
+- `src/VoltaMarcada.Application/Abstractions/Identity/ICurrentUser.cs`
+- `src/VoltaMarcada.Application/Abstractions/Tenancy/ICurrentCompany.cs`
+- `src/VoltaMarcada.Application/Abstractions/Persistence/ICompanyOnboardingRepository.cs`
+- `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingCommand.cs`
+- `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingResult.cs`
+- `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingCommandValidator.cs`
+- `src/VoltaMarcada.Application/CompanyOnboarding/CompanySlugGenerator.cs`
+- `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingUseCase.cs`
+- `src/VoltaMarcada.Application/DependencyInjection.cs`
 
 ## Baseline and build evidence
 

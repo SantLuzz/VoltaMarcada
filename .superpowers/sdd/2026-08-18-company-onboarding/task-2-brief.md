@@ -1,15 +1,15 @@
 ### Task 2: Add onboarding application behavior
 
 **Files:**
-- Create: `src/ServiceSync.Application/Abstractions/Identity/ICurrentUser.cs`
-- Create: `src/ServiceSync.Application/Abstractions/Tenancy/ICurrentCompany.cs`
-- Create: `src/ServiceSync.Application/Abstractions/Persistence/ICompanyOnboardingRepository.cs`
-- Create: `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingCommand.cs`
-- Create: `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingResult.cs`
-- Create: `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingCommandValidator.cs`
-- Create: `src/ServiceSync.Application/CompanyOnboarding/CompanySlugGenerator.cs`
-- Create: `src/ServiceSync.Application/CompanyOnboarding/CompleteCompanyOnboardingUseCase.cs`
-- Modify: `src/ServiceSync.Application/DependencyInjection.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Identity/ICurrentUser.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Tenancy/ICurrentCompany.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Persistence/ICompanyOnboardingRepository.cs`
+- Create: `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingCommand.cs`
+- Create: `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingResult.cs`
+- Create: `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingCommandValidator.cs`
+- Create: `src/VoltaMarcada.Application/CompanyOnboarding/CompanySlugGenerator.cs`
+- Create: `src/VoltaMarcada.Application/CompanyOnboarding/CompleteCompanyOnboardingUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/DependencyInjection.cs`
 
 **Consumes:** Task 1 domain APIs and `TimeProvider`.
 
@@ -28,4 +28,4 @@ public Task<CompleteCompanyOnboardingResult> ExecuteAsync(
 - [ ] Add the command and FluentValidation validator. Require every non-logo field; invoke `BrazilianDocument.TryNormalize` for the document; return clear result codes including `Unauthenticated`, `AlreadyOnboarded`, `InvalidInput`, `DocumentAlreadyExists`, `SlugAlreadyExists`, and `Success`.
 - [ ] Implement slug normalization: lowercase ASCII, remove diacritics, replace non-alphanumeric runs with one hyphen, trim hyphens; use `baseSlug` when available and `$"{baseSlug}-{normalizedDocument[^4..]}"` after collision.
 - [ ] Implement the use case: obtain `ICurrentUser`, validate input, normalize document, reject an existing membership/document, create domain objects with `timeProvider.GetUtcNow()`, choose a free slug, and translate transaction results to the explicit result type. Never accept a user ID or company ID in the command.
-- [ ] Register `TimeProvider.System` and the use case in application DI, then run `dotnet build ServiceSync.sln`; expect exit code 0.
+- [ ] Register `TimeProvider.System` and the use case in application DI, then run `dotnet build VoltaMarcada.sln`; expect exit code 0.

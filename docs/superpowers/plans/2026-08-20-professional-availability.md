@@ -27,10 +27,10 @@
 ### Task 1: Define the availability domain model
 
 **Files:**
-- Create: `src/ServiceSync.Domain/Enums/ProfessionalWorkDays.cs`
-- Create: `src/ServiceSync.Domain/Enums/ScheduleBlockType.cs`
-- Create: `src/ServiceSync.Domain/Entities/ProfessionalAvailability.cs`
-- Create: `src/ServiceSync.Domain/Entities/ScheduleBlock.cs`
+- Create: `src/VoltaMarcada.Domain/Enums/ProfessionalWorkDays.cs`
+- Create: `src/VoltaMarcada.Domain/Enums/ScheduleBlockType.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/ProfessionalAvailability.cs`
+- Create: `src/VoltaMarcada.Domain/Entities/ScheduleBlock.cs`
 
 **Interfaces:**
 - Produces `[Flags] enum ProfessionalWorkDays` with `None`, Monday through Sunday, and `All`.
@@ -119,7 +119,7 @@
   Confirm the new entities implement `ICompanyScopedEntity`, have no public setters, generate server-side GUIDs, and use `DomainException` for invalid state. Run only:
 
   ```powershell
-  rg -n "public .* set;|DateTime\.(Now|UtcNow)|DateTimeOffset\.(Now|UtcNow)" src/ServiceSync.Domain/Entities/ProfessionalAvailability.cs src/ServiceSync.Domain/Entities/ScheduleBlock.cs
+  rg -n "public .* set;|DateTime\.(Now|UtcNow)|DateTimeOffset\.(Now|UtcNow)" src/VoltaMarcada.Domain/Entities/ProfessionalAvailability.cs src/VoltaMarcada.Domain/Entities/ScheduleBlock.cs
   ```
 
   Expected: no public setter or direct machine-clock use.
@@ -127,12 +127,12 @@
 ### Task 2: Map persistence and add the schema migration
 
 **Files:**
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/ProfessionalAvailabilityConfiguration.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Configurations/ScheduleBlockConfiguration.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/AppDbContext.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/20260820190000_AddProfessionalAvailability.cs`
-- Create: `src/ServiceSync.Infrastructure/Persistence/Migrations/20260820190000_AddProfessionalAvailability.Designer.cs`
-- Modify: `src/ServiceSync.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/ProfessionalAvailabilityConfiguration.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Configurations/ScheduleBlockConfiguration.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/AppDbContext.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260820190000_AddProfessionalAvailability.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/20260820190000_AddProfessionalAvailability.Designer.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
 
 **Interfaces:**
 - Produces `DbSet<ProfessionalAvailability> ProfessionalAvailabilities`.
@@ -169,16 +169,16 @@
 ### Task 3: Add application contracts, validation, and explicit use cases
 
 **Files:**
-- Create: `src/ServiceSync.Application/Abstractions/Persistence/IProfessionalAvailabilityRepository.cs`
-- Create: `src/ServiceSync.Application/Professionals/ProfessionalAvailabilityCommands.cs`
-- Create: `src/ServiceSync.Application/Professionals/ProfessionalAvailabilityDtos.cs`
-- Create: `src/ServiceSync.Application/Professionals/ProfessionalAvailabilityCommandValidators.cs`
-- Create: `src/ServiceSync.Application/Professionals/ProfessionalAvailabilityOperationResult.cs`
-- Create: `src/ServiceSync.Application/Professionals/GetProfessionalAvailabilityUseCase.cs`
-- Create: `src/ServiceSync.Application/Professionals/SaveProfessionalAvailabilityUseCase.cs`
-- Create: `src/ServiceSync.Application/Professionals/CreateScheduleBlockUseCase.cs`
-- Create: `src/ServiceSync.Application/Professionals/DeleteScheduleBlockUseCase.cs`
-- Modify: `src/ServiceSync.Application/DependencyInjection.cs`
+- Create: `src/VoltaMarcada.Application/Abstractions/Persistence/IProfessionalAvailabilityRepository.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/ProfessionalAvailabilityCommands.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/ProfessionalAvailabilityDtos.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/ProfessionalAvailabilityCommandValidators.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/ProfessionalAvailabilityOperationResult.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/GetProfessionalAvailabilityUseCase.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/SaveProfessionalAvailabilityUseCase.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/CreateScheduleBlockUseCase.cs`
+- Create: `src/VoltaMarcada.Application/Professionals/DeleteScheduleBlockUseCase.cs`
+- Modify: `src/VoltaMarcada.Application/DependencyInjection.cs`
 
 **Interfaces:**
 - `GetProfessionalAvailabilityUseCase.ExecuteAsync(Guid professionalId, CancellationToken)` returns `ProfessionalAvailabilityDto?`.
@@ -251,9 +251,9 @@
 ### Task 4: Implement the EF Core repository and HTTP endpoints
 
 **Files:**
-- Create: `src/ServiceSync.Infrastructure/Persistence/Repositories/ProfessionalAvailabilityRepository.cs`
-- Modify: `src/ServiceSync.Infrastructure/DependencyInjection.cs`
-- Modify: `src/ServiceSync.Web/Endpoints/ProfessionalEndpoints.cs`
+- Create: `src/VoltaMarcada.Infrastructure/Persistence/Repositories/ProfessionalAvailabilityRepository.cs`
+- Modify: `src/VoltaMarcada.Infrastructure/DependencyInjection.cs`
+- Modify: `src/VoltaMarcada.Web/Endpoints/ProfessionalEndpoints.cs`
 
 **Interfaces:**
 - Implements every `IProfessionalAvailabilityRepository` operation with ID plus `CompanyId` predicates.
@@ -291,7 +291,7 @@
 ### Task 5: Build a reusable MudBlazor availability panel
 
 **Files:**
-- Create: `src/ServiceSync.Web/Components/Shared/ProfessionalAvailabilityPanel.razor`
+- Create: `src/VoltaMarcada.Web/Components/Shared/ProfessionalAvailabilityPanel.razor`
 
 **Interfaces:**
 - Parameters: `Guid ProfessionalId` and `bool ReadOnly`.
@@ -325,8 +325,8 @@
 ### Task 6: Integrate availability into Owner and Employee professional screens
 
 **Files:**
-- Modify: `src/ServiceSync.Web/Components/Pages/ProfessionalRegistration.razor`
-- Modify: `src/ServiceSync.Web/Components/Pages/Professionals.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/ProfessionalRegistration.razor`
+- Modify: `src/VoltaMarcada.Web/Components/Pages/Professionals.razor`
 
 **Interfaces:**
 - Owner edit mode renders `<ProfessionalAvailabilityPanel ProfessionalId="..." ReadOnly="false" />`.
