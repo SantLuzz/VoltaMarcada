@@ -15,7 +15,10 @@ public sealed class ServiceRequestConfiguration : IEntityTypeConfiguration<Servi
         builder.HasAlternateKey(x => new { x.CompanyId, x.Id });
         builder.HasIndex(x => new { x.CompanyId, x.Status, x.CreatedAtUtc });
         builder.HasIndex(x => new { x.CompanyId, x.AppointmentRequestId }).IsUnique();
+        builder.HasIndex(x => new { x.CompanyId, x.WorkOrderId }).IsUnique().HasFilter("\"WorkOrderId\" IS NOT NULL");
+        builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Customer>().WithMany().HasForeignKey(x => new { x.CompanyId, x.CustomerId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<AppointmentRequest>().WithMany().HasForeignKey(x => new { x.CompanyId, x.AppointmentRequestId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<WorkOrder>().WithMany().HasForeignKey(x => new { x.CompanyId, x.WorkOrderId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
     }
 }

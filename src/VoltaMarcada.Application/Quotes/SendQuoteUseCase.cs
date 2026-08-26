@@ -11,6 +11,7 @@ namespace VoltaMarcada.Application.Quotes;
 public sealed class SendQuoteUseCase(
     IQuoteRepository quotes,
     ICustomerRepository customers,
+    IServiceRequestRepository serviceRequests,
     WorkOrderAuthorization authorization,
     IApplicationUrlBuilder applicationUrlBuilder,
     IWhatsAppLinkBuilder whatsAppLinkBuilder,
@@ -30,6 +31,11 @@ public sealed class SendQuoteUseCase(
         var expiration = new DateTimeOffset(quote.ValidUntil.ToDateTime(TimeOnly.MaxValue), TimeSpan.Zero);
         if (expiration <= now) return OperationResult<QuoteSendResult>.Failure(QuoteErrors.InvalidInput);
         quote.Send(PublicTokenGenerator.Hash(token), expiration, now);
+        if (quote.ServiceRequestId is { } serviceRequestId)
+        {
+            var serviceRequest = await serviceRequests.GetForCompanyAsync(serviceRequestId, scope.CompanyId, cancellationToken);
+            serviceRequest?.MarkQuoteSent(now);
+        }
         await quotes.SaveChangesAsync(cancellationToken);
 
         var publicUrl = applicationUrlBuilder.BuildApplicationUrl($"q/{token}");

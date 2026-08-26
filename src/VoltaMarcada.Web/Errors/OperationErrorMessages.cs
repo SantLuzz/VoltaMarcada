@@ -80,6 +80,14 @@ public static class OperationErrorMessages
             ["CustomerContact.InvalidStatus"] = "Este contato n\u00E3o permite esta a\u00E7\u00E3o agora.",
             ["CustomerContact.WhatsAppUnavailable"] = "O cliente n\u00E3o possui um WhatsApp v\u00E1lido para contato.",
             ["CustomerContact.Forbidden"] = "Voc\u00EA n\u00E3o tem permiss\u00E3o para gerenciar contatos."
+            , ["ServiceRequest.NotFound"] = "Solicitação não encontrada."
+            , ["ServiceRequest.InvalidInput"] = "Revise os dados da solicitação."
+            , ["ServiceRequest.InvalidStatus"] = "Esta solicitação não permite essa ação agora."
+            , ["ServiceRequest.Forbidden"] = "Você não tem permissão para avaliar esta solicitação."
+            , ["ServiceRequest.ProfessionalUnavailable"] = "O profissional não está disponível nesse horário."
+            , ["Quote.InvalidInput"] = "Revise os dados do orçamento."
+            , ["Quote.NotFound"] = "Orçamento não encontrado."
+            , ["Quote.InvalidStatus"] = "Este orçamento não permite essa ação agora."
         };
 
     public static string GetMessage(string? code) =>

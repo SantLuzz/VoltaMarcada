@@ -1,9 +1,11 @@
 @page "/q/{Token}"
 @layout PublicLayout
 @using VoltaMarcada.Application.Quotes
+@using VoltaMarcada.Web.Configuration
 @inject GetPublicQuoteUseCase GetPublicQuoteUseCase
 @inject ApprovePublicQuoteUseCase ApprovePublicQuoteUseCase
 @inject RejectPublicQuoteUseCase RejectPublicQuoteUseCase
+@inject PublicQuoteActionLimiter PublicQuoteActionLimiter
 
 <PageTitle>Orçamento | VoltaMarcada</PageTitle>
 
@@ -23,6 +25,7 @@ else
             <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">@actionError</MudAlert>
         }
         <MudText Typo="Typo.h4">Orçamento</MudText>
+        <MudText Typo="Typo.subtitle1" Class="mb-2">@quote.CompanyName</MudText>
         <MudText Typo="Typo.body2" Class="mb-4">Válido até @quote.ValidUntil.ToString("dd/MM/yyyy")</MudText>
         @foreach (var item in quote.Items)
         {
@@ -47,6 +50,7 @@ else
             <MudButton Color="Color.Error" Variant="Variant.Outlined" Class="mt-4 ml-2" Disabled="@isApproving" OnClick="RejectAsync">Recusar</MudButton>
         }
         @if (!string.IsNullOrWhiteSpace(quote.Notes)) { <MudText Class="mt-3">@quote.Notes</MudText> }
+        <MudButton Href="@GetWhatsAppUrl()" Target="_blank" Variant="Variant.Text" Class="mt-3">Falar com a empresa</MudButton>
     </MudPaper>
 }
 
@@ -64,6 +68,7 @@ else
     }
     private async Task ApproveAsync()
     {
+        if (!PublicQuoteActionLimiter.TryAcquire(Token)) { actionError = "Tente novamente em alguns minutos."; return; }
         isApproving = true;
         var result = await ApprovePublicQuoteUseCase.ExecuteAsync(Token);
         actionError = result.IsSuccess ? null : "Não foi possível aprovar este orçamento.";
@@ -72,10 +77,18 @@ else
     }
     private async Task RejectAsync()
     {
+        if (!PublicQuoteActionLimiter.TryAcquire(Token)) { actionError = "Tente novamente em alguns minutos."; return; }
         isApproving = true;
         var result = await RejectPublicQuoteUseCase.ExecuteAsync(Token);
         actionError = result.IsSuccess ? null : "Não foi possível recusar este orçamento.";
         quote = await GetPublicQuoteUseCase.ExecuteAsync(Token);
         isApproving = false;
+    }
+
+    private string GetWhatsAppUrl()
+    {
+        if (quote is null || string.IsNullOrWhiteSpace(quote.CompanyWhatsApp)) return string.Empty;
+        var digits = new string(quote.CompanyWhatsApp.Where(char.IsDigit).ToArray());
+        return string.IsNullOrWhiteSpace(digits) ? string.Empty : $"https://wa.me/55{digits}";
     }
 }

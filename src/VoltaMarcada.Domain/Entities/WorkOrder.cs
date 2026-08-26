@@ -159,5 +159,6 @@ public sealed class WorkOrder : ICompanyScopedEntity
     private void EnsurePending() { if (Status != WorkOrderStatus.Pending) throw new DomainException("Work order must be pending."); }
     private void EnsureInProgress() { if (Status != WorkOrderStatus.InProgress) throw new DomainException("Work order must be in progress."); }
     private static void RequireId(Guid value, string name) { if (value == Guid.Empty) throw new DomainException($"{name} ID is required."); }
+    private static Guid? NormalizeOptionalId(Guid? value) => value is null || value == Guid.Empty ? null : value;
     private static string? NormalizeOptionalText(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

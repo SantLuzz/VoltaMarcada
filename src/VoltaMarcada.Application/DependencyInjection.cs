@@ -12,6 +12,7 @@ using VoltaMarcada.Application.MaintenanceOpportunities;
 using VoltaMarcada.Application.CompanySettings;
 using VoltaMarcada.Application.PublicBooking;
 using VoltaMarcada.Application.Quotes;
+using VoltaMarcada.Application.ServiceRequests;
 
 namespace VoltaMarcada.Application;
 
@@ -114,12 +115,16 @@ public static class DependencyInjection
         services.AddScoped<GetAppointmentRequestResponseUseCase>();
         services.AddScoped<RespondToAppointmentRequestUseCase>();
         services.AddScoped<CreateQuoteUseCase>();
+        services.AddScoped<GetQuotesUseCase>();
+        services.AddScoped<UpdateQuoteUseCase>();
         services.AddScoped<SendQuoteUseCase>();
         services.AddScoped<GetPublicQuoteUseCase>();
         services.AddScoped<ApproveQuoteUseCase>();
         services.AddScoped<RejectQuoteUseCase>();
         services.AddScoped<ApprovePublicQuoteUseCase>();
         services.AddScoped<RejectPublicQuoteUseCase>();
+        services.AddScoped<GetServiceRequestsUseCase>();
+        services.AddScoped<ResolveServiceRequestUseCase>();
         return services;
     }
 }

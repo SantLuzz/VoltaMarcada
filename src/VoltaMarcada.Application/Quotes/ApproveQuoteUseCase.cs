@@ -8,11 +8,12 @@ using VoltaMarcada.Domain.ValueObjects;
 
 namespace VoltaMarcada.Application.Quotes;
 
-public sealed record QuoteApprovalResult(Guid QuoteId, Guid WorkOrderId);
+public sealed record QuoteApprovalResult(Guid QuoteId, Guid WorkOrderId, bool AlreadyApproved);
 
 public sealed class ApproveQuoteUseCase(
     IQuoteRepository quotes,
     IWorkOrderRepository workOrders,
+    IServiceRequestRepository serviceRequests,
     IServiceRepository services,
     WorkOrderAuthorization authorization,
     ICurrentUser currentUser,
@@ -21,12 +22,18 @@ public sealed class ApproveQuoteUseCase(
     public async Task<OperationResult<QuoteApprovalResult>> ExecuteAsync(Guid quoteId, CancellationToken cancellationToken = default)
     {
         var scope = await authorization.GetAccessScopeAsync(cancellationToken);
-        var quote = await quotes.GetForCompanyAsync(quoteId, scope.CompanyId, cancellationToken);
+        await using var transaction = await quotes.BeginTransactionAsync(cancellationToken);
+        var quote = await quotes.GetForCompanyForUpdateAsync(quoteId, scope.CompanyId, cancellationToken);
         if (quote is null) return OperationResult<QuoteApprovalResult>.Failure(QuoteErrors.NotFound);
-        if (quote.Status == QuoteStatus.Approved && quote.GeneratedWorkOrderId is { } existingId) return OperationResult<QuoteApprovalResult>.Success(new QuoteApprovalResult(quote.Id, existingId));
+        if (quote.Status == QuoteStatus.Approved && quote.GeneratedWorkOrderId is { } existingId) return OperationResult<QuoteApprovalResult>.Success(new QuoteApprovalResult(quote.Id, existingId, true));
         if (quote.Status != QuoteStatus.Sent) return OperationResult<QuoteApprovalResult>.Failure(QuoteErrors.InvalidStatus);
         var now = timeProvider.GetUtcNow();
-        if (quote.ExpireIfPast(DateOnly.FromDateTime(now.UtcDateTime), now)) { await quotes.SaveChangesAsync(cancellationToken); return OperationResult<QuoteApprovalResult>.Failure(QuoteErrors.InvalidStatus); }
+        if (quote.ExpireIfPast(DateOnly.FromDateTime(now.UtcDateTime), now))
+        {
+            await quotes.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return OperationResult<QuoteApprovalResult>.Failure(QuoteErrors.InvalidStatus);
+        }
         var service = await services.GetForCompanyAsync(quote.PrimaryServiceId, scope.CompanyId, cancellationToken);
         if (service is null) return OperationResult<QuoteApprovalResult>.Failure(QuoteErrors.InvalidInput);
         var hasPrimaryService = false;
@@ -45,8 +52,14 @@ public sealed class ApproveQuoteUseCase(
         }).ToArray();
         var order = WorkOrder.Create(scope.CompanyId, quote.CustomerId, quote.EquipmentId, quote.PrimaryServiceId, null, currentUser.UserId, WorkOrderPriority.Normal, null, items, service.ChecklistItems.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderChecklistItemDefinition(x.Description, x.IsRequired, x.DisplayOrder)).ToArray(), now, quote.Id, quote.DiscountAmount);
         quote.Approve(order.Id, now);
+        if (quote.ServiceRequestId is { } serviceRequestId)
+        {
+            var serviceRequest = await serviceRequests.GetForCompanyAsync(serviceRequestId, scope.CompanyId, cancellationToken);
+            serviceRequest?.CompleteFromQuote(order.Id, now);
+        }
         await workOrders.AddAsync(order, cancellationToken);
         await quotes.SaveChangesAsync(cancellationToken);
-        return OperationResult<QuoteApprovalResult>.Success(new QuoteApprovalResult(quote.Id, order.Id));
+        await transaction.CommitAsync(cancellationToken);
+        return OperationResult<QuoteApprovalResult>.Success(new QuoteApprovalResult(quote.Id, order.Id, false));
     }
 }

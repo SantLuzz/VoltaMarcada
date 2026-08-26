@@ -44,6 +44,7 @@ builder.Services.AddOptions<ApplicationUrlOptions>()
     .ValidateOnStart();
 builder.Services.AddSingleton<IApplicationUrlBuilder, ApplicationUrlBuilder>();
 builder.Services.AddSingleton<IPublicBookingSubmissionLimiter, PublicBookingSubmissionLimiter>();
+builder.Services.AddSingleton<PublicQuoteActionLimiter>();
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("public-booking", context => RateLimitPartition.GetFixedWindowLimiter(

@@ -14,6 +14,7 @@ public sealed class WorkOrderConfiguration : IEntityTypeConfiguration<WorkOrder>
         builder.HasAlternateKey(x => new { x.CompanyId, x.Id }).HasName("AK_WorkOrders_CompanyId_Id");
         builder.HasIndex(x => new { x.CompanyId, x.Status, x.CreatedAtUtc }).HasDatabaseName("IX_WorkOrders_CompanyId_Status_CreatedAtUtc");
         builder.HasIndex(x => new { x.CompanyId, x.ProfessionalId, x.CreatedAtUtc }).HasDatabaseName("IX_WorkOrders_CompanyId_ProfessionalId_CreatedAtUtc");
+        builder.HasIndex(x => x.SourceQuoteId).IsUnique().HasFilter("\"SourceQuoteId\" IS NOT NULL");
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Customer>().WithMany().HasForeignKey(x => new { x.CompanyId, x.CustomerId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Equipment>().WithMany().HasForeignKey(x => new { x.CompanyId, x.EquipmentId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);

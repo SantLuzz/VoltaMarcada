@@ -76,7 +76,14 @@
                     }
                     @if (request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending)
                     {
-                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => AcceptRequestAsync(request))">Confirmar</MudButton>
+                        @if (request.RequiresCommercialResolution)
+                        {
+                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => NavigationManager.NavigateTo("/solicitacoes"))">Avaliar solicitação</MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => AcceptRequestAsync(request))">Confirmar</MudButton>
+                        }
                         <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => OpenSuggestionDialogAsync(request))">Sugerir outro horário</MudButton>
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => RejectRequestAsync(request.Id))">Recusar</MudButton>
                     }
@@ -135,8 +142,13 @@ else
                 <MudStack Spacing="0">
                     <MudText Typo="Typo.subtitle2">@AppointmentCalendarTime.ToLocalDateTime(appointment.StartAtUtc, appointment.ProfessionalTimeZoneId).ToString("dd/MM HH:mm") — @GetStatusName(appointment.Status)</MudText>
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(appointment.Origin == VoltaMarcada.Domain.Enums.AppointmentOrigin.External ? Color.Info : Color.Default)">@(appointment.Origin == VoltaMarcada.Domain.Enums.AppointmentOrigin.External ? "Externo" : "Interno")</MudChip>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@GetAppointmentTypeName(appointment.Type)</MudChip>
                     <MudText Typo="Typo.body2">@(appointment.CustomerName ?? "Cliente não informado") · @(appointment.ServiceName ?? "Serviço não informado")</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment.ProfessionalName@(string.IsNullOrWhiteSpace(appointment.EquipmentName) ? string.Empty : $" · {appointment.EquipmentName}")</MudText>
+                    @if (!string.IsNullOrWhiteSpace(appointment.Description))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment.Description</MudText>
+                    }
                     @if (!string.IsNullOrWhiteSpace(appointment.Notes))
                     {
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment.Notes</MudText>
@@ -1005,5 +1017,12 @@ else
         VoltaMarcada.Domain.Enums.AppointmentStatus.Cancelled => "Cancelado",
         VoltaMarcada.Domain.Enums.AppointmentStatus.InProgress => "Em andamento",
         _ => "Agendado"
+    };
+
+    private static string GetAppointmentTypeName(VoltaMarcada.Domain.Enums.AppointmentType type) => type switch
+    {
+        VoltaMarcada.Domain.Enums.AppointmentType.TechnicalVisit => "Visita técnica",
+        VoltaMarcada.Domain.Enums.AppointmentType.ServiceExecution => "Execução de serviço",
+        _ => "Outro atendimento"
     };
 }

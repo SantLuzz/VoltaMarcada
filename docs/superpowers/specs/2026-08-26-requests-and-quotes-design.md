@@ -1,6 +1,6 @@
 # Service Requests and Quotes Design
 
-> Status: Proposed on 2026-08-26.
+> Status: Approved on 2026-08-26.
 
 ## Goal
 

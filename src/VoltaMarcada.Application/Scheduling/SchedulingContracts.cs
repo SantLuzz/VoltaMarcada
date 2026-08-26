@@ -12,7 +12,9 @@ public sealed record CreateAppointmentCommand(
     Guid? ServiceId,
     Guid? WorkOrderId,
     string? Notes,
-    Guid? MaintenanceOpportunityId = null);
+    Guid? MaintenanceOpportunityId = null,
+    AppointmentType Type = AppointmentType.Other,
+    string? Description = null);
 
 public sealed record RescheduleAppointmentCommand(DateOnly Date, TimeOnly StartTime, string Reason);
 
@@ -40,6 +42,8 @@ public sealed record AppointmentDto(
     DateTimeOffset EndAtUtc,
     AppointmentStatus Status,
     AppointmentOrigin Origin,
+    AppointmentType Type,
+    string? Description,
     string? Notes,
     string ProfessionalTimeZoneId,
     string ProfessionalName,
@@ -71,6 +75,8 @@ public sealed record AppointmentDetailsDto(
     DateTimeOffset EndAtUtc,
     AppointmentStatus Status,
     AppointmentOrigin Origin,
+    AppointmentType Type,
+    string? Description,
     string? Notes,
     AppointmentCustomerDetailsDto? Customer,
     string ProfessionalTimeZoneId);

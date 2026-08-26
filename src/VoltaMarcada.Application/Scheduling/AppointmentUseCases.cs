@@ -55,7 +55,10 @@ public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorizatio
         var scope = await authorization.GetAccessScopeAsync(cancellationToken);
         if (command.ProfessionalId == Guid.Empty ||
             command.DurationMinutes <= 0 ||
-            command.Notes?.Trim().Length > 1000)
+            command.Notes?.Trim().Length > 1000 ||
+            command.Description?.Trim().Length > 1000 ||
+            !Enum.IsDefined(command.Type) ||
+            command.Type == global::VoltaMarcada.Domain.Enums.AppointmentType.ServiceExecution && command.WorkOrderId is null)
         {
             return OperationResult<Guid>.Failure(SchedulingErrors.InvalidInput);
         }
@@ -159,7 +162,7 @@ public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorizatio
             return OperationResult<Guid>.Failure(SchedulingErrors.ProfessionalUnavailable);
         }
 
-        var appointment = Appointment.Create(scope.CompanyId, professional.Id, normalized.CustomerId, normalized.EquipmentId, normalized.ServiceId, normalized.WorkOrderId, startAtUtc, endAtUtc, normalized.Notes, timeProvider.GetUtcNow());
+        var appointment = Appointment.Create(scope.CompanyId, professional.Id, normalized.CustomerId, normalized.EquipmentId, normalized.ServiceId, normalized.WorkOrderId, startAtUtc, endAtUtc, normalized.Notes, timeProvider.GetUtcNow(), AppointmentOrigin.Internal, normalized.Type, normalized.Description);
         await appointmentRepository.AddAsync(appointment, cancellationToken);
         maintenanceOpportunity?.MarkAsBooked(timeProvider.GetUtcNow());
         if (await appointmentRepository.TrySaveAppointmentChangesAsync(cancellationToken) == AppointmentPersistenceOutcome.Conflict)
@@ -195,6 +198,8 @@ public sealed class GetAppointmentsUseCase(WorkOrderAuthorization authorization,
             item.Appointment.EndAtUtc,
             item.Appointment.Status,
             item.Appointment.Origin,
+            item.Appointment.Type,
+            item.Appointment.Description,
             item.Appointment.Notes,
             timeZoneIds[item.Appointment.ProfessionalId],
             item.ProfessionalName,
@@ -252,6 +257,8 @@ public sealed class GetAppointmentDetailsUseCase(WorkOrderAuthorization authoriz
             appointment.EndAtUtc,
             appointment.Status,
             appointment.Origin,
+            appointment.Type,
+            appointment.Description,
             appointment.Notes,
             customer,
             professional.TimeZoneId);
