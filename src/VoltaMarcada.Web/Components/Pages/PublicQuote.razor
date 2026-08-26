@@ -1,0 +1,44 @@
+@page "/q/{Token}"
+@layout PublicLayout
+@using VoltaMarcada.Application.Quotes
+@inject GetPublicQuoteUseCase GetPublicQuoteUseCase
+
+<PageTitle>Orçamento | VoltaMarcada</PageTitle>
+
+@if (isLoading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (quote is null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">Este orçamento não está disponível.</MudAlert>
+}
+else
+{
+    <MudPaper Class="pa-6" Outlined="true">
+        <MudText Typo="Typo.h4">Orçamento</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4">Válido até @quote.ValidUntil.ToString("dd/MM/yyyy")</MudText>
+        @foreach (var item in quote.Items)
+        {
+            <MudStack Row="true" Justify="Justify.SpaceBetween" Class="py-2">
+                <MudText>@item.Description (@item.Quantity)</MudText><MudText>@item.TotalAmount.ToString("C")</MudText>
+            </MudStack>
+        }
+        @if (quote.DiscountAmount > 0) { <MudText>Desconto: -@quote.DiscountAmount.ToString("C")</MudText> }
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.h6">Total: @quote.TotalAmount.ToString("C")</MudText>
+        @if (!string.IsNullOrWhiteSpace(quote.Notes)) { <MudText Class="mt-3">@quote.Notes</MudText> }
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public string? Token { get; set; }
+    private PublicQuoteDto? quote;
+    private bool isLoading = true;
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        quote = await GetPublicQuoteUseCase.ExecuteAsync(Token);
+        isLoading = false;
+    }
+}
