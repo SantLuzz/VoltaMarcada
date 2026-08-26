@@ -42,6 +42,8 @@ public sealed class SubmitPublicAppointmentRequestUseCase(
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
         var customer = await customerRepository.GetByDocumentAsync(company.Id, document, cancellationToken);
         var primaryAddress = command.Addresses.Single(address => address.IsPrimary);
+        if (!BrazilianPostalCode.TryNormalize(primaryAddress.PostalCode, out var normalizedPostalCode))
+            return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
         CustomerProfileProposal? proposal = new(
             command.CustomerName,
             command.CustomerWhatsApp,
@@ -50,7 +52,7 @@ public sealed class SubmitPublicAppointmentRequestUseCase(
                 primaryAddress.AddressType,
                 primaryAddress.Street,
                 primaryAddress.Number,
-                primaryAddress.PostalCode,
+                normalizedPostalCode,
                 primaryAddress.Complement,
                 primaryAddress.StateId,
                 primaryAddress.CityId));
