@@ -9,6 +9,8 @@ using VoltaMarcada.Application.Professionals;
 using VoltaMarcada.Application.WorkOrders;
 using VoltaMarcada.Application.Scheduling;
 using VoltaMarcada.Application.MaintenanceOpportunities;
+using VoltaMarcada.Application.CompanySettings;
+using VoltaMarcada.Application.PublicBooking;
 
 namespace VoltaMarcada.Application;
 
@@ -95,6 +97,21 @@ public static class DependencyInjection
         services.AddScoped<GetEmployeeInvitationForAcceptanceUseCase>();
         services.AddScoped<AcceptEmployeeInvitationUseCase>();
         services.AddScoped<UpdateCompanyMemberProfileUseCase>();
+        services.AddScoped<GetCompanyPublicSettingsUseCase>();
+        services.AddScoped<UpdateCompanyPublicSettingsUseCase>();
+        services.AddScoped<GetPublicCompanyPageUseCase>();
+        services.AddScoped<GetPublicAvailableSlotsUseCase>();
+        services.AddScoped<SubmitPublicAppointmentRequestUseCase>();
+        services.AddScoped<AcceptAppointmentRequestUseCase>();
+        services.AddScoped<GetAppointmentRequestsUseCase>();
+        services.AddScoped<RejectAppointmentRequestUseCase>();
+        services.AddScoped<GenerateMaintenanceBookingLinkUseCase>();
+        services.AddScoped<GetContextualMaintenanceBookingUseCase>();
+        services.AddScoped<SubmitContextualAppointmentRequestUseCase>();
+        services.AddScoped<RevokeMaintenanceBookingLinkUseCase>();
+        services.AddScoped<SuggestAppointmentRequestTimeUseCase>();
+        services.AddScoped<GetAppointmentRequestResponseUseCase>();
+        services.AddScoped<RespondToAppointmentRequestUseCase>();
         return services;
     }
 }

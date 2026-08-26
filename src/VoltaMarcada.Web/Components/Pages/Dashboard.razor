@@ -5,6 +5,7 @@
 @using VoltaMarcada.Application.MaintenanceOpportunities
 @inject WorkOrderAuthorization WorkOrderAuthorization
 @inject GetAppointmentsUseCase GetAppointmentsUseCase
+@inject GetAppointmentRequestsUseCase GetAppointmentRequestsUseCase
 @inject GetScheduleBlockRequestsUseCase GetScheduleBlockRequestsUseCase
 @inject GetWorkOrdersUseCase GetWorkOrdersUseCase
 @inject GetMaintenanceOpportunitySummaryUseCase GetMaintenanceOpportunitySummaryUseCase
@@ -17,7 +18,10 @@
     <Actions>
         @if (isOwner || accessScope?.ProfessionalId is not null)
         {
-            <MudButton Href="/agenda?new=true" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add">Novo agendamento</MudButton>
+            <MudStack Row="true" Spacing="2">
+                <MudButton Href="/agenda?new=true" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add">Novo agendamento</MudButton>
+                <MudButton Href="/ordens-servico/registro" Color="Color.Primary" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add">Nova OS</MudButton>
+            </MudStack>
         }
     </Actions>
 </PageHeader>
@@ -25,9 +29,17 @@
 @if (isOwner)
 {
     <MudGrid Class="mt-4">
-        <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">Agendamentos no período</MudText><MudText Typo="Typo.h5">@appointments.Count</MudText></MudPaper></MudItem>
-        <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">OS abertas</MudText><MudText Typo="Typo.h5">@openWorkOrders</MudText></MudPaper></MudItem>
-        <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">Bloqueios aguardando ação</MudText><MudText Typo="Typo.h5">@pendingBlockRequests</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="6" md="3" Class="dashboard-kpi-item"><MudPaper Outlined="true" Class="pa-3 dashboard-kpi-card"><MudText Typo="Typo.caption">Agendamentos no período</MudText><MudText Typo="Typo.h5">@appointments.Count</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="6" md="3" Class="dashboard-kpi-item"><MudPaper Outlined="true" Class="pa-3 dashboard-kpi-card"><MudText Typo="Typo.caption">OS abertas</MudText><MudText Typo="Typo.h5">@openWorkOrders</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="6" md="3" Class="dashboard-kpi-item"><MudPaper Outlined="true" Class="pa-3 dashboard-kpi-card"><MudText Typo="Typo.caption">Bloqueios aguardando ação</MudText><MudText Typo="Typo.h5">@pendingBlockRequests</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="6" md="3" Class="dashboard-kpi-item">
+            <a class="dashboard-kpi-link" href="/agenda" aria-label="Ver solicitações externas pendentes na agenda">
+                <MudPaper Outlined="true" Class="pa-3 dashboard-kpi-card dashboard-kpi-external-request">
+                    <MudText Typo="Typo.caption">Solicitações externas pendentes</MudText>
+                    <MudText Typo="Typo.h5">@pendingExternalAppointmentRequests</MudText>
+                </MudPaper>
+            </a>
+        </MudItem>
     </MudGrid>
     <MudPaper Outlined="true" Class="pa-3 mt-4"><MudText Typo="Typo.h6">Manutencoes</MudText><MudText>@maintenanceSummary.OverdueCount vencidas | @maintenanceSummary.NextSevenDaysCount nos proximos 7 dias | @maintenanceSummary.NextThirtyDaysCount nos proximos 30 dias</MudText><MudButton Href="/manutencoes" Variant="Variant.Text" Color="Color.Primary">Ver manutencoes</MudButton></MudPaper>
 }
@@ -123,6 +135,7 @@
     private bool isAppointmentDetailsDialogOpen;
     private bool isOwner;
     private int pendingBlockRequests;
+    private int pendingExternalAppointmentRequests;
     private int openWorkOrders;
     private Guid? selectedAppointmentId;
     private MaintenanceOpportunitySummary maintenanceSummary = new(0, 0, 0);
@@ -179,6 +192,8 @@
 
             if (isOwner)
             {
+                pendingExternalAppointmentRequests = (await GetAppointmentRequestsUseCase.ExecuteAsync())
+                    .Count(request => request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending);
                 pendingBlockRequests = (await GetScheduleBlockRequestsUseCase.ExecuteAsync(currentAccessScope))
                     .Count(request => request.Status is VoltaMarcada.Domain.Enums.ScheduleBlockRequestStatus.Pending or VoltaMarcada.Domain.Enums.ScheduleBlockRequestStatus.RequiresAppointmentResolution);
                 openWorkOrders = (await GetWorkOrdersUseCase.ExecuteAsync(new GetWorkOrdersQuery(null, null)))

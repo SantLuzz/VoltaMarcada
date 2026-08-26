@@ -22,6 +22,7 @@ public sealed class Appointment : ICompanyScopedEntity
     public DateTimeOffset StartAtUtc { get; private set; }
     public DateTimeOffset EndAtUtc { get; private set; }
     public AppointmentStatus Status { get; private set; }
+    public AppointmentOrigin Origin { get; private set; }
     public string? Notes { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public DateTimeOffset UpdatedAtUtc { get; private set; }
@@ -37,10 +38,15 @@ public sealed class Appointment : ICompanyScopedEntity
         DateTimeOffset startAtUtc,
         DateTimeOffset endAtUtc,
         string? notes,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        AppointmentOrigin origin = AppointmentOrigin.Internal)
     {
         EnsureIdentifiers(companyId, professionalId);
         EnsureValidInterval(startAtUtc, endAtUtc);
+        if (!Enum.IsDefined(origin))
+        {
+            throw new DomainException("Appointment origin is invalid.");
+        }
         var utcNow = now.ToUniversalTime();
 
         return new Appointment
@@ -55,6 +61,7 @@ public sealed class Appointment : ICompanyScopedEntity
             StartAtUtc = startAtUtc.ToUniversalTime(),
             EndAtUtc = endAtUtc.ToUniversalTime(),
             Status = AppointmentStatus.Scheduled,
+            Origin = origin,
             Notes = NormalizeNotes(notes),
             CreatedAtUtc = utcNow,
             UpdatedAtUtc = utcNow

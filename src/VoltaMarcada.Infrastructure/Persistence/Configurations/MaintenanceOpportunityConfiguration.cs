@@ -18,12 +18,17 @@ public sealed class MaintenanceOpportunityConfiguration : IEntityTypeConfigurati
         builder.Property(x => x.RecommendedServiceId).IsRequired();
         builder.Property(x => x.DueDate).IsRequired();
         builder.Property(x => x.Notes).HasMaxLength(2000).IsRequired();
+        builder.Property(x => x.BookingTokenHash).HasMaxLength(128).IsRequired(false);
         builder.HasAlternateKey(x => new { x.CompanyId, x.Id })
             .HasName("AK_MaintenanceOpportunities_CompanyId_Id");
         builder.HasIndex(x => new { x.CompanyId, x.Status, x.DueDate })
             .HasDatabaseName("IX_MaintenanceOpportunities_CompanyId_Status_DueDate");
         builder.HasIndex(x => new { x.CompanyId, x.CustomerId })
             .HasDatabaseName("IX_MaintenanceOpportunities_CompanyId_CustomerId");
+        builder.HasIndex(x => x.BookingTokenHash)
+            .HasDatabaseName("IX_MaintenanceOpportunities_BookingTokenHash")
+            .IsUnique()
+            .HasFilter("\"BookingTokenHash\" IS NOT NULL");
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Customer>().WithMany().HasForeignKey(x => new { x.CompanyId, x.CustomerId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Equipment>().WithMany().HasForeignKey(x => new { x.CompanyId, x.EquipmentId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);

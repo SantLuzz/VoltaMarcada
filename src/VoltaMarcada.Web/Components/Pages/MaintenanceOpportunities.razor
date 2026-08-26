@@ -1,6 +1,7 @@
 @page "/manutencoes"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
 @using VoltaMarcada.Application.MaintenanceOpportunities
+@using VoltaMarcada.Application.PublicBooking
 @using VoltaMarcada.Domain.Enums
 @using Microsoft.JSInterop
 @inject GetMaintenanceOpportunitiesUseCase GetMaintenanceOpportunitiesUseCase
@@ -10,6 +11,7 @@
 @inject MarkMaintenanceOpportunityAsBookingRequestedUseCase MarkBookingRequestedUseCase
 @inject CompleteMaintenanceOpportunityUseCase CompleteUseCase
 @inject DismissMaintenanceOpportunityUseCase DismissUseCase
+@inject RevokeMaintenanceBookingLinkUseCase RevokeMaintenanceBookingLinkUseCase
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
@@ -69,8 +71,13 @@ else
                             <MudStack Row="true">
                                 @if (item.Status is MaintenanceOpportunityStatus.Pending or MaintenanceOpportunityStatus.Contacted)
                                 {
-                                    <MudButton Variant="Variant.Text" Disabled="@IsContactActionPending(item.Id)" OnClick="@(() => PrepareWhatsAppAsync(item.Id))">WhatsApp</MudButton>
+                                    <MudButton Variant="Variant.Text" Disabled="@IsContactActionPending(item.Id)" OnClick="@(() => PrepareWhatsAppAsync(item.Id))">Enviar link pelo WhatsApp</MudButton>
                                     <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => ScheduleAsync(item.Id))">Agendar</MudButton>
+                                }
+                                @if (item.Status == MaintenanceOpportunityStatus.BookingRequested)
+                                {
+                                    <MudButton Variant="Variant.Text" Color="Color.Primary" Disabled="@IsContactActionPending(item.Id)" OnClick="@(() => PrepareWhatsAppAsync(item.Id))">Enviar novo link pelo WhatsApp</MudButton>
+                                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@(() => RevokeBookingLinkAsync(item.Id))">Revogar link</MudButton>
                                 }
                                 @if (item.Status == MaintenanceOpportunityStatus.Booked)
                                 {
@@ -224,6 +231,13 @@ else
         {
             Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
         }
+    }
+
+    private async Task RevokeBookingLinkAsync(Guid id)
+    {
+        var result = await RevokeMaintenanceBookingLinkUseCase.ExecuteAsync(id);
+        Snackbar.Add(result.IsSuccess ? "Link revogado." : OperationErrorMessages.GetMessage(result.Error?.Code), result.IsSuccess ? Severity.Success : Severity.Warning);
+        if (result.IsSuccess) await LoadAsync();
     }
 
     private async Task CompleteAsync(Guid id)

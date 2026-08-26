@@ -6,6 +6,11 @@ namespace VoltaMarcada.Infrastructure.Persistence.Repositories;
 
 public sealed class ServiceRepository(AppDbContext dbContext) : IServiceRepository
 {
+    public async Task<IReadOnlyList<global::VoltaMarcada.Domain.Entities.Service>> GetPublicBookingServicesAsync(Guid companyId, CancellationToken cancellationToken = default) =>
+        await dbContext.Services.AsNoTracking()
+            .Where(service => service.CompanyId == companyId && service.IsActive && service.AllowOnlineBooking)
+            .OrderBy(service => service.Name)
+            .ToArrayAsync(cancellationToken);
     public async Task AddAsync(global::VoltaMarcada.Domain.Entities.Service service, CancellationToken cancellationToken = default) =>
         await dbContext.Services.AddAsync(service, cancellationToken);
 

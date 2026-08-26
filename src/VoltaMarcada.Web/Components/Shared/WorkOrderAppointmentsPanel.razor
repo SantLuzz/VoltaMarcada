@@ -35,6 +35,7 @@ else
             <MudListItem T="AppointmentDto" Value="@appointment" Icon="@Icons.Material.Filled.Event" OnClick="@(() => OpenAppointmentDetails(appointment.Id))">
                 <MudStack Spacing="0">
                     <MudText Typo="Typo.subtitle2">@AppointmentCalendarTime.ToLocalDateTime(appointment.StartAtUtc, appointment.ProfessionalTimeZoneId).ToString("dd/MM HH:mm") — @GetStatusName(appointment.Status)</MudText>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(appointment.Origin == AppointmentOrigin.External ? Color.Info : Color.Default)">@(appointment.Origin == AppointmentOrigin.External ? "Externo" : "Interno")</MudChip>
                     <MudText Typo="Typo.body2">@(appointment.CustomerName ?? "Cliente não informado") · @(appointment.ServiceName ?? "Serviço não informado")</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment.ProfessionalName@(string.IsNullOrWhiteSpace(appointment.EquipmentName) ? string.Empty : $" · {appointment.EquipmentName}")</MudText>
                     @if (!string.IsNullOrWhiteSpace(appointment.Notes))

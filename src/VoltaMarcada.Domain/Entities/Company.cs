@@ -31,6 +31,12 @@ public sealed class Company
 
     public string Slug { get; private set; } = string.Empty;
 
+    public string? PublicDescription { get; private set; }
+
+    public string? PublicPhone { get; private set; }
+
+    public string? NotificationEmail { get; private set; }
+
     public DateTimeOffset CreatedAtUtc { get; private set; }
 
     public DateTimeOffset UpdatedAtUtc { get; private set; }
@@ -86,6 +92,14 @@ public sealed class Company
         };
     }
 
+    public void UpdatePublicProfile(string? publicDescription, string? publicPhone, string? notificationEmail, DateTimeOffset now)
+    {
+        PublicDescription = NormalizeOptionalText(publicDescription, 2000, "Public description");
+        PublicPhone = NormalizeOptionalText(publicPhone, 20, "Public phone");
+        NotificationEmail = NormalizeEmail(notificationEmail);
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
     private static string RequireText(string? value, string fieldName)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -96,6 +110,25 @@ public sealed class Company
         return value.Trim();
     }
 
-    private static string? NormalizeOptionalText(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string? NormalizeOptionalText(string? value, int? maximumLength = null, string? fieldName = null)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        if (normalized is not null && maximumLength is { } maxLength && normalized.Length > maxLength)
+        {
+            throw new DomainException($"{fieldName} cannot exceed {maxLength} characters.");
+        }
+
+        return normalized;
+    }
+
+    private static string? NormalizeEmail(string? value)
+    {
+        var normalized = NormalizeOptionalText(value, 320, "Notification email");
+        if (normalized is not null && (!System.Net.Mail.MailAddress.TryCreate(normalized, out var address) || !string.Equals(address.Address, normalized, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new DomainException("Notification email is invalid.");
+        }
+
+        return normalized;
+    }
 }

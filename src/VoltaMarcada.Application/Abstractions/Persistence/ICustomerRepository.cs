@@ -27,7 +27,10 @@ public interface ICustomerRepository
         Guid companyId,
         CancellationToken cancellationToken = default);
 
+    Task<Customer?> GetByDocumentAsync(Guid companyId, string normalizedDocument, CancellationToken cancellationToken = default);
+
     void RemoveAddresses(Customer customer);
+    void RemoveAddress(CustomerAddress address);
 
     void Remove(Customer customer);
 
