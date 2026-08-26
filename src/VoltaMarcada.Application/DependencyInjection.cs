@@ -116,6 +116,7 @@ public static class DependencyInjection
         services.AddScoped<CreateQuoteUseCase>();
         services.AddScoped<SendQuoteUseCase>();
         services.AddScoped<GetPublicQuoteUseCase>();
+        services.AddScoped<ApproveQuoteUseCase>();
         return services;
     }
 }
