@@ -42,6 +42,7 @@ public sealed class AppointmentRequest : ICompanyScopedEntity
     public DateTimeOffset? ResponseTokenExpiresAtUtc { get; private set; }
     public DateTimeOffset? ResponseTokenRevokedAtUtc { get; private set; }
     public Guid? AppointmentId { get; private set; }
+    public string? ProblemDescription { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public DateTimeOffset UpdatedAtUtc { get; private set; }
 
@@ -58,7 +59,8 @@ public sealed class AppointmentRequest : ICompanyScopedEntity
         DateTimeOffset requestedStartAtUtc,
         DateTimeOffset requestedEndAtUtc,
         CustomerProfileProposal? customerProfileProposal,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        string? problemDescription = null)
     {
         RequireId(companyId, "Company");
         RequireId(customerId, "Customer");
@@ -92,6 +94,7 @@ public sealed class AppointmentRequest : ICompanyScopedEntity
             ProposedAddressComplement = customerProfileProposal?.Address.Complement,
             ProposedAddressStateId = customerProfileProposal?.Address.StateId,
             ProposedAddressCityId = customerProfileProposal?.Address.CityId,
+            ProblemDescription = NormalizeOptionalText(problemDescription, 2000, "Problem description"),
             CreatedAtUtc = utcNow,
             UpdatedAtUtc = utcNow
         };
