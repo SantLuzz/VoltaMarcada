@@ -62,8 +62,15 @@ public sealed class CustomerRepository(AppDbContext dbContext) : ICustomerReposi
                 customer => customer.Id == customerId && customer.CompanyId == companyId,
                 cancellationToken);
 
+    public Task<Customer?> GetByDocumentAsync(Guid companyId, string normalizedDocument, CancellationToken cancellationToken = default) =>
+        IncludeAddressesAndLocations().SingleOrDefaultAsync(
+            customer => customer.CompanyId == companyId && customer.Document == normalizedDocument,
+            cancellationToken);
+
     public void RemoveAddresses(Customer customer) =>
         dbContext.CustomerAddresses.RemoveRange(customer.Addresses);
+
+    public void RemoveAddress(CustomerAddress address) => dbContext.CustomerAddresses.Remove(address);
 
     public void Remove(Customer customer) =>
         dbContext.Customers.Remove(customer);

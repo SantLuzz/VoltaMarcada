@@ -39,6 +39,7 @@ public sealed record AppointmentDto(
     DateTimeOffset StartAtUtc,
     DateTimeOffset EndAtUtc,
     AppointmentStatus Status,
+    AppointmentOrigin Origin,
     string? Notes,
     string ProfessionalTimeZoneId,
     string ProfessionalName,
@@ -69,6 +70,7 @@ public sealed record AppointmentDetailsDto(
     DateTimeOffset StartAtUtc,
     DateTimeOffset EndAtUtc,
     AppointmentStatus Status,
+    AppointmentOrigin Origin,
     string? Notes,
     AppointmentCustomerDetailsDto? Customer,
     string ProfessionalTimeZoneId);

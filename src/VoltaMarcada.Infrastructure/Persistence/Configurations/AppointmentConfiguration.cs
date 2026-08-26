@@ -12,6 +12,7 @@ public sealed class AppointmentConfiguration : IEntityTypeConfiguration<Appointm
         builder.HasKey(appointment => appointment.Id);
         builder.Property(appointment => appointment.Id).ValueGeneratedNever();
         builder.Property(appointment => appointment.Status).IsRequired();
+        builder.Property(appointment => appointment.Origin).IsRequired();
         builder.Property(appointment => appointment.Notes).HasMaxLength(1000);
         builder.HasAlternateKey(appointment => new { appointment.CompanyId, appointment.Id }).HasName("AK_Appointments_CompanyId_Id");
         builder.HasIndex(appointment => new { appointment.CompanyId, appointment.ProfessionalId, appointment.StartAtUtc }).HasDatabaseName("IX_Appointments_CompanyId_ProfessionalId_StartAtUtc");

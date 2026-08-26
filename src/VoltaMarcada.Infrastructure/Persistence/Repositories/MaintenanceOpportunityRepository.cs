@@ -17,6 +17,27 @@ public sealed class MaintenanceOpportunityRepository(AppDbContext dbContext) : I
             opportunity => opportunity.Id == opportunityId && opportunity.CompanyId == companyId,
             cancellationToken);
 
+    public Task<MaintenanceBookingContext?> GetBookingContextAsync(string tokenHash, CancellationToken cancellationToken = default) =>
+        (
+            from opportunity in dbContext.MaintenanceOpportunities
+            join company in dbContext.Companies.AsNoTracking() on opportunity.CompanyId equals company.Id
+            join customer in dbContext.Customers.AsNoTracking() on new { opportunity.CompanyId, opportunity.CustomerId } equals new { customer.CompanyId, CustomerId = customer.Id }
+            join equipment in dbContext.Equipment.AsNoTracking() on new { opportunity.CompanyId, opportunity.EquipmentId } equals new { equipment.CompanyId, EquipmentId = equipment.Id }
+            join service in dbContext.Services.AsNoTracking() on new { opportunity.CompanyId, ServiceId = opportunity.RecommendedServiceId } equals new { service.CompanyId, ServiceId = service.Id }
+            where opportunity.BookingTokenHash == tokenHash && opportunity.BookingTokenRevokedAtUtc == null
+            select new MaintenanceBookingContext(
+                opportunity,
+                company.Slug,
+                company.TradeName,
+                company.LogoKey,
+                company.WhatsApp,
+                customer.Name,
+                FormatEquipment(equipment.Type, equipment.Manufacturer, equipment.Model),
+                service.Name,
+                service.DurationMinutes,
+                service.IsActive)
+        ).SingleOrDefaultAsync(cancellationToken);
+
     public Task<MaintenanceOpportunityContactContext?> GetContactContextAsync(
         Guid opportunityId,
         Guid companyId,

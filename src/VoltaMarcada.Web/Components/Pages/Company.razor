@@ -1,20 +1,25 @@
 @page "/empresa"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
 @using VoltaMarcada.Application.EmployeeInvitations
+@using VoltaMarcada.Application.CompanySettings
 @using VoltaMarcada.Web.Authorization
 @using Microsoft.JSInterop
 @using VoltaMarcada.Domain.Enums
 @using VoltaMarcada.Application.Abstractions.Storage
+@using VoltaMarcada.Application.Abstractions.Routing
 @inject GetOwnerCompanyOverviewUseCase GetOwnerCompanyOverviewUseCase
+@inject GetCompanyPublicSettingsUseCase GetCompanyPublicSettingsUseCase
+@inject UpdateCompanyPublicSettingsUseCase UpdateCompanyPublicSettingsUseCase
 @inject CreateEmployeeInvitationUseCase CreateEmployeeInvitationUseCase
 @inject RenewEmployeeInvitationUseCase RenewEmployeeInvitationUseCase
 @inject RevokeEmployeeInvitationUseCase RevokeEmployeeInvitationUseCase
 @inject UpdateCompanyMemberProfileUseCase UpdateCompanyMemberProfileUseCase
 @inject IJSRuntime JsRuntime
 @inject IDialogService DialogService
-@inject NavigationManager NavigationManager
+@inject IApplicationUrlBuilder ApplicationUrlBuilder
 @inject ILogger<Company> Logger
 @inject IFileStorage FileStorage
+@inject ISnackbar Snackbar
 
 <PageTitle>Empresa | VoltaMarcada</PageTitle>
 
@@ -36,6 +41,8 @@ else if (overview is not null)
             <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@operationError</MudAlert>
         }
 
+        <MudTabs Rounded="true" Elevation="0">
+            <MudTabPanel Text="Visão geral">
         <MudPaper Class="company-section" Elevation="0" Outlined="true">
             @if (companyLogoDataUrl is not null)
             {
@@ -135,6 +142,24 @@ else if (overview is not null)
                 </MudTable>
             }
         </MudPaper>
+            </MudTabPanel>
+            <MudTabPanel Text="Configurações">
+                <MudPaper Class="company-section" Elevation="0" Outlined="true">
+                    <header class="company-section-header">
+                        <MudText Typo="Typo.h6">Página pública</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Configure as informações exibidas aos clientes e copie o link de agendamento.</MudText>
+                    </header>
+                    @if (publicSettings is not null)
+                    {
+                        <MudTextField T="string" Value="@GetPublicPageUrl()" Label="Link da página pública" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.ContentCopy" OnAdornmentClick="CopyPublicPageUrlAsync" />
+                        <MudTextField @bind-Value="publicSettings.PublicDescription" Label="Descrição pública" Lines="4" MaxLength="2000" Variant="Variant.Outlined" FullWidth="true" Class="mt-4" Disabled="@isSavingPublicSettings" />
+                        <MudTextField @bind-Value="publicSettings.PublicPhone" Label="Telefone público" Mask="@PublicPhoneMask" Variant="Variant.Outlined" FullWidth="true" Class="mt-3" Disabled="@isSavingPublicSettings" />
+                        <MudTextField @bind-Value="publicSettings.NotificationEmail" Label="E-mail para notificações" InputType="InputType.Email" Validation="ValidateOptionalEmail" Variant="Variant.Outlined" FullWidth="true" Class="mt-3" Disabled="@isSavingPublicSettings" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="SavePublicSettingsAsync" Disabled="@isSavingPublicSettings">@(isSavingPublicSettings ? "Salvando..." : "Salvar configurações")</MudButton>
+                    }
+                </MudPaper>
+            </MudTabPanel>
+        </MudTabs>
     </div>
 
     <MudDialog @bind-Visible="isProfileDialogOpen" Options="profileDialogOptions">
@@ -183,6 +208,8 @@ else if (overview is not null)
     private bool isProfileDialogOpen;
     private bool isSavingProfile;
     private string? profileError;
+    private PublicSettingsFormModel? publicSettings;
+    private bool isSavingPublicSettings;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -198,6 +225,12 @@ else if (overview is not null)
             }
 
             await LoadCompanyLogoAsync();
+            var settings = await GetCompanyPublicSettingsUseCase.ExecuteAsync();
+            if (settings is not null)
+            {
+                var ownerEmail = overview.Employees.FirstOrDefault(employee => employee.Role == CompanyUserRole.Owner)?.Email;
+                publicSettings = new PublicSettingsFormModel(settings.Slug, settings.PublicDescription, settings.PublicPhone, settings.NotificationEmail ?? ownerEmail);
+            }
         }
         catch (Exception exception)
         {
@@ -250,7 +283,7 @@ else if (overview is not null)
                 return;
             }
 
-            generatedInvitationLink = new Uri(new Uri(NavigationManager.BaseUri), $"convites/funcionarios/{token}").ToString();
+            generatedInvitationLink = ApplicationUrlBuilder.BuildApplicationUrl($"convites/funcionarios/{token}");
             employee = new EmployeeFormModel();
             await employeeForm.ResetValidationAsync();
             await ReloadOverviewAsync();
@@ -304,7 +337,7 @@ else if (overview is not null)
 
             if (result.Value?.Token is { } token)
             {
-                generatedInvitationLink = new Uri(new Uri(NavigationManager.BaseUri), $"convites/funcionarios/{token}").ToString();
+                generatedInvitationLink = ApplicationUrlBuilder.BuildApplicationUrl($"convites/funcionarios/{token}");
             }
 
             await ReloadOverviewAsync();
@@ -402,6 +435,34 @@ else if (overview is not null)
         }
     }
 
+    private string GetPublicPageUrl() => publicSettings is null ? string.Empty : ApplicationUrlBuilder.BuildApplicationUrl(publicSettings.Slug);
+
+    private async Task CopyPublicPageUrlAsync() => await JsRuntime.InvokeVoidAsync("serviceSync.copyText", GetPublicPageUrl());
+
+    private async Task SavePublicSettingsAsync()
+    {
+        if (publicSettings is null) return;
+        isSavingPublicSettings = true;
+        operationError = null;
+        try
+        {
+            var result = await UpdateCompanyPublicSettingsUseCase.ExecuteAsync(new UpdateCompanyPublicSettingsCommand(publicSettings.PublicDescription, NormalizePhone(publicSettings.PublicPhone), publicSettings.NotificationEmail));
+            if (!result.IsSuccess) operationError = OperationErrorMessages.GetMessage(result.Error?.Code);
+            else Snackbar.Add("Configurações públicas salvas.", Severity.Success);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to update company public settings");
+            operationError = "Não foi possível salvar as configurações.";
+        }
+        finally { isSavingPublicSettings = false; }
+    }
+
+    private static IEnumerable<string> ValidateOptionalEmail(string? email) =>
+        !string.IsNullOrWhiteSpace(email) && !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email)
+            ? ["Informe um e-mail válido."]
+            : [];
+
 
     private static string GetStatusLabel(EmployeeInvitationDto invitation) => invitation switch
     {
@@ -459,5 +520,23 @@ else if (overview is not null)
         public string Document { get; set; } = string.Empty;
         public string Phone { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
+    }
+
+    private sealed class PublicSettingsFormModel(string slug, string? publicDescription, string? publicPhone, string? notificationEmail)
+    {
+        public string Slug { get; } = slug;
+        public string? PublicDescription { get; set; } = publicDescription;
+        public string? PublicPhone { get; set; } = publicPhone;
+        public string? NotificationEmail { get; set; } = notificationEmail;
+    }
+
+    private static readonly MultiMask PublicPhoneMask = new(
+        "(00) 0000-0000",
+        [new MaskOption("mobile", "(00) 00000-0000", @"^\(\d{2}\) 9")]);
+
+    private static string? NormalizePhone(string? value)
+    {
+        var digits = string.Concat((value ?? string.Empty).Where(char.IsDigit));
+        return string.IsNullOrEmpty(digits) ? null : digits;
     }
 }

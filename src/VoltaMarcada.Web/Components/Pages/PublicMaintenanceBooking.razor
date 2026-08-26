@@ -1,0 +1,117 @@
+@page "/agendar/manutencao/{Token}"
+@layout PublicLayout
+@using VoltaMarcada.Application.PublicBooking
+@inject GetContextualMaintenanceBookingUseCase GetContextualMaintenanceBookingUseCase
+@inject GetPublicAvailableSlotsUseCase GetPublicAvailableSlotsUseCase
+@inject SubmitContextualAppointmentRequestUseCase SubmitContextualAppointmentRequestUseCase
+@inject TimeProvider TimeProvider
+@inject ILogger<PublicMaintenanceBooking> Logger
+
+<PageTitle>Agendar manutenção | VoltaMarcada</PageTitle>
+
+@if (isLoading) { <MudProgressLinear Indeterminate="true" /> }
+else if (context is null) { <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">Este link é inválido, expirou ou já foi utilizado.</MudAlert> }
+else
+{
+    <MudPaper Class="public-booking-section" Elevation="0" Outlined="true">
+        <MudText Typo="Typo.h4">@context.CompanyTradeName</MudText>
+        <MudText Typo="Typo.h6" Class="mt-4">Olá, @context.CustomerName.</MudText>
+        <MudText Class="mt-2">Está chegando o período recomendado para manutenção do seu <strong>@context.EquipmentDescription</strong>.</MudText>
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
+            Serviço recomendado: <strong>@context.ServiceName</strong> · duração aproximada de @context.ServiceDurationMinutes minutos.
+        </MudAlert>
+    </MudPaper>
+    <MudPaper Class="public-booking-section" Elevation="0" Outlined="true">
+        @if (isSubmitted)
+        {
+            <MudAlert Severity="Severity.Success" Variant="Variant.Outlined">Horário solicitado. A empresa entrará em contato para confirmar.</MudAlert>
+        }
+        else
+        {
+            <MudText Typo="Typo.h5">Escolha dia e horário</MudText>
+            @if (error is not null) { <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="my-4">@error</MudAlert> }
+            <MudGrid Spacing="2" Class="mt-2">
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Profissional" @bind-Value="professionalChoice" @bind-Value:after="LoadSlotsAsync" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting">
+                        <MudSelectItem Value="@AnyProfessional">Qualquer profissional disponível</MudSelectItem>
+                        @foreach (var professional in professionals) { <MudSelectItem Value="@professional.Id.ToString()">@professional.Name</MudSelectItem> }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6"><MudDatePicker Label="Data" @bind-Date="date" @bind-Date:after="LoadSlotsAsync" MinDate="@minimumDate" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" /></MudItem>
+                <MudItem xs="12">
+                    @if (isLoadingSlots) { <MudProgressLinear Indeterminate="true" /> }
+                    else
+                    {
+                        <MudSelect T="string" Label="Horário" @bind-Value="slotKey" Variant="Variant.Outlined" FullWidth="@true" Disabled="@(slots.Count == 0 || isSubmitting)">
+                            @if (slots.Count == 0) { <MudSelectItem Value="@string.Empty">Nenhum horário disponível</MudSelectItem> }
+                            @foreach (var slot in slots) { <MudSelectItem Value="@Key(slot)">@slot.StartTime.ToString("HH:mm") · @slot.ProfessionalName</MudSelectItem> }
+                        </MudSelect>
+                    }
+                </MudItem>
+            </MudGrid>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="@true" Class="mt-5" OnClick="SubmitAsync" Disabled="@(string.IsNullOrWhiteSpace(slotKey) || isSubmitting)">@(isSubmitting ? "Enviando..." : "Solicitar horário")</MudButton>
+        }
+    </MudPaper>
+}
+
+@code {
+    private const string AnyProfessional = "any";
+    [Parameter] public string? Token { get; set; }
+    private ContextualMaintenanceBookingDto? context;
+    private IReadOnlyList<PublicProfessionalDto> professionals = [];
+    private IReadOnlyList<PublicAppointmentSlotDto> slots = [];
+    private string professionalChoice = AnyProfessional;
+    private string slotKey = string.Empty;
+    private DateTime minimumDate;
+    private DateTime? date;
+    private string? error;
+    private bool isLoading = true;
+    private bool isLoadingSlots;
+    private bool isSubmitting;
+    private bool isSubmitted;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        minimumDate = TimeProvider.GetLocalNow().Date;
+        date = minimumDate;
+        context = await GetContextualMaintenanceBookingUseCase.ExecuteAsync(Token);
+        isLoading = false;
+        if (context is not null) await LoadSlotsAsync();
+    }
+
+    private async Task LoadSlotsAsync()
+    {
+        slots = []; slotKey = string.Empty;
+        if (context is null || date is null) return;
+        isLoadingSlots = true;
+        try
+        {
+            var professionalId = Guid.TryParse(professionalChoice, out var parsed) ? parsed : (Guid?)null;
+            var result = await GetPublicAvailableSlotsUseCase.ExecuteContextualAsync(Token, DateOnly.FromDateTime(date.Value), professionalId);
+            professionals = result.Professionals; slots = result.Slots;
+        }
+        finally { isLoadingSlots = false; }
+    }
+
+    private async Task SubmitAsync()
+    {
+        var slot = slots.SingleOrDefault(item => Key(item) == slotKey);
+        if (slot is null || date is null || Token is null) return;
+        isSubmitting = true; error = null;
+        try
+        {
+            var result = await SubmitContextualAppointmentRequestUseCase.ExecuteAsync(new(Token, slot.ProfessionalId, DateOnly.FromDateTime(date.Value), slot.StartTime));
+            if (result.IsSuccess) { isSubmitted = true; return; }
+            error = "O horário não está mais disponível. Escolha outro horário.";
+            await LoadSlotsAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to submit contextual maintenance appointment request");
+            error = "Não foi possível enviar a solicitação. Tente novamente.";
+        }
+        finally { isSubmitting = false; }
+    }
+
+    private static string Key(PublicAppointmentSlotDto slot) => $"{slot.ProfessionalId:N}:{slot.StartTime:HHmm}";
+}

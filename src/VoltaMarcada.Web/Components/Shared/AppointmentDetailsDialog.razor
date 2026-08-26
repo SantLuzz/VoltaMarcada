@@ -18,6 +18,7 @@
                 <div>
                     <MudText Typo="Typo.overline">Status</MudText>
                     <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(appointmentDetails.Status)">@GetStatusName(appointmentDetails.Status)</MudChip>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(appointmentDetails.Origin == VoltaMarcada.Domain.Enums.AppointmentOrigin.External ? Color.Info : Color.Default)">@(appointmentDetails.Origin == VoltaMarcada.Domain.Enums.AppointmentOrigin.External ? "Externo" : "Interno")</MudChip>
                 </div>
                 @if (!string.IsNullOrWhiteSpace(appointmentDetails.Notes))
                 {

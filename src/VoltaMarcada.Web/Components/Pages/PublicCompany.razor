@@ -1,0 +1,282 @@
+@page "/{CompanySlug}"
+@layout PublicLayout
+@using Microsoft.EntityFrameworkCore
+@using VoltaMarcada.Application.Abstractions.Storage
+@using VoltaMarcada.Application.Customers
+@using VoltaMarcada.Application.PublicBooking
+@using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Infrastructure.Persistence
+@inject GetPublicCompanyPageUseCase GetPublicCompanyPageUseCase
+@inject GetPublicAvailableSlotsUseCase GetPublicAvailableSlotsUseCase
+@inject SubmitPublicAppointmentRequestUseCase SubmitPublicAppointmentRequestUseCase
+@inject IDbContextFactory<AppDbContext> DbContextFactory
+@inject IServiceProvider ServiceProvider
+@inject TimeProvider TimeProvider
+@inject ILogger<PublicCompany> Logger
+
+<PageTitle>@(company is null ? "Empresa | VoltaMarcada" : $"{company.TradeName} | VoltaMarcada")</PageTitle>
+
+@if (isLoading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (company is null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">Página pública não encontrada.</MudAlert>
+}
+else
+{
+    <MudPaper Class="public-booking-section" Elevation="0" Outlined="true">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            @if (companyLogoDataUrl is not null)
+            {
+                <img src="@companyLogoDataUrl" alt="Logo da @company.TradeName" class="public-company-logo" />
+            }
+            <div>
+                <MudText Typo="Typo.h4">@company.TradeName</MudText>
+                @if (!string.IsNullOrWhiteSpace(company.Description))
+                {
+                    <MudText Typo="Typo.body1" Class="mt-2">@company.Description</MudText>
+                }
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">WhatsApp: @FormatPhoneNumber(company.WhatsApp)</MudText>
+                @if (!string.IsNullOrWhiteSpace(company.Phone))
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Telefone: @FormatPhoneNumber(company.Phone)</MudText>
+                }
+            </div>
+        </MudStack>
+    </MudPaper>
+
+    <MudPaper Class="public-booking-section" Elevation="0" Outlined="true">
+        @if (isSubmitted)
+        {
+            <MudAlert Severity="Severity.Success" Variant="Variant.Outlined">Solicitação enviada. A empresa analisará o horário e entrará em contato para confirmar.</MudAlert>
+        }
+        else if (company.Services.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Esta empresa não possui serviços disponíveis para solicitação online.</MudAlert>
+        }
+        else
+        {
+            <MudText Typo="Typo.h5">Solicitar atendimento</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-5">Escolha o serviço e um horário de preferência. O atendimento será confirmado pela empresa.</MudText>
+            <MudStack Spacing="1" Class="public-service-menu mb-5">
+                @foreach (var availableService in company.Services)
+                {
+                    <MudButton Variant="Variant.Outlined" Color="@(serviceId == availableService.Id ? Color.Primary : Color.Default)" Class="@GetServiceOptionClass(availableService.Id)" FullWidth="@true" OnClick="@(() => SelectServiceAsync(availableService.Id))" Disabled="@isSubmitting" aria-pressed="@(serviceId == availableService.Id)">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="public-service-option-content">
+                            <MudIcon Icon="@Icons.Material.Filled.DesignServices" Size="Size.Large" />
+                            <MudStack Spacing="0" AlignItems="AlignItems.Start" Class="public-service-option-copy">
+                                <MudText Typo="Typo.subtitle1">@availableService.Name</MudText>
+                                @if (!string.IsNullOrWhiteSpace(availableService.Description))
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@availableService.Description</MudText>
+                                }
+                                <MudText Typo="Typo.caption" Color="Color.Info">Duração aproximada: @availableService.DurationMinutes min</MudText>
+                            </MudStack>
+                            @if (serviceId == availableService.Id)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Primary" Class="public-service-option-check" />
+                            }
+                        </MudStack>
+                    </MudButton>
+                }
+            </MudStack>
+            @if (submitError is not null) { <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">@submitError</MudAlert> }
+
+            <MudForm @ref="bookingForm">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" Label="Profissional" @bind-Value="professionalChoice" @bind-Value:after="LoadSlotsAsync" Variant="Variant.Outlined" FullWidth="@true" Disabled="@(serviceId == Guid.Empty || isSubmitting)">
+                            <MudSelectItem Value="@AnyProfessional">Qualquer profissional disponível</MudSelectItem>
+                            @foreach (var professional in professionals) { <MudSelectItem Value="@professional.Id.ToString()">@professional.Name</MudSelectItem> }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6"><MudDatePicker Label="Data" @bind-Date="bookingDate" @bind-Date:after="LoadSlotsAsync" MinDate="@minimumDate" Variant="Variant.Outlined" FullWidth="@true" Disabled="@(serviceId == Guid.Empty || isSubmitting)" /></MudItem>
+                    <MudItem xs="12">
+                        @if (isLoadingSlots) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
+                        else
+                        {
+                            <MudSelect T="string" Label="Horário" @bind-Value="slotKey" Required="true" RequiredError="Selecione o horário." Variant="Variant.Outlined" FullWidth="@true" Disabled="@(slots.Count == 0 || isSubmitting)">
+                                @if (slots.Count == 0) { <MudSelectItem Value="@string.Empty">Nenhum horário disponível para esta data</MudSelectItem> }
+                                @foreach (var slot in slots) { <MudSelectItem Value="@GetSlotKey(slot)">@slot.StartTime.ToString("HH:mm") · @slot.ProfessionalName</MudSelectItem> }
+                            </MudSelect>
+                        }
+                    </MudItem>
+                </MudGrid>
+
+                <MudDivider Class="my-6" />
+                <MudText Typo="Typo.h6">Seus dados</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">O CPF ou CNPJ identifica seu cadastro nesta empresa. Os dados informados serão usados somente para tratar esta solicitação.</MudText>
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6"><BrazilianDocumentInput Id="public-customer-document" Name="customerDocument" @bind-Value="customerDocument" Required="true" Disabled="@isSubmitting" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="customerName" Label="Nome ou razão social" Required="true" RequiredError="Informe seu nome." MaxLength="200" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" /></MudItem>
+                    <MudItem xs="12" sm="6"><BrazilianPhoneInput Id="public-customer-whatsapp" Name="customerWhatsApp" @bind-Value="customerWhatsApp" Required="true" Disabled="@isSubmitting" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="customerEmail" Label="E-mail" InputType="InputType.Email" Validation="ValidateOptionalEmail" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" /></MudItem>
+                    <MudItem xs="12" sm="4"><BrazilianPostalCodeInput Id="public-customer-postal-code" Name="customerPostalCode" @bind-Value="postalCode" Required="true" Disabled="@isSubmitting" /></MudItem>
+                    <MudItem xs="12" sm="8"><MudTextField @bind-Value="street" Label="Rua, avenida ou logradouro" Required="true" RequiredError="Informe o endereço." MaxLength="200" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" /></MudItem>
+                    <MudItem xs="12" sm="4"><MudTextField @bind-Value="number" Label="Número" Required="true" RequiredError="Informe o número." MaxLength="50" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" /></MudItem>
+                    <MudItem xs="12" sm="8"><MudTextField @bind-Value="complement" Label="Complemento" MaxLength="200" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" /></MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="Guid" Label="Estado" @bind-Value="stateId" @bind-Value:after="LoadCitiesAsync" Required="true" RequiredError="Selecione o estado." Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting">
+                            <MudSelectItem Value="@Guid.Empty">Selecione o estado</MudSelectItem>
+                            @foreach (var state in states) { <MudSelectItem Value="@state.Id">@state.Name (@state.Abbreviation)</MudSelectItem> }
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="Guid" Label="Cidade" @bind-Value="cityId" Required="true" RequiredError="Selecione a cidade." Variant="Variant.Outlined" FullWidth="@true" Disabled="@(stateId == Guid.Empty || isSubmitting)">
+                            <MudSelectItem Value="@Guid.Empty">Selecione a cidade</MudSelectItem>
+                            @foreach (var city in cities) { <MudSelectItem Value="@city.Id">@city.Name</MudSelectItem> }
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="@true" Class="mt-6" StartIcon="@Icons.Material.Filled.Send" OnClick="SubmitAsync" Disabled="@isSubmitting">@(isSubmitting ? "Enviando solicitação..." : "Solicitar este horário")</MudButton>
+            </MudForm>
+        }
+    </MudPaper>
+}
+
+@code {
+    private const string AnyProfessional = "any";
+    [Parameter] public string? CompanySlug { get; set; }
+    private MudForm bookingForm = default!;
+    private PublicCompanyPageDto? company;
+    private IReadOnlyList<PublicProfessionalDto> professionals = [];
+    private IReadOnlyList<PublicAppointmentSlotDto> slots = [];
+    private IReadOnlyList<StateOption> states = [];
+    private IReadOnlyList<CityOption> cities = [];
+    private DateTime minimumDate;
+    private DateTime? bookingDate;
+    private Guid serviceId;
+    private string professionalChoice = AnyProfessional;
+    private string slotKey = string.Empty;
+    private string customerName = string.Empty;
+    private string customerDocument = string.Empty;
+    private string customerWhatsApp = string.Empty;
+    private string? customerEmail;
+    private string postalCode = string.Empty;
+    private string street = string.Empty;
+    private string number = string.Empty;
+    private string? complement;
+    private Guid stateId;
+    private Guid cityId;
+    private string? companyLogoDataUrl;
+    private string? submitError;
+    private bool isLoading = true;
+    private bool isLoadingSlots;
+    private bool isSubmitting;
+    private bool isSubmitted;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        minimumDate = TimeProvider.GetLocalNow().Date;
+        bookingDate = minimumDate;
+        company = await GetPublicCompanyPageUseCase.ExecuteAsync(CompanySlug);
+        await LoadStatesAsync();
+        await LoadLogoAsync();
+        isLoading = false;
+    }
+
+    private async Task SelectServiceAsync(Guid selectedServiceId)
+    {
+        if (serviceId == selectedServiceId)
+        {
+            return;
+        }
+
+        serviceId = selectedServiceId;
+        professionalChoice = AnyProfessional;
+        slotKey = string.Empty;
+        await LoadSlotsAsync();
+    }
+
+    private async Task LoadSlotsAsync()
+    {
+        slots = []; slotKey = string.Empty;
+        if (serviceId == Guid.Empty || bookingDate is null) return;
+        isLoadingSlots = true;
+        try
+        {
+            var professionalId = Guid.TryParse(professionalChoice, out var parsed) ? parsed : (Guid?)null;
+            var result = await GetPublicAvailableSlotsUseCase.ExecuteAsync(CompanySlug, serviceId, DateOnly.FromDateTime(bookingDate.Value), professionalId);
+            professionals = result.Professionals;
+            slots = result.Slots;
+        }
+        finally { isLoadingSlots = false; }
+    }
+
+    private async Task SubmitAsync()
+    {
+        submitError = null;
+        await bookingForm.Validate();
+        var selectedSlot = slots.SingleOrDefault(slot => GetSlotKey(slot) == slotKey);
+        if (!bookingForm.IsValid || selectedSlot is null || bookingDate is null) { submitError = "Revise os campos e selecione um horário disponível."; return; }
+        isSubmitting = true;
+        try
+        {
+            var address = new CustomerAddressInput(CustomerAddressType.Residence, true, street, number, postalCode, complement, stateId, cityId);
+            var result = await SubmitPublicAppointmentRequestUseCase.ExecuteAsync(new SubmitPublicAppointmentRequestCommand(CompanySlug ?? string.Empty, serviceId, selectedSlot.ProfessionalId, DateOnly.FromDateTime(bookingDate.Value), selectedSlot.StartTime, customerName, customerDocument, customerWhatsApp, customerEmail, [address]));
+            if (result.IsSuccess) { isSubmitted = true; return; }
+            submitError = result.Error?.Code == "PublicBooking.RateLimited"
+                ? "Muitas tentativas foram realizadas. Aguarde alguns minutos antes de tentar novamente."
+                : "Não foi possível enviar a solicitação. O horário pode ter sido ocupado; escolha outro e tente novamente.";
+            await LoadSlotsAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to submit public appointment request for company slug {CompanySlug}", CompanySlug);
+            submitError = "Não foi possível enviar a solicitação. Tente novamente.";
+        }
+        finally { isSubmitting = false; }
+    }
+
+    private async Task LoadStatesAsync()
+    {
+        await using var db = await DbContextFactory.CreateDbContextAsync();
+        states = await db.States.AsNoTracking().OrderBy(item => item.Abbreviation).Select(item => new StateOption(item.Id, item.Name, item.Abbreviation)).ToArrayAsync();
+    }
+
+    private async Task LoadCitiesAsync()
+    {
+        cityId = Guid.Empty;
+        await using var db = await DbContextFactory.CreateDbContextAsync();
+        cities = stateId == Guid.Empty ? [] : await db.Cities.AsNoTracking().Where(item => item.StateId == stateId).OrderBy(item => item.Name).Select(item => new CityOption(item.Id, item.Name)).ToArrayAsync();
+    }
+
+    private async Task LoadLogoAsync()
+    {
+        if (string.IsNullOrWhiteSpace(company?.LogoKey)) return;
+        try
+        {
+            var fileStorage = ServiceProvider.GetService<IFileStorage>();
+            if (fileStorage is null) return;
+            var logo = await fileStorage.GetAsync(company.LogoKey, CancellationToken.None);
+            companyLogoDataUrl = $"data:{logo.ContentType};base64,{Convert.ToBase64String(logo.Content)}";
+        }
+        catch (Exception exception) { Logger.LogWarning(exception, "Unable to load public company logo for slug {CompanySlug}", CompanySlug); }
+    }
+
+    private static string GetSlotKey(PublicAppointmentSlotDto slot) => $"{slot.ProfessionalId:N}:{slot.StartTime:HHmm}";
+    private static string FormatPhoneNumber(string value)
+    {
+        var digits = new string(value.Where(char.IsDigit).ToArray());
+        if (digits.Length is 10 or 11)
+        {
+            return digits.Length == 11
+                ? $"({digits[..2]}) {digits[2..7]}-{digits[7..]}"
+                : $"({digits[..2]}) {digits[2..6]}-{digits[6..]}";
+        }
+
+        return value;
+    }
+    private string GetServiceOptionClass(Guid selectedServiceId) => serviceId == selectedServiceId
+        ? "public-service-option public-service-option-selected"
+        : "public-service-option";
+    private static IEnumerable<string> ValidateOptionalEmail(string? email) =>
+        !string.IsNullOrWhiteSpace(email) && !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email)
+            ? ["Informe um e-mail válido."]
+            : [];
+    private sealed record StateOption(Guid Id, string Name, string Abbreviation);
+    private sealed record CityOption(Guid Id, string Name);
+}

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using VoltaMarcada.Application;
 using VoltaMarcada.Application.Abstractions.Identity;
+using VoltaMarcada.Application.Abstractions.Routing;
 using VoltaMarcada.Application.Abstractions.Tenancy;
 using VoltaMarcada.Infrastructure;
 using VoltaMarcada.Infrastructure.Identity;
@@ -13,6 +14,9 @@ using VoltaMarcada.Web.Errors;
 using VoltaMarcada.Web.Identity;
 using VoltaMarcada.Web.Configuration;
 using VoltaMarcada.Application.Scheduling;
+using VoltaMarcada.Application.PublicBooking;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +32,30 @@ builder.Services.AddOptions<SchedulingOptions>()
     .Validate(options => options.AllowedTimeZoneIds.Count > 0 && options.AllowedTimeZoneIds.Contains(options.DefaultTimeZoneId, StringComparer.Ordinal), "Allowed time zones must contain the default time zone.")
     .ValidateOnStart();
 builder.Services.AddSingleton<ISchedulingConfiguration, SchedulingConfiguration>();
+builder.Services.AddOptions<PublicBookingOptions>()
+    .Bind(builder.Configuration.GetSection(PublicBookingOptions.SectionName))
+    .Validate(options => options.MaintenanceLinkLifetimeDays is > 0 and <= 365, "Maintenance link lifetime must be between 1 and 365 days.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<IPublicBookingConfiguration, PublicBookingConfiguration>();
+builder.Services.AddOptions<ApplicationUrlOptions>()
+    .Bind(builder.Configuration.GetSection(ApplicationUrlOptions.SectionName))
+    .Validate(options => IsValidApplicationUrl(options.ApplicationBaseUrl), "Application base URL must be an absolute HTTP or HTTPS URL.")
+    .Validate(options => IsValidApplicationUrl(options.LandingPageUrl), "Landing page URL must be an absolute HTTP or HTTPS URL.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<IApplicationUrlBuilder, ApplicationUrlBuilder>();
+builder.Services.AddSingleton<IPublicBookingSubmissionLimiter, PublicBookingSubmissionLimiter>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("public-booking", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            AutoReplenishment = true,
+            PermitLimit = 120,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        }));
+});
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMudServices();
@@ -87,6 +115,8 @@ app.UseStatusCodePages(statusCodeContext =>
 });
 
 app.UseHttpsRedirection();
+app.UseRouting();
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -107,6 +137,12 @@ app.MapAppointmentEndpoints();
 app.MapScheduleBlockRequestEndpoints();
 
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .RequireRateLimiting("public-booking");
 
 app.Run();
+
+static bool IsValidApplicationUrl(string? value) =>
+    Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+    (string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+     string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase));

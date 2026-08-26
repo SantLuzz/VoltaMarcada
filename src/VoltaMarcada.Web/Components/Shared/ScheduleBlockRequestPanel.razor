@@ -1,11 +1,9 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.DependencyInjection
 @using VoltaMarcada.Application.Scheduling
 @using VoltaMarcada.Domain.Enums
 @using VoltaMarcada.Application.WorkOrders
-@inject WorkOrderAuthorization WorkOrderAuthorization
-@inject GetScheduleBlockRequestsUseCase GetScheduleBlockRequestsUseCase
-@inject CreateScheduleBlockRequestUseCase CreateScheduleBlockRequestUseCase
-@inject ApproveScheduleBlockRequestUseCase ApproveScheduleBlockRequestUseCase
-@inject RejectScheduleBlockRequestUseCase RejectScheduleBlockRequestUseCase
+@inherits OwningComponentBase
 @inject ISnackbar Snackbar
 @inject TimeProvider TimeProvider
 
@@ -82,7 +80,8 @@
     private async Task CreateAsync()
     {
         if (startDate is null || endDate is null) return;
-        var result = await CreateScheduleBlockRequestUseCase.ExecuteAsync(new CreateScheduleBlockRequestCommand(ScheduleBlockType.TimeOff, DateOnly.FromDateTime(startDate.Value), DateOnly.FromDateTime(endDate.Value), true, null, null, notes));
+        var useCase = ScopedServices.GetRequiredService<CreateScheduleBlockRequestUseCase>();
+        var result = await useCase.ExecuteAsync(new CreateScheduleBlockRequestCommand(ScheduleBlockType.TimeOff, DateOnly.FromDateTime(startDate.Value), DateOnly.FromDateTime(endDate.Value), true, null, null, notes));
         if (result.IsSuccess)
         {
             Snackbar.Add("Solicitação enviada para aprovação.", Severity.Success);
@@ -95,7 +94,8 @@
 
     private async Task ApproveAsync(Guid id)
     {
-        var result = await ApproveScheduleBlockRequestUseCase.ExecuteAsync(id);
+        var useCase = ScopedServices.GetRequiredService<ApproveScheduleBlockRequestUseCase>();
+        var result = await useCase.ExecuteAsync(id);
         Snackbar.Add(
             result.IsSuccess
                 ? "Bloqueio aprovado."
@@ -106,7 +106,8 @@
 
     private async Task RejectAsync(Guid id)
     {
-        var result = await RejectScheduleBlockRequestUseCase.ExecuteAsync(id, null);
+        var useCase = ScopedServices.GetRequiredService<RejectScheduleBlockRequestUseCase>();
+        var result = await useCase.ExecuteAsync(id, null);
         Snackbar.Add(
             result.IsSuccess
                 ? "Solicitação recusada."
@@ -115,7 +116,11 @@
         await LoadAsync();
     }
 
-    private async Task LoadAsync() => requests = await GetScheduleBlockRequestsUseCase.ExecuteAsync(AccessScope);
+    private async Task LoadAsync()
+    {
+        var useCase = ScopedServices.GetRequiredService<GetScheduleBlockRequestsUseCase>();
+        requests = await useCase.ExecuteAsync(AccessScope);
+    }
 
     private static string GetStatusName(ScheduleBlockRequestStatus status) => status switch
     {

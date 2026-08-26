@@ -4,6 +4,7 @@ namespace VoltaMarcada.Application.Abstractions.Persistence;
 
 public interface IServiceRepository
 {
+    Task<IReadOnlyList<global::VoltaMarcada.Domain.Entities.Service>> GetPublicBookingServicesAsync(Guid companyId, CancellationToken cancellationToken = default);
     Task AddAsync(global::VoltaMarcada.Domain.Entities.Service service, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<global::VoltaMarcada.Domain.Entities.Service>> GetAllForCompanyAsync(

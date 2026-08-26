@@ -24,6 +24,9 @@ public sealed class MaintenanceOpportunity : ICompanyScopedEntity
     public DateTimeOffset? BookedAtUtc { get; private set; }
     public DateTimeOffset? CompletedAtUtc { get; private set; }
     public DateTimeOffset? DismissedAtUtc { get; private set; }
+    public string? BookingTokenHash { get; private set; }
+    public DateTimeOffset? BookingTokenExpiresAtUtc { get; private set; }
+    public DateTimeOffset? BookingTokenRevokedAtUtc { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public DateTimeOffset UpdatedAtUtc { get; private set; }
 
@@ -122,6 +125,42 @@ public sealed class MaintenanceOpportunity : ICompanyScopedEntity
         Status = MaintenanceOpportunityStatus.Dismissed;
         DismissedAtUtc = utcNow;
         UpdatedAtUtc = utcNow;
+    }
+
+    public void SetBookingToken(string tokenHash, DateTimeOffset expiresAtUtc, DateTimeOffset now)
+    {
+        EnsureOpen();
+        if (string.IsNullOrWhiteSpace(tokenHash) || tokenHash.Trim().Length > 128 || expiresAtUtc <= now)
+        {
+            throw new DomainException("Maintenance booking token is invalid.");
+        }
+
+        if (Status is MaintenanceOpportunityStatus.Pending or MaintenanceOpportunityStatus.Contacted)
+        {
+            MarkAsBookingRequested(now);
+        }
+
+        if (Status != MaintenanceOpportunityStatus.BookingRequested)
+        {
+            throw new DomainException("Maintenance opportunity cannot receive a booking token in its current status.");
+        }
+
+        BookingTokenHash = tokenHash.Trim();
+        BookingTokenExpiresAtUtc = expiresAtUtc.ToUniversalTime();
+        BookingTokenRevokedAtUtc = null;
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
+    public void RevokeBookingToken(DateTimeOffset now)
+    {
+        EnsureOpen();
+        if (BookingTokenHash is null)
+        {
+            throw new DomainException("Maintenance booking token does not exist.");
+        }
+
+        BookingTokenRevokedAtUtc = now.ToUniversalTime();
+        UpdatedAtUtc = now.ToUniversalTime();
     }
 
     private void EnsureOpen()

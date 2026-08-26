@@ -1,0 +1,93 @@
+@page "/solicitacoes/{Token}"
+@layout PublicLayout
+@using VoltaMarcada.Application.PublicBooking
+@inject GetAppointmentRequestResponseUseCase GetAppointmentRequestResponseUseCase
+@inject GetPublicAvailableSlotsUseCase GetPublicAvailableSlotsUseCase
+@inject RespondToAppointmentRequestUseCase RespondToAppointmentRequestUseCase
+@inject TimeProvider TimeProvider
+@inject ILogger<PublicAppointmentRequestResponse> Logger
+
+<PageTitle>Responder proposta | VoltaMarcada</PageTitle>
+
+@if (isLoading) { <MudProgressLinear Indeterminate="true" /> }
+else if (context is null) { <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">Este link é inválido, expirou ou já foi utilizado.</MudAlert> }
+else
+{
+    <MudPaper Class="public-booking-section" Elevation="0" Outlined="true">
+        @if (isSubmitted)
+        {
+            <MudAlert Severity="Severity.Success" Variant="Variant.Outlined">Sua resposta foi enviada para a empresa.</MudAlert>
+        }
+        else
+        {
+            <MudText Typo="Typo.h4">@context.CompanyTradeName</MudText>
+            <MudText Typo="Typo.h6" Class="mt-4">Olá, @context.CustomerName.</MudText>
+            <MudText Class="mt-2">A empresa sugeriu um novo horário para <strong>@context.ServiceName</strong>:</MudText>
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="my-4">
+                @context.ProposedDate.ToString("dd/MM/yyyy") às @context.ProposedStartTime.ToString("HH:mm") com @context.ProfessionalName
+            </MudAlert>
+            @if (error is not null) { <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">@error</MudAlert> }
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="@true" OnClick="AcceptProposalAsync" Disabled="@isSubmitting">Aceitar horário sugerido</MudButton>
+            <MudDivider Class="my-6" />
+            <MudText Typo="Typo.h6">Escolher outro horário</MudText>
+            <MudGrid Spacing="2" Class="mt-2">
+                <MudItem xs="12" sm="6"><MudDatePicker Label="Data" @bind-Date="date" @bind-Date:after="LoadSlotsAsync" MinDate="@TimeProvider.GetLocalNow().Date" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" /></MudItem>
+                <MudItem xs="12" sm="6"><MudSelect T="string" Label="Horário" @bind-Value="slotKey" Variant="Variant.Outlined" FullWidth="@true" Disabled="@(slots.Count == 0 || isSubmitting)">@foreach (var slot in slots) { <MudSelectItem Value="@Key(slot)">@slot.StartTime.ToString("HH:mm") · @slot.ProfessionalName</MudSelectItem> }</MudSelect></MudItem>
+            </MudGrid>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="@true" Class="mt-4" OnClick="SubmitAlternativeAsync" Disabled="@(string.IsNullOrWhiteSpace(slotKey) || isSubmitting)">Enviar outro horário</MudButton>
+        }
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public string? Token { get; set; }
+    private AppointmentRequestResponseDto? context;
+    private IReadOnlyList<PublicAppointmentSlotDto> slots = [];
+    private DateTime? date;
+    private string slotKey = string.Empty;
+    private string? error;
+    private bool isLoading = true;
+    private bool isSubmitting;
+    private bool isSubmitted;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        context = await GetAppointmentRequestResponseUseCase.ExecuteAsync(Token);
+        date = context?.ProposedDate.ToDateTime(TimeOnly.MinValue);
+        isLoading = false;
+        if (context is not null) await LoadSlotsAsync();
+    }
+
+    private Task AcceptProposalAsync() => SubmitAsync(context!.ProfessionalId, context.ProposedDate, context.ProposedStartTime);
+    private async Task SubmitAlternativeAsync()
+    {
+        var slot = slots.SingleOrDefault(item => Key(item) == slotKey);
+        if (slot is not null && date is not null) await SubmitAsync(slot.ProfessionalId, DateOnly.FromDateTime(date.Value), slot.StartTime);
+    }
+    private async Task SubmitAsync(Guid professionalId, DateOnly selectedDate, TimeOnly startTime)
+    {
+        if (Token is null) return;
+        isSubmitting = true; error = null;
+        try
+        {
+            var result = await RespondToAppointmentRequestUseCase.ExecuteAsync(new(Token, professionalId, selectedDate, startTime));
+            if (result.IsSuccess) { isSubmitted = true; return; }
+            error = "O horário não está mais disponível. Escolha outra opção.";
+            await LoadSlotsAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to submit a public appointment request response");
+            error = "Não foi possível enviar sua resposta. Tente novamente.";
+        }
+        finally { isSubmitting = false; }
+    }
+    private async Task LoadSlotsAsync()
+    {
+        slots = []; slotKey = string.Empty;
+        if (context is null || date is null) return;
+        var result = await GetPublicAvailableSlotsUseCase.ExecuteResponseAsync(Token, DateOnly.FromDateTime(date.Value));
+        slots = result.Slots;
+    }
+    private static string Key(PublicAppointmentSlotDto slot) => $"{slot.ProfessionalId:N}:{slot.StartTime:HHmm}";
+}

@@ -195,6 +195,9 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<int>("Origin")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("ProfessionalId")
                         .HasColumnType("uuid");
 
@@ -225,6 +228,58 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("IX_Appointments_CompanyId_WorkOrderId_StartAtUtc");
 
                     b.ToTable("Appointments", (string)null);
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.AppointmentRequest", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uuid");
+                    b.Property<Guid?>("AppointmentId").HasColumnType("uuid");
+                    b.Property<Guid>("CompanyId").HasColumnType("uuid");
+                    b.Property<DateTimeOffset>("CreatedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<Guid>("CustomerId").HasColumnType("uuid");
+                    b.Property<int>("DurationMinutes").HasColumnType("integer");
+                    b.Property<Guid?>("EquipmentId").HasColumnType("uuid");
+                    b.Property<Guid?>("MaintenanceOpportunityId").HasColumnType("uuid");
+                    b.Property<Guid?>("ProposedAddressCityId").HasColumnType("uuid");
+                    b.Property<string>("ProposedAddressComplement").HasMaxLength(200).HasColumnType("character varying(200)");
+                    b.Property<string>("ProposedAddressNumber").HasMaxLength(50).HasColumnType("character varying(50)");
+                    b.Property<string>("ProposedAddressPostalCode").HasMaxLength(8).HasColumnType("character varying(8)");
+                    b.Property<Guid?>("ProposedAddressStateId").HasColumnType("uuid");
+                    b.Property<string>("ProposedAddressStreet").HasMaxLength(200).HasColumnType("character varying(200)");
+                    b.Property<int?>("ProposedAddressType").HasColumnType("integer");
+                    b.Property<string>("ProposedCustomerEmail").HasMaxLength(320).HasColumnType("character varying(320)");
+                    b.Property<string>("ProposedCustomerName").HasMaxLength(200).HasColumnType("character varying(200)");
+                    b.Property<string>("ProposedCustomerWhatsApp").HasMaxLength(20).HasColumnType("character varying(20)");
+                    b.Property<DateOnly?>("ProposedDate").HasColumnType("date");
+                    b.Property<int?>("ProposedDurationMinutes").HasColumnType("integer");
+                    b.Property<Guid?>("ProposedProfessionalId").HasColumnType("uuid");
+                    b.Property<TimeOnly?>("ProposedStartTime").HasColumnType("time without time zone");
+                    b.Property<Guid>("ProfessionalId").HasColumnType("uuid");
+                    b.Property<string>("RejectionReason").HasMaxLength(1000).HasColumnType("character varying(1000)");
+                    b.Property<DateOnly>("RequestedDate").HasColumnType("date");
+                    b.Property<DateTimeOffset>("RequestedEndAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset>("RequestedStartAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<TimeOnly>("RequestedStartTime").HasColumnType("time without time zone");
+                    b.Property<DateTimeOffset?>("ResponseTokenExpiresAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<string>("ResponseTokenHash").HasMaxLength(128).HasColumnType("character varying(128)");
+                    b.Property<DateTimeOffset?>("ResponseTokenRevokedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<Guid>("ServiceId").HasColumnType("uuid");
+                    b.Property<int>("Status").HasColumnType("integer");
+                    b.Property<DateTimeOffset>("UpdatedAtUtc").HasColumnType("timestamp with time zone");
+                    b.HasKey("Id");
+                    b.HasAlternateKey("CompanyId", "Id").HasName("AK_AppointmentRequests_CompanyId_Id");
+                    b.HasIndex("CompanyId", "AppointmentId");
+                    b.HasIndex("CompanyId", "CustomerId").HasDatabaseName("IX_AppointmentRequests_CompanyId_CustomerId");
+                    b.HasIndex("CompanyId", "EquipmentId");
+                    b.HasIndex("CompanyId", "MaintenanceOpportunityId");
+                    b.HasIndex("CompanyId", "ProfessionalId");
+                    b.HasIndex("CompanyId", "ProposedProfessionalId");
+                    b.HasIndex("CompanyId", "ServiceId");
+                    b.HasIndex("CompanyId", "Status", "RequestedStartAtUtc").HasDatabaseName("IX_AppointmentRequests_CompanyId_Status_RequestedStartAtUtc");
+                    b.HasIndex("ProposedAddressCityId");
+                    b.HasIndex("ProposedAddressStateId");
+                    b.HasIndex("ResponseTokenHash").IsUnique().HasDatabaseName("IX_AppointmentRequests_ResponseTokenHash").HasFilter("\"ResponseTokenHash\" IS NOT NULL");
+                    b.ToTable("AppointmentRequests", (string)null);
                 });
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.AppointmentRescheduleHistory", b =>
@@ -321,10 +376,22 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("NotificationEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
                     b.Property<string>("PostalCode")
                         .IsRequired()
                         .HasMaxLength(8)
                         .HasColumnType("character varying(8)");
+
+                    b.Property<string>("PublicDescription")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("PublicPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("Slug")
                         .IsRequired()
@@ -696,6 +763,16 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("BookingRequestedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("BookingTokenExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("BookingTokenHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset?>("BookingTokenRevokedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
@@ -753,6 +830,11 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CompanyId", "Status", "DueDate")
                         .HasDatabaseName("IX_MaintenanceOpportunities_CompanyId_Status_DueDate");
+
+                    b.HasIndex("BookingTokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("IX_MaintenanceOpportunities_BookingTokenHash")
+                        .HasFilter("\"BookingTokenHash\" IS NOT NULL");
 
                     b.ToTable("MaintenanceOpportunities", (string)null);
                 });
@@ -1435,6 +1517,20 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CompanyId", "WorkOrderId")
                         .HasPrincipalKey("CompanyId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.AppointmentRequest", b =>
+                {
+                    b.HasOne("VoltaMarcada.Domain.Entities.Appointment", null).WithMany().HasForeignKey("CompanyId", "AppointmentId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict);
+                    b.HasOne("VoltaMarcada.Domain.Entities.City", null).WithMany().HasForeignKey("ProposedAddressCityId").OnDelete(DeleteBehavior.Restrict);
+                    b.HasOne("VoltaMarcada.Domain.Entities.Company", null).WithMany().HasForeignKey("CompanyId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("VoltaMarcada.Domain.Entities.Customer", null).WithMany().HasForeignKey("CompanyId", "CustomerId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("VoltaMarcada.Domain.Entities.Equipment", null).WithMany().HasForeignKey("CompanyId", "EquipmentId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict);
+                    b.HasOne("VoltaMarcada.Domain.Entities.MaintenanceOpportunity", null).WithMany().HasForeignKey("CompanyId", "MaintenanceOpportunityId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict);
+                    b.HasOne("VoltaMarcada.Domain.Entities.Professional", null).WithMany().HasForeignKey("CompanyId", "ProfessionalId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("VoltaMarcada.Domain.Entities.Professional", null).WithMany().HasForeignKey("CompanyId", "ProposedProfessionalId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict);
+                    b.HasOne("VoltaMarcada.Domain.Entities.Service", null).WithMany().HasForeignKey("CompanyId", "ServiceId").HasPrincipalKey("CompanyId", "Id").OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("VoltaMarcada.Domain.Entities.State", null).WithMany().HasForeignKey("ProposedAddressStateId").OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.AppointmentRescheduleHistory", b =>

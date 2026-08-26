@@ -1,0 +1,20 @@
+@inherits LayoutComponentBase
+@using VoltaMarcada.Application.Abstractions.Routing
+@inject IApplicationUrlBuilder ApplicationUrlBuilder
+
+<MudThemeProvider Theme="@VoltaMarcadaTheme.Instance" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<main class="public-layout">
+    <div class="public-shell">
+        @Body
+        <footer class="public-brand-footer">
+            <a href="@ApplicationUrlBuilder.LandingPageUrl" aria-label="VoltaMarcada">
+                <img src="/logos/icone.png" alt="VoltaMarcada" class="public-brand-icon" />
+                <span>Agendamentos por VoltaMarcada</span>
+            </a>
+        </footer>
+    </div>
+</main>
