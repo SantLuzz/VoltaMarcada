@@ -18,6 +18,10 @@ else if (quote is null)
 else
 {
     <MudPaper Class="pa-6" Outlined="true">
+        @if (actionError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">@actionError</MudAlert>
+        }
         <MudText Typo="Typo.h4">Orçamento</MudText>
         <MudText Typo="Typo.body2" Class="mb-4">Válido até @quote.ValidUntil.ToString("dd/MM/yyyy")</MudText>
         @foreach (var item in quote.Items)
@@ -29,6 +33,14 @@ else
         @if (quote.DiscountAmount > 0) { <MudText>Desconto: -@quote.DiscountAmount.ToString("C")</MudText> }
         <MudDivider Class="my-3" />
         <MudText Typo="Typo.h6">Total: @quote.TotalAmount.ToString("C")</MudText>
+        @if (quote.Status == VoltaMarcada.Domain.Enums.QuoteStatus.Approved)
+        {
+            <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mt-4">Orçamento aprovado. A empresa dará continuidade ao atendimento.</MudAlert>
+        }
+        else if (quote.Status == VoltaMarcada.Domain.Enums.QuoteStatus.Rejected)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">Orçamento recusado.</MudAlert>
+        }
         @if (quote.Status == VoltaMarcada.Domain.Enums.QuoteStatus.Sent)
         {
             <MudButton Color="Color.Success" Variant="Variant.Filled" Class="mt-4" Disabled="@isApproving" OnClick="ApproveAsync">@(isApproving ? "Aprovando..." : "Aprovar orçamento")</MudButton>
