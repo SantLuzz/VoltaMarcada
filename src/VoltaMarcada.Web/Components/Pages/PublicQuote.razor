@@ -2,6 +2,7 @@
 @layout PublicLayout
 @using VoltaMarcada.Application.Quotes
 @inject GetPublicQuoteUseCase GetPublicQuoteUseCase
+@inject ApprovePublicQuoteUseCase ApprovePublicQuoteUseCase
 
 <PageTitle>Orçamento | VoltaMarcada</PageTitle>
 
@@ -27,6 +28,10 @@ else
         @if (quote.DiscountAmount > 0) { <MudText>Desconto: -@quote.DiscountAmount.ToString("C")</MudText> }
         <MudDivider Class="my-3" />
         <MudText Typo="Typo.h6">Total: @quote.TotalAmount.ToString("C")</MudText>
+        @if (quote.Status == VoltaMarcada.Domain.Enums.QuoteStatus.Sent)
+        {
+            <MudButton Color="Color.Success" Variant="Variant.Filled" Class="mt-4" Disabled="@isApproving" OnClick="ApproveAsync">@(isApproving ? "Aprovando..." : "Aprovar orçamento")</MudButton>
+        }
         @if (!string.IsNullOrWhiteSpace(quote.Notes)) { <MudText Class="mt-3">@quote.Notes</MudText> }
     </MudPaper>
 }
@@ -35,10 +40,20 @@ else
     [Parameter] public string? Token { get; set; }
     private PublicQuoteDto? quote;
     private bool isLoading = true;
+    private bool isApproving;
+    private string? actionError;
     protected override async Task OnParametersSetAsync()
     {
         isLoading = true;
         quote = await GetPublicQuoteUseCase.ExecuteAsync(Token);
         isLoading = false;
+    }
+    private async Task ApproveAsync()
+    {
+        isApproving = true;
+        var result = await ApprovePublicQuoteUseCase.ExecuteAsync(Token);
+        actionError = result.IsSuccess ? null : "Não foi possível aprovar este orçamento.";
+        quote = await GetPublicQuoteUseCase.ExecuteAsync(Token);
+        isApproving = false;
     }
 }

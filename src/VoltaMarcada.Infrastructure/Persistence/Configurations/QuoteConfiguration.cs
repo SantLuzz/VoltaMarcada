@@ -9,7 +9,7 @@ public sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
     public void Configure(EntityTypeBuilder<Quote> builder)
     {
         builder.ToTable("Quotes"); builder.HasKey(x => x.Id); builder.Property(x => x.Id).ValueGeneratedNever();
-        builder.Property(x => x.Notes).HasMaxLength(4000); builder.Property(x => x.PublicTokenHash).HasMaxLength(128); builder.Property(x => x.DiscountAmount).HasPrecision(18, 2);
+        builder.Property(x => x.CreatedByUserId).IsRequired(); builder.Property(x => x.Notes).HasMaxLength(4000); builder.Property(x => x.PublicTokenHash).HasMaxLength(128); builder.Property(x => x.DiscountAmount).HasPrecision(18, 2);
         builder.HasAlternateKey(x => new { x.CompanyId, x.Id });
         builder.HasIndex(x => new { x.CompanyId, x.Status, x.CreatedAtUtc });
         builder.HasIndex(x => x.PublicTokenHash).IsUnique().HasFilter("\"PublicTokenHash\" IS NOT NULL");

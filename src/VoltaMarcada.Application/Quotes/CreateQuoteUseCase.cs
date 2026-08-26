@@ -1,11 +1,12 @@
 using VoltaMarcada.Application.Abstractions.Operations;
 using VoltaMarcada.Application.Abstractions.Persistence;
 using VoltaMarcada.Application.WorkOrders;
+using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Domain.Entities;
 using VoltaMarcada.Domain.Exceptions;
 using VoltaMarcada.Domain.ValueObjects;
 namespace VoltaMarcada.Application.Quotes;
-public sealed class CreateQuoteUseCase(IQuoteRepository quotes, ICustomerRepository customers, IEquipmentRepository equipment, IServiceRepository services, WorkOrderAuthorization authorization, TimeProvider timeProvider)
+public sealed class CreateQuoteUseCase(IQuoteRepository quotes, ICustomerRepository customers, IEquipmentRepository equipment, IServiceRepository services, WorkOrderAuthorization authorization, ICurrentUser currentUser, TimeProvider timeProvider)
 {
     public async Task<OperationResult<Guid>> ExecuteAsync(CreateQuoteCommand command, CancellationToken cancellationToken = default)
     {
@@ -18,7 +19,7 @@ public sealed class CreateQuoteUseCase(IQuoteRepository quotes, ICustomerReposit
         if (selectedEquipment is null || selectedEquipment.CustomerId != customer.Id) return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
         try
         {
-            var quote = Quote.Create(scope.CompanyId, customer.Id, command.EquipmentId, service.Id, null, command.Items.Select(x => new QuoteItemDefinition(x.Description, x.Quantity, x.UnitPrice, x.Type)).ToArray(), command.DiscountAmount, command.Notes, command.ValidUntil, timeProvider.GetUtcNow());
+            var quote = Quote.Create(scope.CompanyId, customer.Id, currentUser.UserId, command.EquipmentId, service.Id, null, command.Items.Select(x => new QuoteItemDefinition(x.Description, x.Quantity, x.UnitPrice, x.Type)).ToArray(), command.DiscountAmount, command.Notes, command.ValidUntil, timeProvider.GetUtcNow());
             await quotes.AddAsync(quote, cancellationToken); await quotes.SaveChangesAsync(cancellationToken); return OperationResult<Guid>.Success(quote.Id);
         }
         catch (DomainException) { return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput); }
