@@ -49,6 +49,8 @@ public static class DependencyInjection
         services.AddScoped<IAppointmentRequestRepository, AppointmentRequestRepository>();
         services.AddScoped<IMaintenanceOpportunityRepository, MaintenanceOpportunityRepository>();
         services.AddScoped<ICustomerContactRepository, CustomerContactRepository>();
+        services.AddScoped<IServiceRequestRepository, ServiceRequestRepository>();
+        services.AddScoped<IQuoteRepository, QuoteRepository>();
         services.AddScoped<IWhatsAppLinkBuilder, WhatsAppLinkBuilder>();
         services.AddScoped<IEmployeeInvitationRepository, EmployeeInvitationRepository>();
         services.AddScoped<IEmployeeInvitationAccountService, EmployeeInvitationAccountService>();

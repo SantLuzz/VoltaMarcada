@@ -108,6 +108,7 @@ else
                 <MudDivider Class="my-6" />
                 <MudText Typo="Typo.h6">Seus dados</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">O CPF ou CNPJ identifica seu cadastro nesta empresa. Os dados informados serão usados somente para tratar esta solicitação.</MudText>
+                <MudTextField @bind-Value="problemDescription" Label="Descreva o atendimento necessário" Lines="3" MaxLength="2000" Counter="2000" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" Class="mb-3" />
                 <MudGrid Spacing="2">
                     <MudItem xs="12" sm="6"><BrazilianDocumentInput Id="public-customer-document" Name="customerDocument" @bind-Value="customerDocument" Required="true" Disabled="@isSubmitting" /></MudItem>
                     <MudItem xs="12" sm="6"><MudTextField @bind-Value="customerName" Label="Nome ou razão social" Required="true" RequiredError="Informe seu nome." MaxLength="200" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" /></MudItem>
@@ -151,6 +152,7 @@ else
     private string professionalChoice = AnyProfessional;
     private string slotKey = string.Empty;
     private string customerName = string.Empty;
+    private string? problemDescription;
     private string customerDocument = string.Empty;
     private string customerWhatsApp = string.Empty;
     private string? customerEmail;
@@ -216,7 +218,7 @@ else
         try
         {
             var address = new CustomerAddressInput(CustomerAddressType.Residence, true, street, number, postalCode, complement, stateId, cityId);
-            var result = await SubmitPublicAppointmentRequestUseCase.ExecuteAsync(new SubmitPublicAppointmentRequestCommand(CompanySlug ?? string.Empty, serviceId, selectedSlot.ProfessionalId, DateOnly.FromDateTime(bookingDate.Value), selectedSlot.StartTime, customerName, customerDocument, customerWhatsApp, customerEmail, [address]));
+            var result = await SubmitPublicAppointmentRequestUseCase.ExecuteAsync(new SubmitPublicAppointmentRequestCommand(CompanySlug ?? string.Empty, serviceId, selectedSlot.ProfessionalId, DateOnly.FromDateTime(bookingDate.Value), selectedSlot.StartTime, customerName, customerDocument, customerWhatsApp, customerEmail, [address], problemDescription));
             if (result.IsSuccess) { isSubmitted = true; return; }
             submitError = result.Error?.Code == "PublicBooking.RateLimited"
                 ? "Muitas tentativas foram realizadas. Aguarde alguns minutos antes de tentar novamente."
