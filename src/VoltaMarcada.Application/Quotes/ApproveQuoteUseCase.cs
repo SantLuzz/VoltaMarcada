@@ -29,7 +29,20 @@ public sealed class ApproveQuoteUseCase(
         if (quote.ExpireIfPast(DateOnly.FromDateTime(now.UtcDateTime), now)) { await quotes.SaveChangesAsync(cancellationToken); return OperationResult<QuoteApprovalResult>.Failure(QuoteErrors.InvalidStatus); }
         var service = await services.GetForCompanyAsync(quote.PrimaryServiceId, scope.CompanyId, cancellationToken);
         if (service is null) return OperationResult<QuoteApprovalResult>.Failure(QuoteErrors.InvalidInput);
-        var items = quote.Items.Select(item => new WorkOrderItemDefinition(item.Description, item.Quantity, item.UnitPrice, item.Type switch { QuoteItemType.Part => WorkOrderItemType.Part, QuoteItemType.Material => WorkOrderItemType.Material, QuoteItemType.Travel => WorkOrderItemType.Travel, QuoteItemType.Service => WorkOrderItemType.Service, _ => WorkOrderItemType.Additional })).ToArray();
+        var hasPrimaryService = false;
+        var items = quote.Items.Select(item =>
+        {
+            var type = item.Type switch
+            {
+                QuoteItemType.Part => WorkOrderItemType.Part,
+                QuoteItemType.Material => WorkOrderItemType.Material,
+                QuoteItemType.Travel => WorkOrderItemType.Travel,
+                QuoteItemType.Service when !hasPrimaryService => WorkOrderItemType.Service,
+                _ => WorkOrderItemType.Additional
+            };
+            if (item.Type == QuoteItemType.Service && !hasPrimaryService) hasPrimaryService = true;
+            return new WorkOrderItemDefinition(item.Description, item.Quantity, item.UnitPrice, type);
+        }).ToArray();
         var order = WorkOrder.Create(scope.CompanyId, quote.CustomerId, quote.EquipmentId, quote.PrimaryServiceId, null, currentUser.UserId, WorkOrderPriority.Normal, null, items, service.ChecklistItems.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderChecklistItemDefinition(x.Description, x.IsRequired, x.DisplayOrder)).ToArray(), now, quote.Id, quote.DiscountAmount);
         quote.Approve(order.Id, now);
         await workOrders.AddAsync(order, cancellationToken);
