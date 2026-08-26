@@ -3,6 +3,7 @@
 @using VoltaMarcada.Application.Quotes
 @inject GetPublicQuoteUseCase GetPublicQuoteUseCase
 @inject ApprovePublicQuoteUseCase ApprovePublicQuoteUseCase
+@inject RejectPublicQuoteUseCase RejectPublicQuoteUseCase
 
 <PageTitle>Orçamento | VoltaMarcada</PageTitle>
 
@@ -31,6 +32,7 @@ else
         @if (quote.Status == VoltaMarcada.Domain.Enums.QuoteStatus.Sent)
         {
             <MudButton Color="Color.Success" Variant="Variant.Filled" Class="mt-4" Disabled="@isApproving" OnClick="ApproveAsync">@(isApproving ? "Aprovando..." : "Aprovar orçamento")</MudButton>
+            <MudButton Color="Color.Error" Variant="Variant.Outlined" Class="mt-4 ml-2" Disabled="@isApproving" OnClick="RejectAsync">Recusar</MudButton>
         }
         @if (!string.IsNullOrWhiteSpace(quote.Notes)) { <MudText Class="mt-3">@quote.Notes</MudText> }
     </MudPaper>
@@ -53,6 +55,14 @@ else
         isApproving = true;
         var result = await ApprovePublicQuoteUseCase.ExecuteAsync(Token);
         actionError = result.IsSuccess ? null : "Não foi possível aprovar este orçamento.";
+        quote = await GetPublicQuoteUseCase.ExecuteAsync(Token);
+        isApproving = false;
+    }
+    private async Task RejectAsync()
+    {
+        isApproving = true;
+        var result = await RejectPublicQuoteUseCase.ExecuteAsync(Token);
+        actionError = result.IsSuccess ? null : "Não foi possível recusar este orçamento.";
         quote = await GetPublicQuoteUseCase.ExecuteAsync(Token);
         isApproving = false;
     }
