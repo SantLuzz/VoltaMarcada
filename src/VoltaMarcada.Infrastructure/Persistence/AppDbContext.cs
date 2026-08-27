@@ -14,6 +14,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<Company> Companies => Set<Company>();
 
+    public DbSet<CompanyBusinessHours> CompanyBusinessHours => Set<CompanyBusinessHours>();
+
     public DbSet<CompanyUser> CompanyUsers => Set<CompanyUser>();
 
     public DbSet<EmployeeInvitation> EmployeeInvitations => Set<EmployeeInvitation>();

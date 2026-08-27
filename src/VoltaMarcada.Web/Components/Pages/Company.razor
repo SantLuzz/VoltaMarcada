@@ -5,6 +5,7 @@
 @using VoltaMarcada.Web.Authorization
 @using Microsoft.JSInterop
 @using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Domain.Entities
 @using VoltaMarcada.Application.Abstractions.Storage
 @using VoltaMarcada.Application.Abstractions.Routing
 @inject GetOwnerCompanyOverviewUseCase GetOwnerCompanyOverviewUseCase
@@ -151,10 +152,20 @@ else if (overview is not null)
                     </header>
                     @if (publicSettings is not null)
                     {
-                        <MudTextField T="string" Value="@GetPublicPageUrl()" Label="Link da página pública" ReadOnly="true" Variant="Variant.Outlined" FullWidth="true" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.ContentCopy" OnAdornmentClick="CopyPublicPageUrlAsync" />
-                        <MudTextField @bind-Value="publicSettings.PublicDescription" Label="Descrição pública" Lines="4" MaxLength="2000" Variant="Variant.Outlined" FullWidth="true" Class="mt-4" Disabled="@isSavingPublicSettings" />
-                        <MudTextField @bind-Value="publicSettings.PublicPhone" Label="Telefone público" Mask="@PublicPhoneMask" Variant="Variant.Outlined" FullWidth="true" Class="mt-3" Disabled="@isSavingPublicSettings" />
-                        <MudTextField @bind-Value="publicSettings.NotificationEmail" Label="E-mail para notificações" InputType="InputType.Email" Validation="ValidateOptionalEmail" Variant="Variant.Outlined" FullWidth="true" Class="mt-3" Disabled="@isSavingPublicSettings" />
+                        <MudTextField T="string" Value="@GetPublicPageUrl()" Label="Link da página pública" ReadOnly="true" Variant="Variant.Outlined" FullWidth="@((bool)true)" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.ContentCopy" OnAdornmentClick="CopyPublicPageUrlAsync" />
+                        <MudTextField @bind-Value="publicSettings.PublicDescription" Label="Descrição pública" Lines="4" MaxLength="2000" Variant="Variant.Outlined" FullWidth="@((bool)true)" Class="mt-4" Disabled="@isSavingPublicSettings" />
+                        <MudTextField @bind-Value="publicSettings.PublicPhone" Label="Telefone público" Mask="@PublicPhoneMask" Variant="Variant.Outlined" FullWidth="@((bool)true)" Class="mt-3" Disabled="@isSavingPublicSettings" />
+                        <MudTextField @bind-Value="publicSettings.NotificationEmail" Label="E-mail para notificações" InputType="InputType.Email" Validation="ValidateOptionalEmail" Variant="Variant.Outlined" FullWidth="@((bool)true)" Class="mt-3" Disabled="@isSavingPublicSettings" />
+                        <MudNumericField T="int" @bind-Value="publicSettings.PublicRequestIntervalMinutes" Label="Intervalo dos horários públicos (minutos)" Min="1" Variant="Variant.Outlined" FullWidth="true" Class="mt-3" Disabled="@isSavingPublicSettings" />
+                        <MudText Typo="Typo.subtitle1" Class="mt-5">Horário de funcionamento</MudText>
+                        @foreach (var hours in publicSettings.BusinessHours)
+                        {
+                            <MudGrid Spacing="2" Class="mt-1">
+                                <MudItem xs="12" sm="3"><MudSwitch @bind-Value="hours.IsOpen" Color="Color.Primary" Disabled="@isSavingPublicSettings">@GetWeekdayLabel(hours.DayOfWeek)</MudSwitch></MudItem>
+                                <MudItem xs="12" sm="4"><MudTimePicker @bind-Time="hours.StartTime" Label="Início" Variant="Variant.Outlined" FullWidth="true" Disabled="@(!hours.IsOpen || isSavingPublicSettings)" /></MudItem>
+                                <MudItem xs="12" sm="4"><MudTimePicker @bind-Time="hours.EndTime" Label="Fim" Variant="Variant.Outlined" FullWidth="true" Disabled="@(!hours.IsOpen || isSavingPublicSettings)" /></MudItem>
+                            </MudGrid>
+                        }
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="SavePublicSettingsAsync" Disabled="@isSavingPublicSettings">@(isSavingPublicSettings ? "Salvando..." : "Salvar configurações")</MudButton>
                     }
                 </MudPaper>
@@ -229,7 +240,7 @@ else if (overview is not null)
             if (settings is not null)
             {
                 var ownerEmail = overview.Employees.FirstOrDefault(employee => employee.Role == CompanyUserRole.Owner)?.Email;
-                publicSettings = new PublicSettingsFormModel(settings.Slug, settings.PublicDescription, settings.PublicPhone, settings.NotificationEmail ?? ownerEmail);
+                publicSettings = new PublicSettingsFormModel(settings.Slug, settings.PublicDescription, settings.PublicPhone, settings.NotificationEmail ?? ownerEmail, settings.PublicRequestIntervalMinutes, settings.BusinessHours);
             }
         }
         catch (Exception exception)
@@ -446,7 +457,7 @@ else if (overview is not null)
         operationError = null;
         try
         {
-            var result = await UpdateCompanyPublicSettingsUseCase.ExecuteAsync(new UpdateCompanyPublicSettingsCommand(publicSettings.PublicDescription, NormalizePhone(publicSettings.PublicPhone), publicSettings.NotificationEmail));
+            var result = await UpdateCompanyPublicSettingsUseCase.ExecuteAsync(new UpdateCompanyPublicSettingsCommand(publicSettings.PublicDescription, NormalizePhone(publicSettings.PublicPhone), publicSettings.NotificationEmail, publicSettings.PublicRequestIntervalMinutes, publicSettings.BusinessHours.Select(item => new CompanyBusinessHoursInput(item.DayOfWeek, item.IsOpen, item.StartTime is { } startTime ? TimeOnly.FromTimeSpan(startTime) : null, item.EndTime is { } endTime ? TimeOnly.FromTimeSpan(endTime) : null)).ToArray()));
             if (!result.IsSuccess) operationError = OperationErrorMessages.GetMessage(result.Error?.Code);
             else Snackbar.Add("Configurações públicas salvas.", Severity.Success);
         }
@@ -522,12 +533,34 @@ else if (overview is not null)
         public string Address { get; set; } = string.Empty;
     }
 
-    private sealed class PublicSettingsFormModel(string slug, string? publicDescription, string? publicPhone, string? notificationEmail)
+    private static string GetWeekdayLabel(DayOfWeek dayOfWeek) => dayOfWeek switch
+    {
+        DayOfWeek.Sunday => "Domingo",
+        DayOfWeek.Monday => "Segunda-feira",
+        DayOfWeek.Tuesday => "Terça-feira",
+        DayOfWeek.Wednesday => "Quarta-feira",
+        DayOfWeek.Thursday => "Quinta-feira",
+        DayOfWeek.Friday => "Sexta-feira",
+        DayOfWeek.Saturday => "Sábado",
+        _ => string.Empty
+    };
+
+    private sealed class PublicSettingsFormModel(string slug, string? publicDescription, string? publicPhone, string? notificationEmail, int publicRequestIntervalMinutes, IReadOnlyList<CompanyBusinessHoursDto> businessHours)
     {
         public string Slug { get; } = slug;
         public string? PublicDescription { get; set; } = publicDescription;
         public string? PublicPhone { get; set; } = publicPhone;
         public string? NotificationEmail { get; set; } = notificationEmail;
+        public int PublicRequestIntervalMinutes { get; set; } = publicRequestIntervalMinutes;
+        public List<BusinessHoursFormModel> BusinessHours { get; } = businessHours.Select(item => new BusinessHoursFormModel(item.DayOfWeek, item.IsOpen, item.StartTime?.ToTimeSpan(), item.EndTime?.ToTimeSpan())).ToList();
+    }
+
+    private sealed class BusinessHoursFormModel(DayOfWeek dayOfWeek, bool isOpen, TimeSpan? startTime, TimeSpan? endTime)
+    {
+        public DayOfWeek DayOfWeek { get; } = dayOfWeek;
+        public bool IsOpen { get; set; } = isOpen;
+        public TimeSpan? StartTime { get; set; } = startTime;
+        public TimeSpan? EndTime { get; set; } = endTime;
     }
 
     private static readonly MultiMask PublicPhoneMask = new(

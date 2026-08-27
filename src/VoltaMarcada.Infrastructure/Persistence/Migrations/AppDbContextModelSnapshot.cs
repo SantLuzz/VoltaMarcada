@@ -254,11 +254,11 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.Property<int?>("ProposedDurationMinutes").HasColumnType("integer");
                     b.Property<Guid?>("ProposedProfessionalId").HasColumnType("uuid");
                     b.Property<TimeOnly?>("ProposedStartTime").HasColumnType("time without time zone");
-                    b.Property<Guid>("ProfessionalId").HasColumnType("uuid");
+                    b.Property<Guid?>("ProfessionalId").HasColumnType("uuid");
                     b.Property<string>("RejectionReason").HasMaxLength(1000).HasColumnType("character varying(1000)");
                     b.Property<DateOnly>("RequestedDate").HasColumnType("date");
-                    b.Property<DateTimeOffset>("RequestedEndAtUtc").HasColumnType("timestamp with time zone");
-                    b.Property<DateTimeOffset>("RequestedStartAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset?>("RequestedEndAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset?>("RequestedStartAtUtc").HasColumnType("timestamp with time zone");
                     b.Property<TimeOnly>("RequestedStartTime").HasColumnType("time without time zone");
                     b.Property<DateTimeOffset?>("ResponseTokenExpiresAtUtc").HasColumnType("timestamp with time zone");
                     b.Property<string>("ResponseTokenHash").HasMaxLength(128).HasColumnType("character varying(128)");
@@ -346,6 +346,17 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.ToTable("Cities", (string)null);
                 });
 
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.CompanyBusinessHours", b =>
+                {
+                    b.Property<Guid>("CompanyId").HasColumnType("uuid");
+                    b.Property<int>("DayOfWeek").HasColumnType("integer");
+                    b.Property<TimeOnly?>("EndTime").HasColumnType("time without time zone");
+                    b.Property<bool>("IsOpen").HasColumnType("boolean");
+                    b.Property<TimeOnly?>("StartTime").HasColumnType("time without time zone");
+                    b.HasKey("CompanyId", "DayOfWeek");
+                    b.ToTable("CompanyBusinessHours", (string)null);
+                });
+
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.Company", b =>
                 {
                     b.Property<Guid>("Id")
@@ -392,6 +403,10 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.Property<string>("PublicPhone")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<int>("PublicRequestIntervalMinutes")
+                        .HasDefaultValue(60)
+                        .HasColumnType("integer");
 
                     b.Property<string>("Slug")
                         .IsRequired()
@@ -1549,6 +1564,15 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("StateId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.CompanyBusinessHours", b =>
+                {
+                    b.HasOne("VoltaMarcada.Domain.Entities.Company", "BusinessHours")
+                        .WithMany("BusinessHours")
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

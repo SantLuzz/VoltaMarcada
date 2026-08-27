@@ -22,11 +22,12 @@ public sealed class AcceptAppointmentRequestUseCase(
         var scope = await authorization.GetAccessScopeAsync(cancellationToken);
         var request = await requestRepository.GetForCompanyAsync(requestId, scope.CompanyId, cancellationToken);
         if (request is null) return OperationResult<Guid>.Failure(SchedulingErrors.NotFound);
-        if (!scope.IsOwner && scope.ProfessionalId != request.ProfessionalId) return OperationResult<Guid>.Failure(SchedulingErrors.Forbidden);
+        if (request.ProfessionalId is not { } professionalId) return OperationResult<Guid>.Failure(SchedulingErrors.InvalidStatus);
+        if (!scope.IsOwner && scope.ProfessionalId != professionalId) return OperationResult<Guid>.Failure(SchedulingErrors.Forbidden);
         if (request.Status != AppointmentRequestStatus.Pending) return OperationResult<Guid>.Failure(SchedulingErrors.InvalidStatus);
         var service = await serviceRepository.GetForCompanyAsync(request.ServiceId, scope.CompanyId, cancellationToken);
         if (service is null || !service.IsActive || service.DurationMinutes != request.DurationMinutes) return OperationResult<Guid>.Failure(SchedulingErrors.InvalidInput);
-        var professional = await professionalRepository.GetForCompanyAsync(request.ProfessionalId, scope.CompanyId, cancellationToken);
+        var professional = await professionalRepository.GetForCompanyAsync(professionalId, scope.CompanyId, cancellationToken);
         if (professional is null || professional.ProfessionalServices.All(link => link.ServiceId != request.ServiceId)) return OperationResult<Guid>.Failure(SchedulingErrors.ProfessionalNotQualified);
         await using var transaction = await appointmentRepository.BeginSchedulingTransactionAsync(scope.CompanyId, professional.Id, cancellationToken);
         if (!await availability.IsAvailableAsync(professional, request.RequestedDate, request.RequestedStartTime, request.DurationMinutes, cancellationToken: cancellationToken)) return OperationResult<Guid>.Failure(SchedulingErrors.ProfessionalUnavailable);

@@ -27,9 +27,6 @@ public sealed class AppointmentRequestRepository(AppDbContext dbContext) : IAppo
             join company in dbContext.Companies.AsNoTracking() on request.CompanyId equals company.Id
             join customer in dbContext.Customers.AsNoTracking() on new { request.CompanyId, request.CustomerId } equals new { customer.CompanyId, CustomerId = customer.Id }
             join service in dbContext.Services.AsNoTracking() on new { request.CompanyId, request.ServiceId } equals new { service.CompanyId, ServiceId = service.Id }
-            join professional in dbContext.Professionals.AsNoTracking() on new { request.CompanyId, ProfessionalId = request.ProposedProfessionalId } equals new { professional.CompanyId, ProfessionalId = (Guid?)professional.Id }
-            join companyUser in dbContext.CompanyUsers.AsNoTracking() on professional.CompanyUserId equals companyUser.Id
-            join user in dbContext.Users.AsNoTracking() on companyUser.UserId equals user.Id
             where request.ResponseTokenHash == tokenHash && request.ResponseTokenRevokedAtUtc == null
             select new AppointmentRequestResponseContext(
                 request,
@@ -37,7 +34,7 @@ public sealed class AppointmentRequestRepository(AppDbContext dbContext) : IAppo
                 company.TradeName,
                 customer.Name,
                 service.Name,
-                user.FullName ?? user.Email ?? "Professional")
+                string.Empty)
         ).SingleOrDefaultAsync(cancellationToken);
 
     public async Task<IReadOnlyList<AppointmentRequestListItem>> GetOpenForCompanyAsync(Guid companyId, CancellationToken cancellationToken = default) =>
@@ -45,18 +42,15 @@ public sealed class AppointmentRequestRepository(AppDbContext dbContext) : IAppo
             from request in dbContext.AppointmentRequests.AsNoTracking()
             join customer in dbContext.Customers.AsNoTracking().Where(item => item.CompanyId == companyId) on request.CustomerId equals customer.Id
             join service in dbContext.Services.AsNoTracking().Where(item => item.CompanyId == companyId) on request.ServiceId equals service.Id
-            join professional in dbContext.Professionals.AsNoTracking().Where(item => item.CompanyId == companyId) on (request.ProposedProfessionalId ?? request.ProfessionalId) equals professional.Id
-            join companyUser in dbContext.CompanyUsers.AsNoTracking() on professional.CompanyUserId equals companyUser.Id
-            join user in dbContext.Users.AsNoTracking() on companyUser.UserId equals user.Id
             where request.CompanyId == companyId &&
                   (request.Status == AppointmentRequestStatus.Pending || request.Status == AppointmentRequestStatus.RescheduleRequested)
-            orderby request.RequestedStartAtUtc
+            orderby request.RequestedDate, request.RequestedStartTime
             select new AppointmentRequestListItem(
                 request,
                 customer.Name,
                 customer.WhatsApp,
                 service.Name,
-                user.FullName ?? user.Email ?? "Professional",
+                string.Empty,
                 null)
         ).ToArrayAsync(cancellationToken);
 

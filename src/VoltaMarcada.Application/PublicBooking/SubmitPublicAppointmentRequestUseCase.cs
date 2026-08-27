@@ -11,10 +11,8 @@ namespace VoltaMarcada.Application.PublicBooking;
 public sealed class SubmitPublicAppointmentRequestUseCase(
     ICompanyRepository companyRepository,
     IServiceRepository serviceRepository,
-    IProfessionalRepository professionalRepository,
     ICustomerRepository customerRepository,
     IAppointmentRequestRepository requestRepository,
-    AppointmentAvailability availability,
     IValidator<CreateCustomerCommand> customerValidator,
     IPublicBookingSubmissionLimiter submissionLimiter,
     TimeProvider timeProvider)
@@ -31,13 +29,9 @@ public sealed class SubmitPublicAppointmentRequestUseCase(
         var company = await companyRepository.GetBySlugAsync(command.CompanySlug.Trim().ToLowerInvariant(), cancellationToken);
         if (company is null) return OperationResult<Guid>.Failure(PublicBookingErrors.NotFound);
         var service = await serviceRepository.GetForCompanyAsync(command.ServiceId, company.Id, cancellationToken);
-        var professional = await professionalRepository.GetForCompanyAsync(command.ProfessionalId, company.Id, cancellationToken);
-        if (service is null || !service.IsActive || !service.AllowOnlineBooking || professional is null || !professional.IsActive || professional.ProfessionalServices.All(x => x.ServiceId != service.Id))
+        if (service is null || !service.IsActive || !service.AllowOnlineBooking || !company.IsPublicRequestSlot(command.Date, command.StartTime))
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
-        if (!await customerRepository.AreLocationsValidAsync(command.Addresses, cancellationToken) ||
-            !AppointmentAvailability.TryGetUtcInterval(professional.TimeZoneId, command.Date, command.StartTime, service.DurationMinutes, out var start, out var end) ||
-            start <= timeProvider.GetUtcNow() ||
-            !await availability.IsAvailableAsync(professional, command.Date, command.StartTime, service.DurationMinutes, cancellationToken: cancellationToken))
+        if (!await customerRepository.AreLocationsValidAsync(command.Addresses, cancellationToken))
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
         var customer = await customerRepository.GetByDocumentAsync(company.Id, document, cancellationToken);
         var primaryAddress = command.Addresses.Single(address => address.IsPrimary);
@@ -61,7 +55,7 @@ public sealed class SubmitPublicAppointmentRequestUseCase(
             await customerRepository.AddAsync(customer, cancellationToken);
             proposal = null;
         }
-        var request = AppointmentRequest.Create(company.Id, customer.Id, service.Id, professional.Id, null, null, command.Date, command.StartTime, service.DurationMinutes, start, end, proposal, timeProvider.GetUtcNow());
+        var request = AppointmentRequest.CreatePublicPreference(company.Id, customer.Id, service.Id, null, null, command.Date, command.StartTime, service.DurationMinutes, proposal, timeProvider.GetUtcNow());
         await requestRepository.AddAsync(request, cancellationToken);
         await requestRepository.SaveChangesAsync(cancellationToken);
         return OperationResult<Guid>.Success(request.Id);

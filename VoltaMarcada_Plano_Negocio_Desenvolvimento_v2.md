@@ -875,7 +875,143 @@ arquitetura para automação futura.
 
 ------------------------------------------------------------------------
 
-# Fase 7 --- Agendamento público
+# Fase 7 --- Refatoração da solicitação pública e motor de disponibilidade
+
+## Objetivo
+
+Corrigir o desenho da solicitação pública para que o cliente solicite o
+atendimento à empresa, sem visualizar ou escolher o profissional. A escolha
+do profissional e a análise da agenda são decisões operacionais internas,
+apoiadas por um motor de disponibilidade reutilizável.
+
+## Horário de funcionamento da empresa
+
+Na configuração da empresa, permitir definir, para cada dia da semana:
+
+- se atende naquele dia;
+- horário inicial;
+- horário final.
+
+No MVP, cada dia possui no máximo um intervalo de funcionamento. Esse horário
+define os dias e horários que podem ser apresentados na página pública; ele não
+substitui nem altera a agenda individual dos profissionais.
+
+Exemplo:
+
+``` text
+Segunda a sexta: 08:00-18:00
+Sábado: 08:00-12:00
+Domingo: fechado
+```
+
+## Granularidade pública
+
+A empresa deve possuir uma configuração de granularidade para horários
+públicos, com padrão inicial de 60 minutos. A regra é independente dos blocos
+de 30 minutos usados na agenda interna dos profissionais.
+
+``` text
+Funcionamento: 08:00-18:00
+Intervalo público: 60 minutos
+
+08:00, 09:00, 10:00, ..., 17:00
+```
+
+## Solicitação pública
+
+A página pública não pode expor profissionais nem permitir que o cliente os
+selecione. O cliente informa o serviço desejado, o equipamento, a data, o
+horário preferido e os demais dados da solicitação atual. O equipamento deve
+seguir o mesmo modelo e as mesmas regras da solicitação interna.
+
+Os horários públicos são gerados a partir do horário de funcionamento e da
+granularidade pública. Eles representam apenas preferências que a empresa
+aceita receber, não a disponibilidade real de profissionais.
+
+Exibir de forma clara:
+
+> Escolha o horário de sua preferência. A disponibilidade será analisada e
+> confirmada pela empresa.
+
+## Motor centralizado de disponibilidade
+
+Criar ou refatorar um serviço de domínio/aplicação reutilizável que receba,
+no mínimo, serviço, data desejada e horário desejado. O serviço deve localizar
+todos os profissionais que executam o serviço e, para cada um, verificar:
+
+- se trabalha no dia;
+- se o atendimento cabe integralmente em seu expediente;
+- compromissos e bloqueios existentes;
+- duração do serviço;
+- disponibilidade contínua de todos os blocos de 30 minutos necessários.
+
+Um serviço de 120 minutos iniciado às 14:00 exige os blocos livres de 14:00,
+14:30, 15:00 e 15:30. Não selecionar automaticamente apenas o primeiro
+profissional disponível.
+
+## Resultado da análise
+
+Se houver disponibilidade no horário solicitado, retornar todos os
+profissionais elegíveis disponíveis naquele horário para que o owner escolha
+um deles internamente.
+
+Se não houver, buscar alternativas primeiro no restante do mesmo dia e depois
+nos próximos dias, em ordem cronológica. Cada resultado deve informar a
+combinação de horário e profissional, sempre respeitando aptidão, expediente,
+agenda, bloqueios e duração do serviço.
+
+Os limites da busca devem ser configuráveis em `appsettings`, sem valores
+hardcoded:
+
+``` json
+"Scheduling": {
+  "AvailabilitySearchDays": 7,
+  "AvailabilityResultLimit": 10
+}
+```
+
+`AvailabilitySearchDays` define quantos dias corridos à frente serão
+analisados. `AvailabilityResultLimit` define o máximo de alternativas; se
+vários profissionais estiverem livres exatamente no horário solicitado, todos
+podem ser retornados.
+
+## Fluxo interno e confirmação
+
+Ao abrir a solicitação, o owner visualiza cliente, serviço, equipamento, data
+e horário solicitados, além da análise de disponibilidade. Quando o horário
+solicitado for viável, escolhe um dos profissionais compatíveis. Caso
+contrário, o sistema informa a indisponibilidade e apresenta automaticamente
+até o limite configurado de alternativas para escolha.
+
+O horário solicitado permanece uma preferência. O owner aceita a preferência
+ou escolhe uma alternativa, envia a proposta/orçamento com o horário proposto,
+e o horário só se torna confirmado após a confirmação do cliente conforme o
+fluxo existente.
+
+``` text
+Cliente solicita serviço + equipamento + data + horário desejado
+↓
+Sistema analisa profissionais e agenda
+↓
+Owner escolhe profissional no horário solicitado ou uma alternativa
+↓
+Cliente confirma a proposta
+↓
+Horário confirmado
+```
+
+## Separação e reutilização
+
+Manter distintos no domínio: horário de funcionamento da empresa,
+granularidade pública, agenda do profissional, duração do serviço, horário
+solicitado, horário proposto e horário confirmado. A lógica de disponibilidade
+não pertence a componentes Blazor ou endpoints e deve poder ser reutilizada em
+solicitações públicas, criação interna, reagendamentos, recorrência de
+manutenção e integrações futuras.
+
+------------------------------------------------------------------------
+
+# Fase 8 --- Agendamento público
 
 ## Página pública da empresa
 
@@ -899,8 +1035,6 @@ Fluxo:
 
 ``` text
 Serviço
-↓
-Profissional ou qualquer disponível
 ↓
 Data
 ↓
@@ -945,14 +1079,13 @@ Duração aproximada:
 
 ## Solicitação de horário
 
-O cliente vê horários compatíveis com:
+O cliente vê horários de preferência gerados a partir de:
 
--   profissional;
--   serviço;
--   duração;
--   expediente;
--   compromissos;
--   bloqueios.
+-   horário de funcionamento da empresa;
+-   granularidade pública configurada.
+
+O cliente não visualiza nem escolhe profissionais. A disponibilidade real é
+analisada internamente pelo motor de disponibilidade da Fase 7.
 
 A escolha cria:
 
@@ -964,15 +1097,16 @@ e não um agendamento confirmado automaticamente.
 
 ## Confirmação
 
-A empresa pode:
+A empresa avalia a solicitação, escolhe o profissional e o horário proposto e
+pode:
 
 ``` text
-[ CONFIRMAR ]
+[ ENVIAR PROPOSTA ]
 [ SUGERIR OUTRO HORÁRIO ]
 [ RECUSAR ]
 ```
 
-Após confirmação:
+Somente após a confirmação do cliente sobre a proposta:
 
 ``` text
 AppointmentRequest
@@ -999,13 +1133,14 @@ Oportunidade
 → contato
 → link
 → cliente escolhe
-→ empresa confirma
+→ empresa propõe
+→ cliente confirma
 → atendimento
 ```
 
 ------------------------------------------------------------------------
 
-# Fase 8 --- Solicitações e orçamentos
+# Fase 9 --- Solicitações e orçamentos
 
 ## Solicitação
 
@@ -1099,7 +1234,7 @@ aprovação e criação da OS.
 
 ------------------------------------------------------------------------
 
-# Fase 9 --- Histórico, dashboards e refinamento operacional
+# Fase 10 --- Histórico, dashboards e refinamento operacional
 
 ## Histórico do equipamento
 
@@ -1190,7 +1325,7 @@ comerciais.
 
 ------------------------------------------------------------------------
 
-# Fase 10 --- Licença, PIX e baixa manual
+# Fase 11 --- Licença, PIX e baixa manual
 
 ## Licença da empresa
 
@@ -1272,7 +1407,7 @@ Permitir a comercialização inicial do VoltaMarcada sem gateway de pagamento, m
 
 ------------------------------------------------------------------------
 
-# Fase 11 --- Regra de cobrança no encerramento da OS
+# Fase 12 --- Regra de cobrança no encerramento da OS
 
 ## Objetivo
 
@@ -1381,7 +1516,7 @@ impedir que pagamentos pendentes sejam acompanhados posteriormente.
 
 ------------------------------------------------------------------------
 
-# Fase 12 --- SaaS comercial e lançamento
+# Fase 13 --- SaaS comercial e lançamento
 
 ## Cadastro autônomo
 

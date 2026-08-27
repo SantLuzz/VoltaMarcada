@@ -14,14 +14,14 @@ public sealed class AppointmentRequest : ICompanyScopedEntity
     public Guid CompanyId { get; private set; }
     public Guid CustomerId { get; private set; }
     public Guid ServiceId { get; private set; }
-    public Guid ProfessionalId { get; private set; }
+    public Guid? ProfessionalId { get; private set; }
     public Guid? EquipmentId { get; private set; }
     public Guid? MaintenanceOpportunityId { get; private set; }
     public DateOnly RequestedDate { get; private set; }
     public TimeOnly RequestedStartTime { get; private set; }
     public int DurationMinutes { get; private set; }
-    public DateTimeOffset RequestedStartAtUtc { get; private set; }
-    public DateTimeOffset RequestedEndAtUtc { get; private set; }
+    public DateTimeOffset? RequestedStartAtUtc { get; private set; }
+    public DateTimeOffset? RequestedEndAtUtc { get; private set; }
     public AppointmentRequestStatus Status { get; private set; }
     public DateOnly? ProposedDate { get; private set; }
     public TimeOnly? ProposedStartTime { get; private set; }
@@ -97,12 +97,78 @@ public sealed class AppointmentRequest : ICompanyScopedEntity
         };
     }
 
+    public static AppointmentRequest CreatePublicPreference(
+        Guid companyId,
+        Guid customerId,
+        Guid serviceId,
+        Guid? equipmentId,
+        Guid? maintenanceOpportunityId,
+        DateOnly requestedDate,
+        TimeOnly requestedStartTime,
+        int durationMinutes,
+        CustomerProfileProposal? customerProfileProposal,
+        DateTimeOffset now)
+    {
+        RequireId(companyId, "Company");
+        RequireId(customerId, "Customer");
+        RequireId(serviceId, "Service");
+        if (requestedDate == DateOnly.MinValue || durationMinutes <= 0)
+        {
+            throw new DomainException("Appointment request preference is invalid.");
+        }
+
+        var utcNow = now.ToUniversalTime();
+        return new AppointmentRequest
+        {
+            Id = Guid.NewGuid(),
+            CompanyId = companyId,
+            CustomerId = customerId,
+            ServiceId = serviceId,
+            EquipmentId = NormalizeOptionalId(equipmentId),
+            MaintenanceOpportunityId = NormalizeOptionalId(maintenanceOpportunityId),
+            RequestedDate = requestedDate,
+            RequestedStartTime = requestedStartTime,
+            DurationMinutes = durationMinutes,
+            Status = AppointmentRequestStatus.Pending,
+            ProposedCustomerName = customerProfileProposal?.Name,
+            ProposedCustomerWhatsApp = customerProfileProposal?.WhatsApp,
+            ProposedCustomerEmail = customerProfileProposal?.Email,
+            ProposedAddressType = customerProfileProposal?.Address.AddressType,
+            ProposedAddressStreet = customerProfileProposal?.Address.Street,
+            ProposedAddressNumber = customerProfileProposal?.Address.Number,
+            ProposedAddressPostalCode = customerProfileProposal?.Address.PostalCode,
+            ProposedAddressComplement = customerProfileProposal?.Address.Complement,
+            ProposedAddressStateId = customerProfileProposal?.Address.StateId,
+            ProposedAddressCityId = customerProfileProposal?.Address.CityId,
+            CreatedAtUtc = utcNow,
+            UpdatedAtUtc = utcNow
+        };
+    }
+
     public void Accept(Guid appointmentId, DateTimeOffset now)
     {
         EnsureStatus(AppointmentRequestStatus.Pending);
         RequireId(appointmentId, "Appointment");
         AppointmentId = appointmentId;
         Status = AppointmentRequestStatus.Accepted;
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
+    public void AcceptProposal(Guid appointmentId, DateTimeOffset now)
+    {
+        EnsureStatus(AppointmentRequestStatus.RescheduleRequested);
+        RequireId(appointmentId, "Appointment");
+        AppointmentId = appointmentId;
+        ResponseTokenRevokedAtUtc = now.ToUniversalTime();
+        Status = AppointmentRequestStatus.Accepted;
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
+    public void DeclineProposal(DateTimeOffset now)
+    {
+        EnsureStatus(AppointmentRequestStatus.RescheduleRequested);
+        ResponseTokenRevokedAtUtc = now.ToUniversalTime();
+        Status = AppointmentRequestStatus.CustomerDeclined;
         UpdatedAtUtc = now.ToUniversalTime();
     }
 

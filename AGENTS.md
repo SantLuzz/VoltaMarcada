@@ -165,6 +165,8 @@ CreateMaintenanceReminder
 GetUpcomingMaintenanceReminders
 CreateBookingRequest
 AcceptBookingRequest
+AnalyzeAppointmentRequestAvailability
+GetAvailableAppointmentSlots
 RescheduleAppointment
 ```
 
@@ -353,6 +355,20 @@ Expected information may include:
 
 The public `Slug` must be unique.
 
+### CompanyBusinessHours
+
+Defines the hours in which a company accepts public service requests. Each
+company may configure one interval per day of the week, including whether the
+company serves customers on that day and its local start and end times.
+
+Company business hours determine the dates and times exposed on public pages.
+They must not replace, modify, or be inferred from an individual
+professional's availability.
+
+The company also configures the public request interval. Its initial default
+is 60 minutes and it is independent from the 30-minute blocks used by the
+internal professional schedule.
+
 ### CompanyUser
 
 Links an authenticated user to a company and stores company-level membership information.
@@ -491,6 +507,10 @@ Represents a booking request that has not necessarily been confirmed yet.
 
 Public booking must create an `AppointmentRequest`, not immediately create a confirmed `Appointment` unless the company explicitly adopts an automatic confirmation mode in the future.
 
+The requested date and time are the customer's preference. A public request
+does not select, expose, or assign a professional. A professional is selected
+only by an authorized internal user after availability analysis.
+
 Initial statuses should support concepts equivalent to:
 
 - Pending
@@ -625,7 +645,8 @@ Work Order Completed
         -> Company Sends Contextual Booking Link
         -> Customer Selects Preferred Time
         -> Appointment Request Created
-        -> Company Accepts Request
+        -> Company Analyzes Availability and Selects a Professional or Alternative
+        -> Customer Confirms the Proposed Time
         -> Appointment Created
         -> New Work Order Created or Linked
         -> Service Completed
@@ -675,7 +696,8 @@ Customer
 ```text
 Public company page
 -> Booking request
--> Company acceptance
+-> Internal availability analysis and proposal
+-> Customer confirmation
 -> Appointment
 -> Optional work order
 ```
@@ -694,7 +716,9 @@ Maintenance reminder
 
 ## Scheduling Rules
 
-Appointment availability must consider at least:
+Real professional availability, used for internal scheduling, appointment
+request analysis, rescheduling, and appointment confirmation, must consider
+at least:
 
 - professional availability
 - service duration
@@ -718,6 +742,39 @@ Prefer a use case such as:
 ```text
 GetAvailableAppointmentSlots
 ```
+
+The availability engine must receive the service, requested date, and
+requested time; identify every eligible professional; and validate consecutive
+30-minute blocks for the full service duration. It must return all
+professionals available at the requested time, never select the first one
+automatically.
+
+If no eligible professional is available at the requested time, search other
+times on the same date and then future dates in chronological order. Return
+time-and-professional alternatives while honoring configurable limits:
+
+```json
+"Scheduling": {
+  "AvailabilitySearchDays": 7,
+  "AvailabilityResultLimit": 10
+}
+```
+
+The limits must come from configuration, not hardcoded values. Every final
+appointment creation or acceptance must revalidate the selected professional
+and interval on the server.
+
+### Public Request Availability
+
+Public request slots are generated from company business hours and the public
+request interval. They express when the company accepts a preferred time; they
+do not represent real-time professional availability and must not expose any
+professional to the customer.
+
+The public page must clearly state that the selected time is a preference that
+will be analyzed and confirmed by the company. It must use the same equipment
+model and validation rules as internal requests, not a simplified public-only
+model.
 
 The result should represent valid start times, not arbitrary calendar cells.
 
@@ -789,7 +846,8 @@ Do not expose internal database IDs as the only authorization mechanism for publ
 
 Public pages must reveal only the data necessary for the intended action.
 
-The contextual booking link should allow the customer to choose an available day and time and submit an `AppointmentRequest`.
+The contextual booking link should allow the customer to select a preferred day
+and time from public request slots and submit an `AppointmentRequest`.
 
 The initial version should require company confirmation before an appointment becomes confirmed.
 
@@ -1146,11 +1204,13 @@ Included areas:
 13. maintenance reminders
 14. maintenance reminder dashboard
 15. public company page
-16. public booking requests
-17. contextual maintenance booking links
-18. quotes
-19. quote PDF
-20. WhatsApp share links
+16. company business hours and public request granularity
+17. public booking requests without professional selection
+18. centralized availability analysis and alternatives
+19. contextual maintenance booking links
+20. quotes
+21. quote PDF
+22. WhatsApp share links
 
 The following are explicitly outside the initial MVP unless requested:
 
@@ -1240,7 +1300,19 @@ Follow this sequence unless current requirements justify changing it.
 - Contextual maintenance booking token
 - Contextual booking page
 
-### Phase 7 - Quotes
+### Phase 7 - Public Request Refactoring and Availability Engine
+
+- Company business hours with one operating interval per day
+- Public request granularity, initially 60 minutes
+- Public request flow without professional exposure or selection
+- Preferred-time messaging and internal professional assignment
+- Centralized availability engine over professional schedules
+- All eligible professionals at the requested time
+- Chronological alternative time-and-professional results
+- Configurable availability search days and result limit
+- Reuse by public requests, internal scheduling, rescheduling, and maintenance recurrence
+
+### Phase 8 - Quotes
 
 - Quote creation
 - Quote items
@@ -1250,7 +1322,7 @@ Follow this sequence unless current requirements justify changing it.
 - Public approval/rejection
 - WhatsApp share action
 
-### Phase 8 - Enhancements
+### Phase 9 - Enhancements
 
 - Work order photos
 - before/after photos
