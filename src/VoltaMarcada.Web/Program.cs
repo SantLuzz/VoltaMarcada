@@ -28,6 +28,8 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddOptions<SchedulingOptions>()
     .Bind(builder.Configuration.GetSection(SchedulingOptions.SectionName))
     .Validate(options => options.SlotIntervalMinutes > 0 && 60 % options.SlotIntervalMinutes == 0, "Slot interval must divide one hour.")
+    .Validate(options => options.AvailabilitySearchDays > 0, "Availability search days must be positive.")
+    .Validate(options => options.AvailabilityResultLimit > 0, "Availability result limit must be positive.")
     .Validate(options => !string.IsNullOrWhiteSpace(options.DefaultTimeZoneId), "Default time zone is required.")
     .Validate(options => options.AllowedTimeZoneIds.Count > 0 && options.AllowedTimeZoneIds.Contains(options.DefaultTimeZoneId, StringComparer.Ordinal), "Allowed time zones must contain the default time zone.")
     .ValidateOnStart();

@@ -6,5 +6,6 @@ public enum AppointmentRequestStatus
     Accepted,
     Rejected,
     RescheduleRequested,
-    Cancelled
+    Cancelled,
+    CustomerDeclined
 }

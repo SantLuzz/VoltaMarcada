@@ -9,7 +9,7 @@ public sealed record AppointmentRequestDto(
     string CustomerWhatsApp,
     Guid ServiceId,
     string ServiceName,
-    Guid ProfessionalId,
+    Guid? ProfessionalId,
     string ProfessionalName,
     DateOnly Date,
     TimeOnly StartTime,
@@ -19,17 +19,23 @@ public sealed record AppointmentRequestDto(
     string? ProposedCustomerName,
     string? ProposedCustomerWhatsApp,
     string? ProposedCustomerEmail,
-    string? ProposedAddress);
+    string? ProposedAddress,
+    IReadOnlyList<AvailableProfessionalDto> RequestedTimeProfessionals,
+    IReadOnlyList<AppointmentAlternativeDto> Alternatives);
 
-public sealed class GetAppointmentRequestsUseCase(WorkOrderAuthorization authorization, IAppointmentRequestRepository repository)
+public sealed class GetAppointmentRequestsUseCase(WorkOrderAuthorization authorization, IAppointmentRequestRepository repository, AnalyzeAppointmentRequestAvailabilityUseCase availabilityAnalysis)
 {
     public async Task<IReadOnlyList<AppointmentRequestDto>> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var scope = await authorization.GetAccessScopeAsync(cancellationToken);
         var requests = await repository.GetOpenForCompanyAsync(scope.CompanyId, cancellationToken);
-        return requests
-            .Where(item => scope.IsOwner || item.Request.ProfessionalId == scope.ProfessionalId)
-            .Select(item => new AppointmentRequestDto(
+        var result = new List<AppointmentRequestDto>();
+        foreach (var item in requests.Where(item => scope.IsOwner || item.Request.ProfessionalId == scope.ProfessionalId))
+        {
+            var analysis = scope.IsOwner && item.Request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending
+                ? await availabilityAnalysis.ExecuteAsync(item.Request.Id, scope.CompanyId, cancellationToken)
+                : null;
+            result.Add(new AppointmentRequestDto(
                 item.Request.Id,
                 item.CustomerName,
                 item.CustomerWhatsApp,
@@ -47,7 +53,11 @@ public sealed class GetAppointmentRequestsUseCase(WorkOrderAuthorization authori
                 item.Request.ProposedCustomerEmail,
                 item.Request.ProposedAddressStreet is null
                     ? null
-                    : $"{item.Request.ProposedAddressStreet}, {item.Request.ProposedAddressNumber} - CEP {item.Request.ProposedAddressPostalCode}"))
-            .ToArray();
+                    : $"{item.Request.ProposedAddressStreet}, {item.Request.ProposedAddressNumber} - CEP {item.Request.ProposedAddressPostalCode}",
+                analysis?.RequestedTimeProfessionals ?? [],
+                analysis?.Alternatives ?? []));
+        }
+
+        return result;
     }
 }

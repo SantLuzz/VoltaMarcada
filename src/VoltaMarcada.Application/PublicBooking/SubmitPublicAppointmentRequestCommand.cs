@@ -5,7 +5,6 @@ namespace VoltaMarcada.Application.PublicBooking;
 public sealed record SubmitPublicAppointmentRequestCommand(
     string CompanySlug,
     Guid ServiceId,
-    Guid ProfessionalId,
     DateOnly Date,
     TimeOnly StartTime,
     string CustomerName,
