@@ -86,12 +86,6 @@ else
 
             <MudForm @ref="bookingForm">
                 <MudGrid Spacing="2">
-                    <MudItem xs="12" sm="6">
-                        <MudSelect T="string" Label="Profissional" @bind-Value="professionalChoice" @bind-Value:after="LoadSlotsAsync" Variant="Variant.Outlined" FullWidth="@true" Disabled="@(serviceId == Guid.Empty || isSubmitting)">
-                            <MudSelectItem Value="@AnyProfessional">Qualquer profissional disponível</MudSelectItem>
-                            @foreach (var professional in professionals) { <MudSelectItem Value="@professional.Id.ToString()">@professional.Name</MudSelectItem> }
-                        </MudSelect>
-                    </MudItem>
                     <MudItem xs="12" sm="6"><MudDatePicker Label="Data" @bind-Date="bookingDate" @bind-Date:after="LoadSlotsAsync" MinDate="@minimumDate" Variant="Variant.Outlined" FullWidth="@true" Disabled="@(serviceId == Guid.Empty || isSubmitting)" /></MudItem>
                     <MudItem xs="12">
                         @if (isLoadingSlots) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
@@ -99,11 +93,12 @@ else
                         {
                             <MudSelect T="string" Label="Horário" @bind-Value="slotKey" Required="true" RequiredError="Selecione o horário." Variant="Variant.Outlined" FullWidth="@true" Disabled="@(slots.Count == 0 || isSubmitting)">
                                 @if (slots.Count == 0) { <MudSelectItem Value="@string.Empty">Nenhum horário disponível para esta data</MudSelectItem> }
-                                @foreach (var slot in slots) { <MudSelectItem Value="@GetSlotKey(slot)">@slot.StartTime.ToString("HH:mm") · @slot.ProfessionalName</MudSelectItem> }
+                                @foreach (var slot in slots) { <MudSelectItem Value="@GetSlotKey(slot)">@slot.StartTime.ToString("HH:mm")</MudSelectItem> }
                             </MudSelect>
                         }
                     </MudItem>
                 </MudGrid>
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">Escolha o horário de sua preferência. A disponibilidade será analisada e confirmada pela empresa.</MudAlert>
 
                 <MudDivider Class="my-6" />
                 <MudText Typo="Typo.h6">Seus dados</MudText>
@@ -138,18 +133,15 @@ else
 }
 
 @code {
-    private const string AnyProfessional = "any";
     [Parameter] public string? CompanySlug { get; set; }
     private MudForm bookingForm = default!;
     private PublicCompanyPageDto? company;
-    private IReadOnlyList<PublicProfessionalDto> professionals = [];
     private IReadOnlyList<PublicAppointmentSlotDto> slots = [];
     private IReadOnlyList<StateOption> states = [];
     private IReadOnlyList<CityOption> cities = [];
     private DateTime minimumDate;
     private DateTime? bookingDate;
     private Guid serviceId;
-    private string professionalChoice = AnyProfessional;
     private string slotKey = string.Empty;
     private string customerName = string.Empty;
     private string? problemDescription;
@@ -188,7 +180,6 @@ else
         }
 
         serviceId = selectedServiceId;
-        professionalChoice = AnyProfessional;
         slotKey = string.Empty;
         await LoadSlotsAsync();
     }
@@ -200,10 +191,7 @@ else
         isLoadingSlots = true;
         try
         {
-            var professionalId = Guid.TryParse(professionalChoice, out var parsed) ? parsed : (Guid?)null;
-            var result = await GetPublicAvailableSlotsUseCase.ExecuteAsync(CompanySlug, serviceId, DateOnly.FromDateTime(bookingDate.Value), professionalId);
-            professionals = result.Professionals;
-            slots = result.Slots;
+            slots = await GetPublicAvailableSlotsUseCase.ExecuteAsync(CompanySlug, serviceId, DateOnly.FromDateTime(bookingDate.Value));
         }
         finally { isLoadingSlots = false; }
     }
@@ -218,7 +206,7 @@ else
         try
         {
             var address = new CustomerAddressInput(CustomerAddressType.Residence, true, street, number, postalCode, complement, stateId, cityId);
-            var result = await SubmitPublicAppointmentRequestUseCase.ExecuteAsync(new SubmitPublicAppointmentRequestCommand(CompanySlug ?? string.Empty, serviceId, selectedSlot.ProfessionalId, DateOnly.FromDateTime(bookingDate.Value), selectedSlot.StartTime, customerName, customerDocument, customerWhatsApp, customerEmail, [address], problemDescription));
+            var result = await SubmitPublicAppointmentRequestUseCase.ExecuteAsync(new SubmitPublicAppointmentRequestCommand(CompanySlug ?? string.Empty, serviceId, DateOnly.FromDateTime(bookingDate.Value), selectedSlot.StartTime, customerName, customerDocument, customerWhatsApp, customerEmail, [address], problemDescription));
             if (result.IsSuccess) { isSubmitted = true; return; }
             submitError = result.Error?.Code == "PublicBooking.RateLimited"
                 ? "Muitas tentativas foram realizadas. Aguarde alguns minutos antes de tentar novamente."
@@ -259,7 +247,7 @@ else
         catch (Exception exception) { Logger.LogWarning(exception, "Unable to load public company logo for slug {CompanySlug}", CompanySlug); }
     }
 
-    private static string GetSlotKey(PublicAppointmentSlotDto slot) => $"{slot.ProfessionalId:N}:{slot.StartTime:HHmm}";
+    private static string GetSlotKey(PublicAppointmentSlotDto slot) => slot.StartTime.ToString("HHmm");
     private static string FormatPhoneNumber(string value)
     {
         var digits = new string(value.Where(char.IsDigit).ToArray());

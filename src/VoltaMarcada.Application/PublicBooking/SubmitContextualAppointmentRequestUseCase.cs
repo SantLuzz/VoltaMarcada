@@ -8,15 +8,13 @@ namespace VoltaMarcada.Application.PublicBooking;
 
 public sealed record SubmitContextualAppointmentRequestCommand(
     string Token,
-    Guid ProfessionalId,
     DateOnly Date,
     TimeOnly StartTime);
 
 public sealed class SubmitContextualAppointmentRequestUseCase(
     IMaintenanceOpportunityRepository opportunityRepository,
-    IProfessionalRepository professionalRepository,
+    ICompanyRepository companyRepository,
     IAppointmentRequestRepository requestRepository,
-    AppointmentAvailability availability,
     TimeProvider timeProvider)
 {
     public async Task<OperationResult<Guid>> ExecuteAsync(
@@ -34,25 +32,19 @@ public sealed class SubmitContextualAppointmentRequestUseCase(
         if (await requestRepository.HasOpenForMaintenanceOpportunityAsync(opportunity.CompanyId, opportunity.Id, cancellationToken))
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
 
-        var professional = await professionalRepository.GetForCompanyAsync(command.ProfessionalId, opportunity.CompanyId, cancellationToken);
-        if (professional is null || !professional.IsActive || professional.ProfessionalServices.All(link => link.ServiceId != opportunity.RecommendedServiceId) ||
-            !AppointmentAvailability.TryGetUtcInterval(professional.TimeZoneId, command.Date, command.StartTime, context.ServiceDurationMinutes, out var start, out var end) ||
-            start <= timeProvider.GetUtcNow() ||
-            !await availability.IsAvailableAsync(professional, command.Date, command.StartTime, context.ServiceDurationMinutes, cancellationToken: cancellationToken))
+        var company = await companyRepository.GetByIdAsync(opportunity.CompanyId, cancellationToken);
+        if (company is null || !company.IsPublicRequestSlot(command.Date, command.StartTime))
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
 
-        var request = AppointmentRequest.Create(
+        var request = AppointmentRequest.CreatePublicPreference(
             opportunity.CompanyId,
             opportunity.CustomerId,
             opportunity.RecommendedServiceId,
-            professional.Id,
             opportunity.EquipmentId,
             opportunity.Id,
             command.Date,
             command.StartTime,
             context.ServiceDurationMinutes,
-            start,
-            end,
             null,
             timeProvider.GetUtcNow());
         await requestRepository.AddAsync(request, cancellationToken);

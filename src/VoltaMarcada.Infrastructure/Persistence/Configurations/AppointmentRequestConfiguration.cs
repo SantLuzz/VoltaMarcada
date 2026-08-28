@@ -13,6 +13,9 @@ public sealed class AppointmentRequestConfiguration : IEntityTypeConfiguration<A
         builder.Property(request => request.Id).ValueGeneratedNever();
         builder.Property(request => request.Status).IsRequired();
         builder.Property(request => request.DurationMinutes).IsRequired();
+        builder.Property(request => request.ProfessionalId).IsRequired(false);
+        builder.Property(request => request.RequestedStartAtUtc).IsRequired(false);
+        builder.Property(request => request.RequestedEndAtUtc).IsRequired(false);
         builder.Property(request => request.ProposedCustomerName).HasMaxLength(200);
         builder.Property(request => request.ProposedCustomerWhatsApp).HasMaxLength(20);
         builder.Property(request => request.ProposedCustomerEmail).HasMaxLength(320);

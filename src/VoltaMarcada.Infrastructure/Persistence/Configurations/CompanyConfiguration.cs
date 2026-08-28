@@ -22,8 +22,10 @@ public sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
         builder.Property(company => company.PublicDescription).HasMaxLength(2000).IsRequired(false);
         builder.Property(company => company.PublicPhone).HasMaxLength(20).IsRequired(false);
         builder.Property(company => company.NotificationEmail).HasMaxLength(320).IsRequired(false);
+        builder.Property(company => company.PublicRequestIntervalMinutes).IsRequired().HasDefaultValue(60);
         builder.Property(company => company.CreatedAtUtc).IsRequired();
         builder.Property(company => company.UpdatedAtUtc).IsRequired();
+        builder.Navigation(company => company.BusinessHours).UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasIndex(company => company.Document)
             .HasDatabaseName("UX_Companies_Document")

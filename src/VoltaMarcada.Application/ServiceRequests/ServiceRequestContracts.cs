@@ -15,7 +15,7 @@ public sealed record ServiceRequestDto(
     string CustomerWhatsApp,
     Guid ServiceId,
     string ServiceName,
-    Guid ProfessionalId,
+    Guid? ProfessionalId,
     string ProfessionalName,
     DateOnly RequestedDate,
     TimeOnly RequestedStartTime,
@@ -26,6 +26,7 @@ public sealed record ServiceRequestDto(
 
 public sealed record ResolveServiceRequestCommand(
     Guid AppointmentRequestId,
+    Guid ProfessionalId,
     ServiceRequestResolution Resolution,
     Guid EquipmentId,
     string AppointmentDescription,

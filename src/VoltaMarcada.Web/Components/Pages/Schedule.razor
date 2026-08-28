@@ -60,7 +60,7 @@
             {
                 <MudListItem T="AppointmentRequestDto" Value="@request" Icon="@Icons.Material.Filled.EventAvailable">
                     <MudText Typo="Typo.subtitle2">@request.CustomerName · @request.ServiceName</MudText>
-                    <MudText Typo="Typo.body2">@request.Date.ToString("dd/MM/yyyy") às @request.StartTime.ToString("HH:mm") · @request.ProfessionalName</MudText>
+                    <MudText Typo="Typo.body2">@request.Date.ToString("dd/MM/yyyy") às @request.StartTime.ToString("HH:mm")</MudText>
                     <MudChip T="string" Size="Size.Small" Color="@(request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending ? Color.Warning : Color.Info)">@(request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending ? "Aguardando empresa" : "Aguardando cliente")</MudChip>
                     @if (request.HasCustomerProfileProposal)
                     {
@@ -82,9 +82,20 @@
                         }
                         else
                         {
-                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => AcceptRequestAsync(request))">Confirmar</MudButton>
+                            @if (request.RequestedTimeProfessionals.Count > 0)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Success">Disponíveis no horário solicitado: @string.Join(", ", request.RequestedTimeProfessionals.Select(item => item.ProfessionalName))</MudText>
+                            }
+                            else if (request.Alternatives.Count > 0)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Warning">Alternativas: @string.Join(" · ", request.Alternatives.Select(item => $"{item.Date:dd/MM HH:mm} - {item.ProfessionalName}"))</MudText>
+                                @foreach (var alternative in request.Alternatives)
+                                {
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionForAlternativeAsync(request, alternative))">@alternative.Date.ToString("dd/MM") às @alternative.StartTime.ToString("HH:mm") · @alternative.ProfessionalName</MudButton>
+                                }
+                            }
+                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionDialogAsync(request))">Propor horário</MudButton>
                         }
-                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => OpenSuggestionDialogAsync(request))">Sugerir outro horário</MudButton>
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => RejectRequestAsync(request.Id))">Recusar</MudButton>
                     }
                     else
@@ -555,6 +566,17 @@ else
         await LoadSuggestionSlotsAsync();
     }
 
+    private async Task OpenSuggestionForAlternativeAsync(AppointmentRequestDto request, AppointmentAlternativeDto alternative)
+    {
+        requestToSuggest = request;
+        suggestionProfessionalId = alternative.ProfessionalId;
+        suggestionDate = alternative.Date.ToDateTime(TimeOnly.MinValue);
+        suggestionStartTime = alternative.StartTime;
+        isRequestSuggestionDialogOpen = true;
+        await LoadSuggestionSlotsAsync();
+        suggestionStartTime = alternative.StartTime;
+    }
+
     private async Task LoadSuggestionSlotsAsync()
     {
         suggestionStartTime = null;
@@ -599,7 +621,7 @@ else
     }
 
     private static string CreateSuggestedTimeWhatsAppMessage(AppointmentRequestDto request, DateOnly date, TimeOnly startTime, string link) =>
-        $"Olá, {request.CustomerName}!\n\nSugerimos um novo horário para {request.ServiceName}: {date:dd/MM/yyyy} às {startTime:HH:mm}.\n\nPara confirmar ou escolher outro horário, acesse:\n{link}";
+        $"Olá, {request.CustomerName}!\n\nA empresa propôs um horário para {request.ServiceName}: {date:dd/MM/yyyy} às {startTime:HH:mm}.\n\nPara aceitar ou recusar, acesse:\n{link}";
 
     private async Task RejectRequestAsync(Guid requestId)
     {

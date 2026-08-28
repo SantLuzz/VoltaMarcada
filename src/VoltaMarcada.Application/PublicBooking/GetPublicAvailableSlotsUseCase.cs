@@ -1,105 +1,44 @@
 using VoltaMarcada.Application.Abstractions.Persistence;
-using VoltaMarcada.Application.Scheduling;
+using VoltaMarcada.Domain.Entities;
+using VoltaMarcada.Domain.Enums;
 
 namespace VoltaMarcada.Application.PublicBooking;
 
-public sealed record PublicProfessionalDto(Guid Id, string Name);
-
-public sealed record PublicAppointmentSlotDto(Guid ProfessionalId, string ProfessionalName, TimeOnly StartTime);
+public sealed record PublicAppointmentSlotDto(TimeOnly StartTime);
 
 public sealed class GetPublicAvailableSlotsUseCase(
     ICompanyRepository companyRepository,
     IServiceRepository serviceRepository,
-    IProfessionalRepository professionalRepository,
     IMaintenanceOpportunityRepository opportunityRepository,
-    IAppointmentRequestRepository requestRepository,
-    AppointmentAvailability availability,
-    ISchedulingConfiguration configuration,
     TimeProvider timeProvider)
 {
-    public async Task<(IReadOnlyList<PublicProfessionalDto> Professionals, IReadOnlyList<PublicAppointmentSlotDto> Slots)> ExecuteAsync(
-        string? companySlug,
-        Guid serviceId,
-        DateOnly date,
-        Guid? professionalId = null,
-        CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PublicAppointmentSlotDto>> ExecuteAsync(string? companySlug, Guid serviceId, DateOnly date, CancellationToken cancellationToken = default)
     {
         var company = await companyRepository.GetBySlugAsync(companySlug?.Trim().ToLowerInvariant() ?? string.Empty, cancellationToken);
-        if (company is null || serviceId == Guid.Empty || date == DateOnly.MinValue)
-        {
-            return ([], []);
-        }
-
+        if (company is null || serviceId == Guid.Empty || date == DateOnly.MinValue) return [];
         var service = await serviceRepository.GetForCompanyAsync(serviceId, company.Id, cancellationToken);
-        if (service is null || !service.IsActive || !service.AllowOnlineBooking)
-        {
-            return ([], []);
-        }
-
-        return await GetSlotsAsync(company.Id, service.Id, service.DurationMinutes, date, professionalId, cancellationToken);
+        return service is null || !service.IsActive || !service.AllowOnlineBooking ? [] : GetSlots(company, date);
     }
 
-    public async Task<(IReadOnlyList<PublicProfessionalDto> Professionals, IReadOnlyList<PublicAppointmentSlotDto> Slots)> ExecuteContextualAsync(
-        string? token,
-        DateOnly date,
-        Guid? professionalId = null,
-        CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PublicAppointmentSlotDto>> ExecuteContextualAsync(string? token, DateOnly date, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(token)) return ([], []);
+        if (string.IsNullOrWhiteSpace(token)) return [];
         var context = await opportunityRepository.GetBookingContextAsync(PublicTokenGenerator.Hash(token), cancellationToken);
         var opportunity = context?.Opportunity;
-        if (context is null || opportunity is null || !context.ServiceIsActive || opportunity.BookingTokenExpiresAtUtc <= timeProvider.GetUtcNow() ||
-            opportunity.Status != VoltaMarcada.Domain.Enums.MaintenanceOpportunityStatus.BookingRequested)
-            return ([], []);
-        return await GetSlotsAsync(opportunity.CompanyId, opportunity.RecommendedServiceId, context.ServiceDurationMinutes, date, professionalId, cancellationToken);
+        if (context is null || opportunity is null || !context.ServiceIsActive || opportunity.BookingTokenExpiresAtUtc <= timeProvider.GetUtcNow() || opportunity.Status != MaintenanceOpportunityStatus.BookingRequested)
+            return [];
+        var company = await companyRepository.GetByIdAsync(opportunity.CompanyId, cancellationToken);
+        return company is null ? [] : GetSlots(company, date);
     }
 
-    public async Task<(IReadOnlyList<PublicProfessionalDto> Professionals, IReadOnlyList<PublicAppointmentSlotDto> Slots)> ExecuteResponseAsync(
-        string? token,
-        DateOnly date,
-        Guid? professionalId = null,
-        CancellationToken cancellationToken = default)
+    private static IReadOnlyList<PublicAppointmentSlotDto> GetSlots(Company company, DateOnly date)
     {
-        if (string.IsNullOrWhiteSpace(token)) return ([], []);
-        var request = await requestRepository.GetForResponseTokenAsync(PublicTokenGenerator.Hash(token), cancellationToken);
-        if (request is null || request.ResponseTokenExpiresAtUtc <= timeProvider.GetUtcNow() ||
-            request.Status != VoltaMarcada.Domain.Enums.AppointmentRequestStatus.RescheduleRequested)
-            return ([], []);
-        var service = await serviceRepository.GetForCompanyAsync(request.ServiceId, request.CompanyId, cancellationToken);
-        if (service is null || !service.IsActive) return ([], []);
-        return await GetSlotsAsync(request.CompanyId, request.ServiceId, request.ProposedDurationMinutes ?? service.DurationMinutes, date, professionalId, cancellationToken);
-    }
+        var hours = company.BusinessHours.SingleOrDefault(item => item.DayOfWeek == date.DayOfWeek);
+        if (hours is not { IsOpen: true, StartTime: { } startTime, EndTime: { } endTime }) return [];
 
-    private async Task<(IReadOnlyList<PublicProfessionalDto> Professionals, IReadOnlyList<PublicAppointmentSlotDto> Slots)> GetSlotsAsync(
-        Guid companyId,
-        Guid serviceId,
-        int durationMinutes,
-        DateOnly date,
-        Guid? professionalId,
-        CancellationToken cancellationToken)
-    {
-
-        var candidates = (await professionalRepository.GetAllForCompanyAsync(companyId, null, cancellationToken))
-            .Where(item => item.Professional.IsActive && item.ServiceIds.Contains(serviceId))
-            .Where(item => professionalId is null || item.Professional.Id == professionalId)
-            .ToArray();
-        var professionals = candidates.Select(item => new PublicProfessionalDto(item.Professional.Id, item.CompanyMemberName)).ToArray();
         var slots = new List<PublicAppointmentSlotDto>();
-
-        foreach (var candidate in candidates)
-        {
-            for (var minute = 0; minute < 24 * 60; minute += configuration.SlotIntervalMinutes)
-            {
-                var startTime = new TimeOnly(minute / 60, minute % 60);
-                if (AppointmentAvailability.TryGetUtcInterval(candidate.Professional.TimeZoneId, date, startTime, durationMinutes, out var startAtUtc, out _) &&
-                    startAtUtc > timeProvider.GetUtcNow() &&
-                    await availability.IsAvailableAsync(candidate.Professional, date, startTime, durationMinutes, cancellationToken: cancellationToken))
-                {
-                    slots.Add(new PublicAppointmentSlotDto(candidate.Professional.Id, candidate.CompanyMemberName, startTime));
-                }
-            }
-        }
-
-        return (professionals, slots.OrderBy(slot => slot.StartTime).ThenBy(slot => slot.ProfessionalName).ToArray());
+        for (var time = startTime; time < endTime; time = time.AddMinutes(company.PublicRequestIntervalMinutes))
+            slots.Add(new PublicAppointmentSlotDto(time));
+        return slots;
     }
 }

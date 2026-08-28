@@ -16,7 +16,14 @@ public sealed class GetCompanyPublicSettingsUseCase(MaintenanceOpportunityOwnerA
         }
 
         var company = await repository.GetByIdAsync(companyId.Value, cancellationToken);
-        return company is null ? null : new CompanyPublicSettingsDto(company.Slug, company.TradeName, company.PublicDescription, company.PublicPhone, company.NotificationEmail);
+        return company is null ? null : new CompanyPublicSettingsDto(
+            company.Slug,
+            company.TradeName,
+            company.PublicDescription,
+            company.PublicPhone,
+            company.NotificationEmail,
+            company.PublicRequestIntervalMinutes,
+            company.BusinessHours.OrderBy(item => item.DayOfWeek).Select(item => new CompanyBusinessHoursDto(item.DayOfWeek, item.IsOpen, item.StartTime, item.EndTime)).ToArray());
     }
 }
 
@@ -39,6 +46,7 @@ public sealed class UpdateCompanyPublicSettingsUseCase(MaintenanceOpportunityOwn
         try
         {
             company.UpdatePublicProfile(command.PublicDescription, command.PublicPhone, command.NotificationEmail, timeProvider.GetUtcNow());
+            company.UpdatePublicScheduling(command.PublicRequestIntervalMinutes, command.BusinessHours, timeProvider.GetUtcNow());
         }
         catch (DomainException)
         {

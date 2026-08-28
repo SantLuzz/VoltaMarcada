@@ -1,9 +1,11 @@
 @page "/solicitacoes"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
 @using VoltaMarcada.Application.Equipment
+@using VoltaMarcada.Application.Professionals
 @using VoltaMarcada.Application.ServiceRequests
 @inject GetServiceRequestsUseCase GetServiceRequestsUseCase
 @inject GetCustomerEquipmentUseCase GetCustomerEquipmentUseCase
+@inject GetProfessionalsUseCase GetProfessionalsUseCase
 @inject ResolveServiceRequestUseCase ResolveServiceRequestUseCase
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
@@ -40,6 +42,7 @@ else
             <MudStack Spacing="2">
                 <MudText>@selectedRequest.CustomerName · @selectedRequest.ServiceName</MudText>
                 <MudSelect T="Guid" Label="Equipamento" @bind-Value="equipmentId" Required="true"><MudSelectItem Value="@Guid.Empty">Selecione um equipamento</MudSelectItem>@foreach (var item in equipment) { <MudSelectItem Value="@item.Id">@item.Type @item.Manufacturer @item.Model</MudSelectItem> }</MudSelect>
+                <MudSelect T="Guid" Label="Profissional" @bind-Value="professionalId" Required="true"><MudSelectItem Value="@Guid.Empty">Selecione um profissional</MudSelectItem>@foreach (var item in professionals) { <MudSelectItem Value="@item.Id">@item.CompanyMemberName</MudSelectItem> }</MudSelect>
                 <MudRadioGroup T="ServiceRequestResolution" @bind-Value="resolution"><MudRadio Value="ServiceRequestResolution.PrepareQuote">Visita técnica e orçamento</MudRadio><MudRadio Value="ServiceRequestResolution.CreateWorkOrder">Criar OS direta</MudRadio></MudRadioGroup>
                 <MudTextField @bind-Value="appointmentDescription" Label="Descrição para o cliente" Required="true" MaxLength="1000" />
                 <MudNumericField T="decimal?" @bind-Value="serviceUnitPrice" Label="Valor do serviço" Adornment="Adornment.Start" AdornmentText="R$" />
@@ -56,9 +59,11 @@ else
 @code {
     private IReadOnlyList<ServiceRequestDto> requests = [];
     private IReadOnlyList<EquipmentDto> equipment = [];
+    private IReadOnlyList<ProfessionalDto> professionals = [];
     private ServiceRequestDto? selectedRequest;
     private ServiceRequestResolution resolution = ServiceRequestResolution.PrepareQuote;
     private Guid equipmentId;
+    private Guid professionalId;
     private string appointmentDescription = string.Empty;
     private decimal? serviceUnitPrice;
     private bool applyCustomerProfileProposal;
@@ -74,7 +79,11 @@ else
     {
         selectedRequest = request;
         equipment = (await GetCustomerEquipmentUseCase.ExecuteAsync(request.CustomerId)).Where(item => item.IsActive).ToArray();
+        professionals = (await GetProfessionalsUseCase.ExecuteAsync())
+            .Where(item => item.IsActive && item.ServiceIds.Contains(request.ServiceId))
+            .ToArray();
         equipmentId = Guid.Empty;
+        professionalId = Guid.Empty;
         resolution = ServiceRequestResolution.PrepareQuote;
         appointmentDescription = $"Visita técnica para {request.ServiceName}";
         serviceUnitPrice = null;
@@ -88,7 +97,7 @@ else
         isResolving = true;
         try
         {
-            var result = await ResolveServiceRequestUseCase.ExecuteAsync(new ResolveServiceRequestCommand(selectedRequest.AppointmentRequestId, resolution, equipmentId, appointmentDescription, serviceUnitPrice, applyCustomerProfileProposal));
+            var result = await ResolveServiceRequestUseCase.ExecuteAsync(new ResolveServiceRequestCommand(selectedRequest.AppointmentRequestId, professionalId, resolution, equipmentId, appointmentDescription, serviceUnitPrice, applyCustomerProfileProposal));
             if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; }
             isDialogOpen = false;
             Snackbar.Add(resolution == ServiceRequestResolution.PrepareQuote ? "Visita técnica e orçamento preparados." : "OS criada e agendada.", Severity.Success);

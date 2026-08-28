@@ -9,7 +9,7 @@ public sealed record AppointmentRequestDto(
     string CustomerWhatsApp,
     Guid ServiceId,
     string ServiceName,
-    Guid ProfessionalId,
+    Guid? ProfessionalId,
     string ProfessionalName,
     DateOnly Date,
     TimeOnly StartTime,
@@ -20,9 +20,15 @@ public sealed record AppointmentRequestDto(
     string? ProposedCustomerName,
     string? ProposedCustomerWhatsApp,
     string? ProposedCustomerEmail,
-    string? ProposedAddress);
+    string? ProposedAddress,
+    IReadOnlyList<AvailableProfessionalDto> RequestedTimeProfessionals,
+    IReadOnlyList<AppointmentAlternativeDto> Alternatives);
 
-public sealed class GetAppointmentRequestsUseCase(WorkOrderAuthorization authorization, IAppointmentRequestRepository repository, IServiceRequestRepository serviceRequests)
+public sealed class GetAppointmentRequestsUseCase(
+    WorkOrderAuthorization authorization,
+    IAppointmentRequestRepository repository,
+    IServiceRequestRepository serviceRequests,
+    AnalyzeAppointmentRequestAvailabilityUseCase availabilityAnalysis)
 {
     public async Task<IReadOnlyList<AppointmentRequestDto>> ExecuteAsync(CancellationToken cancellationToken = default)
     {
@@ -31,6 +37,9 @@ public sealed class GetAppointmentRequestsUseCase(WorkOrderAuthorization authori
         var result = new List<AppointmentRequestDto>();
         foreach (var item in requests.Where(item => scope.IsOwner || item.Request.ProfessionalId == scope.ProfessionalId))
         {
+            var analysis = scope.IsOwner && item.Request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending
+                ? await availabilityAnalysis.ExecuteAsync(item.Request.Id, scope.CompanyId, cancellationToken)
+                : null;
             var serviceRequest = await serviceRequests.GetForAppointmentRequestAsync(item.Request.Id, scope.CompanyId, cancellationToken);
             result.Add(new AppointmentRequestDto(
                 item.Request.Id,
@@ -51,7 +60,9 @@ public sealed class GetAppointmentRequestsUseCase(WorkOrderAuthorization authori
                 item.Request.ProposedCustomerEmail,
                 item.Request.ProposedAddressStreet is null
                     ? null
-                    : $"{item.Request.ProposedAddressStreet}, {item.Request.ProposedAddressNumber} - CEP {item.Request.ProposedAddressPostalCode}"));
+                    : $"{item.Request.ProposedAddressStreet}, {item.Request.ProposedAddressNumber} - CEP {item.Request.ProposedAddressPostalCode}",
+                analysis?.RequestedTimeProfessionals ?? [],
+                analysis?.Alternatives ?? []));
         }
 
         return result;

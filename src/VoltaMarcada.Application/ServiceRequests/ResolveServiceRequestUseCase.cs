@@ -28,7 +28,7 @@ public sealed class ResolveServiceRequestUseCase(
         ResolveServiceRequestCommand command,
         CancellationToken cancellationToken = default)
     {
-        if (command.AppointmentRequestId == Guid.Empty || command.EquipmentId == Guid.Empty ||
+        if (command.AppointmentRequestId == Guid.Empty || command.ProfessionalId == Guid.Empty || command.EquipmentId == Guid.Empty ||
             string.IsNullOrWhiteSpace(command.AppointmentDescription) || command.AppointmentDescription.Trim().Length > 1000 ||
             !Enum.IsDefined(command.Resolution))
         {
@@ -43,7 +43,7 @@ public sealed class ResolveServiceRequestUseCase(
             return OperationResult<ServiceRequestResolutionResult>.Failure(ServiceRequestErrors.NotFound);
         }
 
-        if (!scope.IsOwner && scope.ProfessionalId != appointmentRequest.ProfessionalId)
+        if (!scope.IsOwner && scope.ProfessionalId != command.ProfessionalId)
         {
             return OperationResult<ServiceRequestResolutionResult>.Failure(ServiceRequestErrors.Forbidden);
         }
@@ -53,7 +53,7 @@ public sealed class ResolveServiceRequestUseCase(
             return OperationResult<ServiceRequestResolutionResult>.Failure(ServiceRequestErrors.InvalidStatus);
         }
 
-        var professional = await professionals.GetForCompanyAsync(appointmentRequest.ProfessionalId, scope.CompanyId, cancellationToken);
+        var professional = await professionals.GetForCompanyAsync(command.ProfessionalId, scope.CompanyId, cancellationToken);
         var service = await services.GetForCompanyAsync(appointmentRequest.ServiceId, scope.CompanyId, cancellationToken);
         var selectedEquipment = await equipment.GetForCompanyAsync(command.EquipmentId, scope.CompanyId, cancellationToken);
         if (professional is null || service is null || !service.IsActive || selectedEquipment is null ||
@@ -69,13 +69,14 @@ public sealed class ResolveServiceRequestUseCase(
             return OperationResult<ServiceRequestResolutionResult>.Failure(ServiceRequestErrors.InvalidInput);
         }
 
-        await using var transaction = await appointments.BeginSchedulingTransactionAsync(scope.CompanyId, professional.Id, cancellationToken);
-        if (!await availability.IsAvailableAsync(professional, appointmentRequest.RequestedDate, appointmentRequest.RequestedStartTime, appointmentRequest.DurationMinutes, cancellationToken: cancellationToken) ||
-            !AppointmentAvailability.TryGetUtcInterval(professional.TimeZoneId, appointmentRequest.RequestedDate, appointmentRequest.RequestedStartTime, appointmentRequest.DurationMinutes, out var startAtUtc, out var endAtUtc) ||
-            startAtUtc <= timeProvider.GetUtcNow())
+        if (!AppointmentAvailability.TryGetUtcInterval(professional.TimeZoneId, appointmentRequest.RequestedDate, appointmentRequest.RequestedStartTime, appointmentRequest.DurationMinutes, out var startAtUtc, out var endAtUtc) ||
+            startAtUtc <= timeProvider.GetUtcNow() ||
+            !await availability.IsAvailableAsync(professional, appointmentRequest.RequestedDate, appointmentRequest.RequestedStartTime, appointmentRequest.DurationMinutes, cancellationToken: cancellationToken))
         {
             return OperationResult<ServiceRequestResolutionResult>.Failure(ServiceRequestErrors.ProfessionalUnavailable);
         }
+
+        await using var transaction = await appointments.BeginSchedulingTransactionAsync(scope.CompanyId, professional.Id, cancellationToken);
 
         var now = timeProvider.GetUtcNow();
         Guid? quoteId = null;
@@ -136,6 +137,7 @@ public sealed class ResolveServiceRequestUseCase(
             appointmentType,
             command.AppointmentDescription);
         await appointments.AddAsync(appointment, cancellationToken);
+        appointmentRequest.AssignProfessional(professional.Id, now);
         appointmentRequest.Accept(appointment.Id, now);
 
         if (command.ApplyCustomerProfileProposal && scope.IsOwner)

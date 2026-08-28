@@ -5,6 +5,7 @@ namespace VoltaMarcada.Domain.Entities;
 
 public sealed class Company
 {
+    private readonly List<CompanyBusinessHours> businessHours = [];
     private Company()
     {
     }
@@ -36,6 +37,10 @@ public sealed class Company
     public string? PublicPhone { get; private set; }
 
     public string? NotificationEmail { get; private set; }
+
+    public int PublicRequestIntervalMinutes { get; private set; } = 60;
+
+    public IReadOnlyCollection<CompanyBusinessHours> BusinessHours => businessHours.AsReadOnly();
 
     public DateTimeOffset CreatedAtUtc { get; private set; }
 
@@ -74,7 +79,7 @@ public sealed class Company
             throw new DomainException("City ID is required.");
         }
 
-        return new Company
+        var company = new Company
         {
             Id = Guid.NewGuid(),
             LegalName = RequireText(legalName, "Legal name"),
@@ -90,6 +95,9 @@ public sealed class Company
             CreatedAtUtc = now.ToUniversalTime(),
             UpdatedAtUtc = now.ToUniversalTime()
         };
+
+        company.InitializeDefaultBusinessHours();
+        return company;
     }
 
     public void UpdatePublicProfile(string? publicDescription, string? publicPhone, string? notificationEmail, DateTimeOffset now)
@@ -98,6 +106,58 @@ public sealed class Company
         PublicPhone = NormalizeOptionalText(publicPhone, 20, "Public phone");
         NotificationEmail = NormalizeEmail(notificationEmail);
         UpdatedAtUtc = now.ToUniversalTime();
+    }
+
+    public void UpdatePublicScheduling(int publicRequestIntervalMinutes, IReadOnlyCollection<CompanyBusinessHoursInput> hours, DateTimeOffset now)
+    {
+        if (publicRequestIntervalMinutes <= 0 || 60 % publicRequestIntervalMinutes != 0)
+        {
+            throw new DomainException("Public request interval must divide one hour.");
+        }
+
+        if (hours.Count != 7 || hours.Select(item => item.DayOfWeek).Distinct().Count() != 7)
+        {
+            throw new DomainException("Business hours must contain each day of the week exactly once.");
+        }
+
+        foreach (var input in hours)
+        {
+            var current = businessHours.SingleOrDefault(item => item.DayOfWeek == input.DayOfWeek);
+            if (current is null)
+            {
+                businessHours.Add(CompanyBusinessHours.Create(Id, input.DayOfWeek, input.IsOpen, input.StartTime, input.EndTime));
+            }
+            else
+            {
+                current.Update(input.IsOpen, input.StartTime, input.EndTime);
+            }
+        }
+
+        PublicRequestIntervalMinutes = publicRequestIntervalMinutes;
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
+    public bool IsPublicRequestSlot(DateOnly date, TimeOnly startTime)
+    {
+        var hours = businessHours.SingleOrDefault(item => item.DayOfWeek == date.DayOfWeek);
+        return hours is { IsOpen: true, StartTime: { } openingTime, EndTime: { } closingTime } &&
+               startTime >= openingTime && startTime < closingTime &&
+               (startTime.Minute * 60 + startTime.Second) == 0 &&
+               (startTime.Hour * 60 + startTime.Minute - openingTime.Hour * 60 - openingTime.Minute) % PublicRequestIntervalMinutes == 0;
+    }
+
+    private void InitializeDefaultBusinessHours()
+    {
+        foreach (var dayOfWeek in Enum.GetValues<DayOfWeek>())
+        {
+            var isOpen = dayOfWeek is >= DayOfWeek.Monday and <= DayOfWeek.Friday;
+            businessHours.Add(CompanyBusinessHours.Create(
+                Id,
+                dayOfWeek,
+                isOpen,
+                isOpen ? new TimeOnly(8, 0) : null,
+                isOpen ? new TimeOnly(18, 0) : null));
+        }
     }
 
     private static string RequireText(string? value, string fieldName)

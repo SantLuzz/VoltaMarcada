@@ -5,4 +5,8 @@ public sealed record CompanyPublicSettingsDto(
     string TradeName,
     string? PublicDescription,
     string? PublicPhone,
-    string? NotificationEmail);
+    string? NotificationEmail,
+    int PublicRequestIntervalMinutes,
+    IReadOnlyList<CompanyBusinessHoursDto> BusinessHours);
+
+public sealed record CompanyBusinessHoursDto(DayOfWeek DayOfWeek, bool IsOpen, TimeOnly? StartTime, TimeOnly? EndTime);

@@ -64,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<GetWorkOrderPhotoContentUseCase>();
         services.AddScoped<RemoveWorkOrderPhotoUseCase>();
         services.AddScoped<AppointmentAvailability>();
+        services.AddScoped<AnalyzeAppointmentRequestAvailabilityUseCase>();
         services.AddScoped<GetAvailableAppointmentSlotsUseCase>();
         services.AddScoped<CreateAppointmentUseCase>();
         services.AddScoped<GetAppointmentsUseCase>();
