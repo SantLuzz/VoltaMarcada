@@ -1,16 +1,12 @@
 @page "/"
+@inherits CircuitIsolatedComponentBase
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
 @using VoltaMarcada.Application.Scheduling
 @using VoltaMarcada.Application.WorkOrders
 @using VoltaMarcada.Application.MaintenanceOpportunities
-@inject WorkOrderAuthorization WorkOrderAuthorization
-@inject GetAppointmentsUseCase GetAppointmentsUseCase
-@inject GetAppointmentRequestsUseCase GetAppointmentRequestsUseCase
-@inject GetScheduleBlockRequestsUseCase GetScheduleBlockRequestsUseCase
-@inject GetWorkOrdersUseCase GetWorkOrdersUseCase
-@inject GetMaintenanceOpportunitySummaryUseCase GetMaintenanceOpportunitySummaryUseCase
 @inject ISchedulingConfiguration SchedulingConfiguration
 @inject TimeProvider TimeProvider
+@inject ILogger<Dashboard> Logger
 
 <PageTitle>Painel | VoltaMarcada</PageTitle>
 
@@ -25,6 +21,11 @@
         }
     </Actions>
 </PageHeader>
+
+@if (loadError is not null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mt-4">@loadError</MudAlert>
+}
 
 @if (isOwner)
 {
@@ -139,14 +140,24 @@
     private int openWorkOrders;
     private Guid? selectedAppointmentId;
     private MaintenanceOpportunitySummary maintenanceSummary = new(0, 0, 0);
+    private string? loadError;
 
     protected override async Task OnInitializedAsync()
     {
-        today = DateOnly.FromDateTime(AppointmentCalendarTime.ToLocalDateTime(TimeProvider.GetUtcNow(), SchedulingConfiguration.DefaultTimeZoneId));
-        currentDate = today;
-        accessScope = await WorkOrderAuthorization.GetAccessScopeAsync();
-        isOwner = accessScope.IsOwner;
-        await LoadAsync();
+        try
+        {
+            today = DateOnly.FromDateTime(AppointmentCalendarTime.ToLocalDateTime(TimeProvider.GetUtcNow(), SchedulingConfiguration.DefaultTimeZoneId));
+            currentDate = today;
+            accessScope = await GetScopedService<WorkOrderAuthorization>().GetAccessScopeAsync();
+            isOwner = accessScope.IsOwner;
+            await LoadAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to initialize the dashboard");
+            loadError = "Não foi possível carregar o painel. Tente novamente.";
+            isLoading = false;
+        }
     }
 
     private async Task ShowPreviousPeriodAsync()
@@ -181,6 +192,7 @@
         }
 
         isLoading = true;
+        loadError = null;
         try
         {
             visibleStartDate = isOwner
@@ -188,19 +200,24 @@
                 : currentDate;
             var endDate = isOwner ? visibleStartDate.AddDays(7) : visibleStartDate.AddDays(1);
             var range = AppointmentCalendarTime.GetUtcRange(visibleStartDate, endDate, SchedulingConfiguration.AllowedTimeZoneIds);
-            appointments = await GetAppointmentsUseCase.ExecuteAsync(currentAccessScope, range.StartAtUtc, range.EndAtUtc);
+            appointments = await GetScopedService<GetAppointmentsUseCase>().ExecuteAsync(currentAccessScope, range.StartAtUtc, range.EndAtUtc);
 
             if (isOwner)
             {
-                pendingExternalAppointmentRequests = (await GetAppointmentRequestsUseCase.ExecuteAsync())
+                pendingExternalAppointmentRequests = (await GetScopedService<GetAppointmentRequestsUseCase>().ExecuteAsync())
                     .Count(request => request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending);
-                pendingBlockRequests = (await GetScheduleBlockRequestsUseCase.ExecuteAsync(currentAccessScope))
+                pendingBlockRequests = (await GetScopedService<GetScheduleBlockRequestsUseCase>().ExecuteAsync(currentAccessScope))
                     .Count(request => request.Status is VoltaMarcada.Domain.Enums.ScheduleBlockRequestStatus.Pending or VoltaMarcada.Domain.Enums.ScheduleBlockRequestStatus.RequiresAppointmentResolution);
-                openWorkOrders = (await GetWorkOrdersUseCase.ExecuteAsync(new GetWorkOrdersQuery(null, null)))
+                openWorkOrders = (await GetScopedService<GetWorkOrdersUseCase>().ExecuteAsync(new GetWorkOrdersQuery(null, null)))
                     .Count(workOrder => workOrder.Status is VoltaMarcada.Domain.Enums.WorkOrderStatus.Pending or VoltaMarcada.Domain.Enums.WorkOrderStatus.InProgress);
-                var summaryResult = await GetMaintenanceOpportunitySummaryUseCase.ExecuteAsync();
+                var summaryResult = await GetScopedService<GetMaintenanceOpportunitySummaryUseCase>().ExecuteAsync();
                 if (summaryResult.IsSuccess) maintenanceSummary = summaryResult.Value!;
             }
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to load dashboard data for {CurrentDate}", currentDate);
+            loadError = "Não foi possível atualizar os dados do painel. Tente novamente.";
         }
         finally
         {

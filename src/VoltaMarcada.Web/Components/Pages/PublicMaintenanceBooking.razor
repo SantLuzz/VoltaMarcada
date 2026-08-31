@@ -32,7 +32,7 @@ else
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-2">Escolha o horário de sua preferência. A disponibilidade será analisada e confirmada pela empresa.</MudAlert>
             @if (error is not null) { <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="my-4">@error</MudAlert> }
             <MudGrid Spacing="2" Class="mt-2">
-                <MudItem xs="12" sm="6"><MudDatePicker Label="Data" @bind-Date="date" @bind-Date:after="LoadSlotsAsync" MinDate="@minimumDate" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" /></MudItem>
+                <MudItem xs="12" sm="6"><MudDatePicker Label="Data" @bind-Date="date" @bind-Date:after="LoadSlotsAsync" MinDate="@minimumDate" Variant="Variant.Outlined" Disabled="@isSubmitting" /></MudItem>
                 <MudItem xs="12">
                     @if (isLoadingSlots) { <MudProgressLinear Indeterminate="true" /> }
                     else

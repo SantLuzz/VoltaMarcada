@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace VoltaMarcada.Infrastructure.Persistence.Migrations;
 
 [DbContext(typeof(AppDbContext))]
+[Migration("20260827103000_MakeAppointmentRequestProfessionalOptional")]
 public partial class MakeAppointmentRequestProfessionalOptional : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)

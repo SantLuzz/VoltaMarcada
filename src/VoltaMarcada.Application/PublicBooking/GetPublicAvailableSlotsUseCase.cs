@@ -17,7 +17,7 @@ public sealed class GetPublicAvailableSlotsUseCase(
         var company = await companyRepository.GetBySlugAsync(companySlug?.Trim().ToLowerInvariant() ?? string.Empty, cancellationToken);
         if (company is null || serviceId == Guid.Empty || date == DateOnly.MinValue) return [];
         var service = await serviceRepository.GetForCompanyAsync(serviceId, company.Id, cancellationToken);
-        return service is null || !service.IsActive || !service.AllowOnlineBooking ? [] : GetSlots(company, date);
+        return service is null || !service.IsActive || !service.AllowOnlineBooking ? [] : GetSlots(company, date, timeProvider);
     }
 
     public async Task<IReadOnlyList<PublicAppointmentSlotDto>> ExecuteContextualAsync(string? token, DateOnly date, CancellationToken cancellationToken = default)
@@ -28,17 +28,22 @@ public sealed class GetPublicAvailableSlotsUseCase(
         if (context is null || opportunity is null || !context.ServiceIsActive || opportunity.BookingTokenExpiresAtUtc <= timeProvider.GetUtcNow() || opportunity.Status != MaintenanceOpportunityStatus.BookingRequested)
             return [];
         var company = await companyRepository.GetByIdAsync(opportunity.CompanyId, cancellationToken);
-        return company is null ? [] : GetSlots(company, date);
+        return company is null ? [] : GetSlots(company, date, timeProvider);
     }
 
-    private static IReadOnlyList<PublicAppointmentSlotDto> GetSlots(Company company, DateOnly date)
+    private static IReadOnlyList<PublicAppointmentSlotDto> GetSlots(Company company, DateOnly date, TimeProvider timeProvider)
     {
         var hours = company.BusinessHours.SingleOrDefault(item => item.DayOfWeek == date.DayOfWeek);
         if (hours is not { IsOpen: true, StartTime: { } startTime, EndTime: { } endTime }) return [];
 
         var slots = new List<PublicAppointmentSlotDto>();
         for (var time = startTime; time < endTime; time = time.AddMinutes(company.PublicRequestIntervalMinutes))
-            slots.Add(new PublicAppointmentSlotDto(time));
+        {
+            if (PublicRequestSlotTime.IsFuture(date, time, timeProvider))
+            {
+                slots.Add(new PublicAppointmentSlotDto(time));
+            }
+        }
         return slots;
     }
 }

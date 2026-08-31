@@ -86,7 +86,7 @@ else
 
             <MudForm @ref="bookingForm">
                 <MudGrid Spacing="2">
-                    <MudItem xs="12" sm="6"><MudDatePicker Label="Data" @bind-Date="bookingDate" @bind-Date:after="LoadSlotsAsync" MinDate="@minimumDate" Variant="Variant.Outlined" FullWidth="@true" Disabled="@(serviceId == Guid.Empty || isSubmitting)" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudDatePicker Label="Data" @bind-Date="bookingDate" @bind-Date:after="LoadSlotsAsync" MinDate="@minimumDate" Variant="Variant.Outlined" Disabled="@(serviceId == Guid.Empty || isSubmitting)" /></MudItem>
                     <MudItem xs="12">
                         @if (isLoadingSlots) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" /> }
                         else

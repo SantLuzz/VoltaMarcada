@@ -11,6 +11,8 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
+@if (hasCompanyContext)
+{
 <MudLayout>
     <MudAppBar Elevation="0" Class="main-app-bar">
         <MudTooltip Text="Abrir ou recolher menu">
@@ -64,6 +66,11 @@
         </main>
     </MudMainContent>
 </MudLayout>
+}
+else
+{
+    @Body
+}
 
 @code {
     [CascadingParameter]
@@ -71,6 +78,7 @@
 
     private bool isDrawerOpen = true;
     private bool isOwner;
+    private bool hasCompanyContext;
     private string companyName = string.Empty;
     private string accountSummary = string.Empty;
 
@@ -82,10 +90,16 @@
             return;
         }
 
-        var companyId = await CurrentCompany.GetCompanyIdAsync();
+        var companyId = await CurrentCompany.FindCompanyIdAsync();
+        if (companyId is null)
+        {
+            return;
+        }
+
+        hasCompanyContext = true;
         await using var dbContext = await DbContextFactory.CreateDbContextAsync();
         companyName = await dbContext.Companies.AsNoTracking()
-            .Where(company => company.Id == companyId)
+            .Where(company => company.Id == companyId.Value)
             .Select(company => company.TradeName)
             .SingleOrDefaultAsync();
         var userIdValue = authenticationState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -103,7 +117,7 @@
             isOwner = await dbContext.CompanyUsers.AsNoTracking()
                 .AnyAsync(companyUser =>
                     companyUser.UserId == userId &&
-                    companyUser.CompanyId == companyId &&
+                    companyUser.CompanyId == companyId.Value &&
                     companyUser.Role == CompanyUserRole.Owner);
         }
     }
