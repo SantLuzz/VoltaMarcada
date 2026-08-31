@@ -367,7 +367,7 @@ else
                         </MudSelect>
                     </MudItem>
                 }
-                <MudItem xs="12"><MudDatePicker Label="Data" @bind-Date="suggestionDate" @bind-Date:after="LoadSuggestionSlotsAsync" MinDate="@TimeProvider.GetLocalNow().Date" Variant="Variant.Outlined" FullWidth="@true" /></MudItem>
+                <MudItem xs="12"><MudDatePicker Label="Data" @bind-Date="suggestionDate" @bind-Date:after="LoadSuggestionSlotsAsync" MinDate="@TimeProvider.GetLocalNow().Date" Variant="Variant.Outlined" /></MudItem>
                 <MudItem xs="12">
                     <MudSelect T="TimeOnly?" Label="Horário" @bind-Value="suggestionStartTime" Variant="Variant.Outlined" FullWidth="@true" Disabled="@(suggestionSlots.Count == 0)">
                         @foreach (var slot in suggestionSlots) { <MudSelectItem Value="@((TimeOnly?)slot.StartTime)">@slot.StartTime.ToString("HH:mm")</MudSelectItem> }

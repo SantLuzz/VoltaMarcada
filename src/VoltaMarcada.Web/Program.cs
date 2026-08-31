@@ -21,7 +21,10 @@ using System.Threading.RateLimiting;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        options.DetailedErrors = builder.Environment.IsDevelopment();
+    });
 builder.Services.AddExceptionHandler<UnexpectedExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddCascadingAuthenticationState();
@@ -81,7 +84,15 @@ builder.Services.AddAuthorizationBuilder()
 
 var app = builder.Build();
 
-await app.Services.ApplyDatabaseMigrationsAsync();
+try
+{
+    await app.Services.ApplyDatabaseMigrationsAsync();
+}
+catch (Exception exception)
+{
+    app.Logger.LogCritical(exception, "Unable to apply database migrations during application startup");
+    throw;
+}
 await PlatformAdministratorInitializer.InitializeAsync(app.Services, builder.Configuration);
 
 app.UseExceptionHandler();

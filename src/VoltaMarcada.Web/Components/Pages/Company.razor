@@ -162,8 +162,8 @@ else if (overview is not null)
                         {
                             <MudGrid Spacing="2" Class="mt-1">
                                 <MudItem xs="12" sm="3"><MudSwitch @bind-Value="hours.IsOpen" Color="Color.Primary" Disabled="@isSavingPublicSettings">@GetWeekdayLabel(hours.DayOfWeek)</MudSwitch></MudItem>
-                                <MudItem xs="12" sm="4"><MudTimePicker @bind-Time="hours.StartTime" Label="Início" Variant="Variant.Outlined" FullWidth="true" Disabled="@(!hours.IsOpen || isSavingPublicSettings)" /></MudItem>
-                                <MudItem xs="12" sm="4"><MudTimePicker @bind-Time="hours.EndTime" Label="Fim" Variant="Variant.Outlined" FullWidth="true" Disabled="@(!hours.IsOpen || isSavingPublicSettings)" /></MudItem>
+                                <MudItem xs="12" sm="4"><MudTimePicker @bind-Time="hours.StartTime" Label="Início" Variant="Variant.Outlined" Disabled="@(!hours.IsOpen || isSavingPublicSettings)" /></MudItem>
+                                <MudItem xs="12" sm="4"><MudTimePicker @bind-Time="hours.EndTime" Label="Fim" Variant="Variant.Outlined" Disabled="@(!hours.IsOpen || isSavingPublicSettings)" /></MudItem>
                             </MudGrid>
                         }
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="SavePublicSettingsAsync" Disabled="@isSavingPublicSettings">@(isSavingPublicSettings ? "Salvando..." : "Salvar configurações")</MudButton>
