@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using VoltaMarcada.Web.Components;
 using VoltaMarcada.Web.Components.Pages;
+using VoltaMarcada.Web.Components.Shared;
 using Xunit;
 
 namespace VoltaMarcada.IntegrationTests.Components;
@@ -15,6 +16,12 @@ public sealed class CircuitIsolatedComponentBaseTests
     public void Dashboard_ShouldOwnItsServiceScope()
     {
         Assert.True(typeof(Dashboard).IsSubclassOf(typeof(CircuitIsolatedComponentBase)));
+    }
+
+    [Fact]
+    public void ScheduleBlockRequestPanel_ShouldUseTheCircuitServiceScope()
+    {
+        Assert.False(typeof(ScheduleBlockRequestPanel).IsSubclassOf(typeof(OwningComponentBase)));
     }
 
     [Fact]

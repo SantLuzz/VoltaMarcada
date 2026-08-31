@@ -33,7 +33,7 @@ public sealed class SubmitContextualAppointmentRequestUseCase(
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
 
         var company = await companyRepository.GetByIdAsync(opportunity.CompanyId, cancellationToken);
-        if (company is null || !company.IsPublicRequestSlot(command.Date, command.StartTime))
+        if (company is null || !company.IsPublicRequestSlot(command.Date, command.StartTime) || !PublicRequestSlotTime.IsFuture(command.Date, command.StartTime, timeProvider))
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
 
         var request = AppointmentRequest.CreatePublicPreference(

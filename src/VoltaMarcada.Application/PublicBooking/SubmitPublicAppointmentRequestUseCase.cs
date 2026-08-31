@@ -29,7 +29,7 @@ public sealed class SubmitPublicAppointmentRequestUseCase(
         var company = await companyRepository.GetBySlugAsync(command.CompanySlug.Trim().ToLowerInvariant(), cancellationToken);
         if (company is null) return OperationResult<Guid>.Failure(PublicBookingErrors.NotFound);
         var service = await serviceRepository.GetForCompanyAsync(command.ServiceId, company.Id, cancellationToken);
-        if (service is null || !service.IsActive || !service.AllowOnlineBooking || !company.IsPublicRequestSlot(command.Date, command.StartTime))
+        if (service is null || !service.IsActive || !service.AllowOnlineBooking || !company.IsPublicRequestSlot(command.Date, command.StartTime) || !PublicRequestSlotTime.IsFuture(command.Date, command.StartTime, timeProvider))
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
         if (!await customerRepository.AreLocationsValidAsync(command.Addresses, cancellationToken))
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);

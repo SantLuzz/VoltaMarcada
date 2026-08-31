@@ -61,7 +61,13 @@
                 <MudListItem T="AppointmentRequestDto" Value="@request" Icon="@Icons.Material.Filled.EventAvailable">
                     <MudText Typo="Typo.subtitle2">@request.CustomerName · @request.ServiceName</MudText>
                     <MudText Typo="Typo.body2">@request.Date.ToString("dd/MM/yyyy") às @request.StartTime.ToString("HH:mm")</MudText>
-                    <MudChip T="string" Size="Size.Small" Color="@(request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending ? Color.Warning : Color.Info)">@(request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending ? "Aguardando empresa" : "Aguardando cliente")</MudChip>
+                    <MudStack Spacing="1" Class="my-1">
+                        <MudChip T="string" Size="Size.Small" Color="@(request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending ? Color.Warning : Color.Info)">@(request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending ? "Aguardando empresa" : "Aguardando cliente")</MudChip>
+                        @if (request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending && request.RequestedTimeProfessionals.Count > 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Success">Disponíveis no horário solicitado: @string.Join(", ", request.RequestedTimeProfessionals.Select(item => item.ProfessionalName))</MudText>
+                        }
+                    </MudStack>
                     @if (request.HasCustomerProfileProposal)
                     {
                         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
@@ -76,24 +82,21 @@
                     }
                     @if (request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending)
                     {
-                        @if (request.RequestedTimeProfessionals.Count > 0)
+                        @if (request.RequestedTimeProfessionals.Count == 0 && request.Alternatives.Count > 0)
                         {
-                            <MudText Typo="Typo.caption" Color="Color.Success">Disponíveis no horário solicitado: @string.Join(", ", request.RequestedTimeProfessionals.Select(item => item.ProfessionalName))</MudText>
-                        }
-                        else if (request.Alternatives.Count > 0)
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Warning">Alternativas: @string.Join(" · ", request.Alternatives.Select(item => $"{item.Date:dd/MM HH:mm} - {item.ProfessionalName}"))</MudText>
                             @foreach (var alternative in request.Alternatives)
                             {
-                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionForAlternativeAsync(request, alternative))">@alternative.Date.ToString("dd/MM") às @alternative.StartTime.ToString("HH:mm") · @alternative.ProfessionalName</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionForAlternativeAsync(request, alternative))">Propor horário: @alternative.Date.ToString("dd/MM") às @alternative.StartTime.ToString("HH:mm") · @alternative.ProfessionalName</MudButton>
                             }
                         }
-                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionDialogAsync(request))">Propor horário</MudButton>
-                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => RejectRequestAsync(request.Id))">Recusar</MudButton>
+                        <MudStack Row="true" Spacing="1">
+                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionDialogAsync(request))">Escolher outro horário</MudButton>
+                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => OpenRequestRejectionDialog(request))">Recusar</MudButton>
+                        </MudStack>
                     }
                     else
                     {
-                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => RejectRequestAsync(request.Id))">Recusar solicitação</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => OpenRequestRejectionDialog(request))">Recusar solicitação</MudButton>
                     }
                 </MudListItem>
             }
@@ -349,6 +352,34 @@ else
     </DialogActions>
 </MudDialog>
 
+<MudDialog @bind-Visible="isRequestRejectionDialogOpen">
+    <TitleContent><MudText Typo="Typo.h6">Recusar solicitação</MudText></TitleContent>
+    <DialogContent>
+        @if (requestToReject is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mb-4">@requestToReject.CustomerName · @requestToReject.ServiceName</MudText>
+            <MudTextField Label="Motivo da recusa"
+                          Lines="3"
+                          Required="true"
+                          RequiredError="Informe o motivo da recusa."
+                          MaxLength="1000"
+                          Immediate="true"
+                          @bind-Value="requestRejectionReason"
+                          Disabled="@isRejectingRequest" />
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">A recusa será registrada e uma mensagem será preparada no WhatsApp do cliente.</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseRequestRejectionDialog" Disabled="@isRejectingRequest">Cancelar</MudButton>
+        <MudButton Color="Color.Error"
+                   Variant="Variant.Filled"
+                   OnClick="RejectRequestAsync"
+                   Disabled="@(isRejectingRequest || string.IsNullOrWhiteSpace(requestRejectionReason))">
+            @(isRejectingRequest ? "Recusando..." : "Recusar e avisar cliente")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 <MudDialog @bind-Visible="isRequestSuggestionDialogOpen">
     <TitleContent><MudText Typo="Typo.h6">Sugerir outro horário</MudText></TitleContent>
     <DialogContent>
@@ -443,6 +474,10 @@ else
     private AppointmentRequestDto? requestToSuggest;
     private bool isRequestSuggestionDialogOpen;
     private bool isSuggestingRequest;
+    private AppointmentRequestDto? requestToReject;
+    private bool isRequestRejectionDialogOpen;
+    private bool isRejectingRequest;
+    private string? requestRejectionReason;
     private Guid? suggestionProfessionalId;
     private DateTime? suggestionDate;
     private TimeOnly? suggestionStartTime;
@@ -547,11 +582,10 @@ else
     private async Task OpenSuggestionDialogAsync(AppointmentRequestDto request)
     {
         requestToSuggest = request;
-        suggestionProfessionalId = request.ProfessionalId;
+        suggestionProfessionalId = request.ProfessionalId ?? (request.RequestedTimeProfessionals.Count == 1 ? request.RequestedTimeProfessionals[0].ProfessionalId : null);
         suggestionDate = request.Date.ToDateTime(TimeOnly.MinValue);
-        suggestionStartTime = null;
         isRequestSuggestionDialogOpen = true;
-        await LoadSuggestionSlotsAsync();
+        await LoadSuggestionSlotsAsync(request.StartTime);
     }
 
     private async Task OpenSuggestionForAlternativeAsync(AppointmentRequestDto request, AppointmentAlternativeDto alternative)
@@ -559,18 +593,22 @@ else
         requestToSuggest = request;
         suggestionProfessionalId = alternative.ProfessionalId;
         suggestionDate = alternative.Date.ToDateTime(TimeOnly.MinValue);
-        suggestionStartTime = alternative.StartTime;
         isRequestSuggestionDialogOpen = true;
-        await LoadSuggestionSlotsAsync();
-        suggestionStartTime = alternative.StartTime;
+        await LoadSuggestionSlotsAsync(alternative.StartTime);
     }
 
-    private async Task LoadSuggestionSlotsAsync()
+    private Task LoadSuggestionSlotsAsync() => LoadSuggestionSlotsAsync(null);
+
+    private async Task LoadSuggestionSlotsAsync(TimeOnly? preferredStartTime)
     {
         suggestionStartTime = null;
         suggestionSlots = [];
         if (requestToSuggest is null || suggestionProfessionalId is not { } professionalId || suggestionDate is null) return;
         suggestionSlots = await GetAvailableAppointmentSlotsUseCase.ExecuteAsync(professionalId, DateOnly.FromDateTime(suggestionDate.Value), requestToSuggest.DurationMinutes);
+        if (preferredStartTime is { } startTime && suggestionSlots.Any(slot => slot.StartTime == startTime))
+        {
+            suggestionStartTime = startTime;
+        }
     }
 
     private void CloseSuggestionDialog()
@@ -611,12 +649,57 @@ else
     private static string CreateSuggestedTimeWhatsAppMessage(AppointmentRequestDto request, DateOnly date, TimeOnly startTime, string link) =>
         $"Olá, {request.CustomerName}!\n\nA empresa propôs um horário para {request.ServiceName}: {date:dd/MM/yyyy} às {startTime:HH:mm}.\n\nPara aceitar ou recusar, acesse:\n{link}";
 
-    private async Task RejectRequestAsync(Guid requestId)
+    private void OpenRequestRejectionDialog(AppointmentRequestDto request)
     {
-        var result = await RejectAppointmentRequestUseCase.ExecuteAsync(requestId, null);
-        if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; }
-        Snackbar.Add("Solicitação recusada.", Severity.Success);
-        await LoadAsync();
+        requestToReject = request;
+        requestRejectionReason = null;
+        isRequestRejectionDialogOpen = true;
+    }
+
+    private void CloseRequestRejectionDialog()
+    {
+        if (isRejectingRequest) return;
+        isRequestRejectionDialogOpen = false;
+        requestToReject = null;
+        requestRejectionReason = null;
+    }
+
+    private async Task RejectRequestAsync()
+    {
+        if (requestToReject is not { } request || string.IsNullOrWhiteSpace(requestRejectionReason)) return;
+
+        var reason = requestRejectionReason.Trim();
+        isRejectingRequest = true;
+        try
+        {
+            var result = await RejectAppointmentRequestUseCase.ExecuteAsync(request.Id, reason);
+            if (!result.IsSuccess)
+            {
+                Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
+                return;
+            }
+
+            var message = AppointmentRequestRejectionMessage.Create(request, reason);
+            if (WhatsAppLinkBuilder.TryBuild(request.CustomerWhatsApp, message, out var whatsAppLink))
+            {
+                await JsRuntime.InvokeVoidAsync("open", whatsAppLink, "_blank");
+                Snackbar.Add("Recusa registrada e mensagem aberta no WhatsApp.", Severity.Success);
+            }
+            else
+            {
+                await JsRuntime.InvokeVoidAsync("serviceSync.copyText", message);
+                Snackbar.Add("Recusa registrada. O WhatsApp do cliente é inválido e a mensagem foi copiada.", Severity.Warning);
+            }
+
+            isRequestRejectionDialogOpen = false;
+            requestToReject = null;
+            requestRejectionReason = null;
+            await LoadAsync();
+        }
+        finally
+        {
+            isRejectingRequest = false;
+        }
     }
 
     private bool ShouldApplyCustomerProfile(Guid requestId) => applyCustomerProfile.GetValueOrDefault(requestId);
