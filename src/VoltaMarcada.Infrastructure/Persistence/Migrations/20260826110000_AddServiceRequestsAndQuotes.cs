@@ -1,10 +1,13 @@
 using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace VoltaMarcada.Infrastructure.Persistence.Migrations;
 
+[DbContext(typeof(AppDbContext))]
+[Migration("20260826110000_AddServiceRequestsAndQuotes")]
 public partial class AddServiceRequestsAndQuotes : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)

@@ -18,6 +18,7 @@ public sealed class Quote : ICompanyScopedEntity
     public Guid EquipmentId { get; private set; }
     public Guid PrimaryServiceId { get; private set; }
     public Guid? ServiceRequestId { get; private set; }
+    public Guid? SourceAppointmentId { get; private set; }
     public Guid? GeneratedWorkOrderId { get; private set; }
     public QuoteStatus Status { get; private set; }
     public decimal DiscountAmount { get; private set; }
@@ -33,12 +34,12 @@ public sealed class Quote : ICompanyScopedEntity
     public IReadOnlyCollection<QuoteItem> Items => _items;
     public decimal TotalAmount => _items.Sum(item => item.TotalAmount) - DiscountAmount;
 
-    public static Quote Create(Guid companyId, Guid customerId, Guid createdByUserId, Guid equipmentId, Guid primaryServiceId, Guid? serviceRequestId, IReadOnlyCollection<QuoteItemDefinition> items, decimal discountAmount, string? notes, DateOnly validUntil, DateTimeOffset now)
+    public static Quote Create(Guid companyId, Guid customerId, Guid createdByUserId, Guid equipmentId, Guid primaryServiceId, Guid? serviceRequestId, Guid? sourceAppointmentId, IReadOnlyCollection<QuoteItemDefinition> items, decimal discountAmount, string? notes, DateOnly validUntil, DateTimeOffset now)
     {
         if (companyId == Guid.Empty || customerId == Guid.Empty || createdByUserId == Guid.Empty || equipmentId == Guid.Empty || primaryServiceId == Guid.Empty) throw new DomainException("Company, customer, creator, equipment, and primary service IDs are required.");
         if (validUntil == DateOnly.MinValue || discountAmount < 0) throw new DomainException("Quote validity or discount is invalid.");
         var utcNow = now.ToUniversalTime();
-        var quote = new Quote { Id = Guid.NewGuid(), CompanyId = companyId, CustomerId = customerId, CreatedByUserId = createdByUserId, EquipmentId = equipmentId, PrimaryServiceId = primaryServiceId, ServiceRequestId = NormalizeId(serviceRequestId), Status = QuoteStatus.Draft, DiscountAmount = discountAmount, Notes = NormalizeNotes(notes), ValidUntil = validUntil, CreatedAtUtc = utcNow, UpdatedAtUtc = utcNow };
+        var quote = new Quote { Id = Guid.NewGuid(), CompanyId = companyId, CustomerId = customerId, CreatedByUserId = createdByUserId, EquipmentId = equipmentId, PrimaryServiceId = primaryServiceId, ServiceRequestId = NormalizeId(serviceRequestId), SourceAppointmentId = NormalizeId(sourceAppointmentId), Status = QuoteStatus.Draft, DiscountAmount = discountAmount, Notes = NormalizeNotes(notes), ValidUntil = validUntil, CreatedAtUtc = utcNow, UpdatedAtUtc = utcNow };
         quote.ReplaceItems(items);
         return quote;
     }

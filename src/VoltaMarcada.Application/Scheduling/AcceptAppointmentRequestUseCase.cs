@@ -33,7 +33,7 @@ public sealed class AcceptAppointmentRequestUseCase(
         if (!await availability.IsAvailableAsync(professional, request.RequestedDate, request.RequestedStartTime, request.DurationMinutes, cancellationToken: cancellationToken)) return OperationResult<Guid>.Failure(SchedulingErrors.ProfessionalUnavailable);
         if (!AppointmentAvailability.TryGetUtcInterval(professional.TimeZoneId, request.RequestedDate, request.RequestedStartTime, request.DurationMinutes, out var start, out var end)) return OperationResult<Guid>.Failure(SchedulingErrors.ProfessionalUnavailable);
         if (start <= timeProvider.GetUtcNow()) return OperationResult<Guid>.Failure(SchedulingErrors.ProfessionalUnavailable);
-        var appointment = Appointment.Create(scope.CompanyId, professional.Id, request.CustomerId, request.EquipmentId, request.ServiceId, null, start, end, null, timeProvider.GetUtcNow(), AppointmentOrigin.External);
+        var appointment = Appointment.Create(scope.CompanyId, professional.Id, request.CustomerId, request.EquipmentId, request.ServiceId, null, start, end, null, timeProvider.GetUtcNow(), AppointmentOrigin.External, AppointmentType.Visit);
         await appointmentRepository.AddAsync(appointment, cancellationToken);
         request.Accept(appointment.Id, timeProvider.GetUtcNow());
         if (request.MaintenanceOpportunityId is { } opportunityId)

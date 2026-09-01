@@ -52,7 +52,8 @@ public sealed class Appointment : ICompanyScopedEntity
             throw new DomainException("Appointment origin is invalid.");
         }
         if (!Enum.IsDefined(type)) throw new DomainException("Appointment type is invalid.");
-        if (type == AppointmentType.ServiceExecution && NormalizeOptionalId(workOrderId) is null) throw new DomainException("A service execution appointment requires a work order.");
+        if (type == AppointmentType.Service && NormalizeOptionalId(workOrderId) is null) throw new DomainException("A service appointment requires a work order.");
+        if (type != AppointmentType.Service && NormalizeOptionalId(workOrderId) is not null) throw new DomainException("Only a service appointment can be linked to a work order.");
         var utcNow = now.ToUniversalTime();
 
         return new Appointment
@@ -104,6 +105,11 @@ public sealed class Appointment : ICompanyScopedEntity
     public void UpdateWorkOrderAssociation(Guid? workOrderId, Guid? customerId, Guid? equipmentId, Guid? serviceId, DateTimeOffset now)
     {
         EnsureScheduled();
+        if (NormalizeOptionalId(workOrderId) is not null && Type != AppointmentType.Service)
+        {
+            throw new DomainException("Only a service appointment can be linked to a work order.");
+        }
+
         WorkOrderId = NormalizeOptionalId(workOrderId);
         CustomerId = NormalizeOptionalId(customerId);
         EquipmentId = NormalizeOptionalId(equipmentId);

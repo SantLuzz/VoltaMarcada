@@ -60,6 +60,13 @@
         }
     </DialogContent>
     <DialogActions>
+        @if (appointmentDetails is not null &&
+             appointmentDetails.Status == VoltaMarcada.Domain.Enums.AppointmentStatus.Completed &&
+             (appointmentDetails.Type == VoltaMarcada.Domain.Enums.AppointmentType.Visit || appointmentDetails.Type == VoltaMarcada.Domain.Enums.AppointmentType.Other))
+        {
+            <MudButton Href="@($"/orcamentos/registro?sourceAppointmentId={appointmentDetails.Id}")" Variant="Variant.Outlined">Gerar orçamento</MudButton>
+            <MudButton Href="@($"/ordens-servico/registro?sourceAppointmentId={appointmentDetails.Id}")" Variant="Variant.Outlined">Gerar OS</MudButton>
+        }
         @if (appointmentDetails?.WorkOrderId is { } workOrderId)
         {
             <MudButton Href="@($"/ordens-servico/registro?id={workOrderId}")" Color="Color.Primary" Variant="Variant.Filled">Abrir OS</MudButton>
@@ -133,8 +140,8 @@
 
     private static string GetTypeName(VoltaMarcada.Domain.Enums.AppointmentType type) => type switch
     {
-        VoltaMarcada.Domain.Enums.AppointmentType.TechnicalVisit => "Visita técnica",
-        VoltaMarcada.Domain.Enums.AppointmentType.ServiceExecution => "Execução de serviço",
+        VoltaMarcada.Domain.Enums.AppointmentType.Visit => "Visita técnica",
+        VoltaMarcada.Domain.Enums.AppointmentType.Service => "Execução de serviço",
         _ => "Outro atendimento"
     };
 }

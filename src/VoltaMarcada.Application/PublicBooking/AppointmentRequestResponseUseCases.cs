@@ -68,7 +68,7 @@ public sealed class RespondToAppointmentRequestUseCase(
             !AppointmentAvailability.TryGetUtcInterval(professional.TimeZoneId, date, startTime, durationMinutes, out var start, out var end) || start <= timeProvider.GetUtcNow())
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
 
-        var appointment = Appointment.Create(request.CompanyId, professional.Id, request.CustomerId, request.EquipmentId, request.ServiceId, null, start, end, null, timeProvider.GetUtcNow(), AppointmentOrigin.External);
+        var appointment = Appointment.Create(request.CompanyId, professional.Id, request.CustomerId, request.EquipmentId, request.ServiceId, null, start, end, null, timeProvider.GetUtcNow(), AppointmentOrigin.External, AppointmentType.Visit);
         await appointmentRepository.AddAsync(appointment, cancellationToken);
         request.AcceptProposal(appointment.Id, timeProvider.GetUtcNow());
         if (request.MaintenanceOpportunityId is { } opportunityId)

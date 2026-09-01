@@ -13,12 +13,14 @@ public sealed class QuoteConfiguration : IEntityTypeConfiguration<Quote>
         builder.HasAlternateKey(x => new { x.CompanyId, x.Id });
         builder.HasIndex(x => new { x.CompanyId, x.Status, x.CreatedAtUtc });
         builder.HasIndex(x => new { x.CompanyId, x.ServiceRequestId }).IsUnique().HasFilter("\"ServiceRequestId\" IS NOT NULL");
+        builder.HasIndex(x => new { x.CompanyId, x.SourceAppointmentId });
         builder.HasIndex(x => x.PublicTokenHash).IsUnique().HasFilter("\"PublicTokenHash\" IS NOT NULL");
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Customer>().WithMany().HasForeignKey(x => new { x.CompanyId, x.CustomerId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Equipment>().WithMany().HasForeignKey(x => new { x.CompanyId, x.EquipmentId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Service>().WithMany().HasForeignKey(x => new { x.CompanyId, x.PrimaryServiceId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<ServiceRequest>().WithMany().HasForeignKey(x => new { x.CompanyId, x.ServiceRequestId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Appointment>().WithMany().HasForeignKey(x => new { x.CompanyId, x.SourceAppointmentId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<WorkOrder>().WithMany().HasForeignKey(x => new { x.CompanyId, x.GeneratedWorkOrderId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasMany(x => x.Items).WithOne().HasForeignKey(x => new { x.CompanyId, x.QuoteId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.Items).UsePropertyAccessMode(PropertyAccessMode.Field);

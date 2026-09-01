@@ -1153,6 +1153,9 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("ServiceRequestId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SourceAppointmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -1179,6 +1182,8 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.HasIndex("CompanyId", "ServiceRequestId")
                         .IsUnique()
                         .HasFilter("\"ServiceRequestId\" IS NOT NULL");
+
+                    b.HasIndex("CompanyId", "SourceAppointmentId");
 
                     b.HasIndex("CompanyId", "Status", "CreatedAtUtc");
 
@@ -1534,6 +1539,9 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SourceAppointmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("SourceQuoteId")
                         .HasColumnType("uuid");
 
@@ -1560,6 +1568,8 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.HasIndex("CompanyId", "EquipmentId");
 
                     b.HasIndex("CompanyId", "ServiceId");
+
+                    b.HasIndex("CompanyId", "SourceAppointmentId");
 
                     b.HasIndex("CompanyId", "ProfessionalId", "CreatedAtUtc")
                         .HasDatabaseName("IX_WorkOrders_CompanyId_ProfessionalId_CreatedAtUtc");
@@ -2171,6 +2181,12 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CompanyId", "ServiceRequestId")
                         .HasPrincipalKey("CompanyId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("VoltaMarcada.Domain.Entities.Appointment", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "SourceAppointmentId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.QuoteItem", b =>
@@ -2285,6 +2301,12 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("CompanyId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("VoltaMarcada.Domain.Entities.Appointment", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "SourceAppointmentId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrderChecklistItem", b =>

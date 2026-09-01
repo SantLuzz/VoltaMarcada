@@ -58,7 +58,7 @@ public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorizatio
             command.Notes?.Trim().Length > 1000 ||
             command.Description?.Trim().Length > 1000 ||
             !Enum.IsDefined(command.Type) ||
-            command.Type == global::VoltaMarcada.Domain.Enums.AppointmentType.ServiceExecution && command.WorkOrderId is null)
+            command.Type == global::VoltaMarcada.Domain.Enums.AppointmentType.Service && command.WorkOrderId is null)
         {
             return OperationResult<Guid>.Failure(SchedulingErrors.InvalidInput);
         }
@@ -252,6 +252,9 @@ public sealed class GetAppointmentDetailsUseCase(WorkOrderAuthorization authoriz
         return new AppointmentDetailsDto(
             appointment.Id,
             appointment.ProfessionalId,
+            appointment.CustomerId,
+            appointment.EquipmentId,
+            appointment.ServiceId,
             appointment.WorkOrderId,
             appointment.StartAtUtc,
             appointment.EndAtUtc,

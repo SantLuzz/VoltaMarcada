@@ -208,6 +208,14 @@ public sealed class AppointmentRequest : ICompanyScopedEntity
         UpdatedAtUtc = now.ToUniversalTime();
     }
 
+    public void CloseForCommercialResolution(DateTimeOffset now)
+    {
+        EnsureStatus(AppointmentRequestStatus.Pending);
+        ResponseTokenRevokedAtUtc = ResponseTokenHash is null ? null : now.ToUniversalTime();
+        Status = AppointmentRequestStatus.Closed;
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
     public void SuggestNewTime(DateOnly date, TimeOnly startTime, int durationMinutes, Guid professionalId, string responseTokenHash, DateTimeOffset responseTokenExpiresAtUtc, DateTimeOffset now)
     {
         EnsureStatus(AppointmentRequestStatus.Pending);

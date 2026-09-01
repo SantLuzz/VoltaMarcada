@@ -24,6 +24,7 @@ public sealed class WorkOrder : ICompanyScopedEntity
     public string? ReportedProblem { get; private set; }
     public string? ExecutionNotes { get; private set; }
     public Guid? SourceQuoteId { get; private set; }
+    public Guid? SourceAppointmentId { get; private set; }
     public decimal DiscountAmount { get; private set; }
     public WorkOrderStatus Status { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
@@ -35,13 +36,13 @@ public sealed class WorkOrder : ICompanyScopedEntity
     public IReadOnlyCollection<WorkOrderPhoto> Photos => _photos;
     public decimal TotalAmount => _items.Sum(item => item.TotalAmount) - DiscountAmount;
 
-    public static WorkOrder Create(Guid companyId, Guid customerId, Guid equipmentId, Guid serviceId, Guid? professionalId, Guid createdByUserId, WorkOrderPriority priority, string? reportedProblem, IReadOnlyCollection<WorkOrderItemDefinition> items, IReadOnlyCollection<WorkOrderChecklistItemDefinition> checklistItems, DateTimeOffset now, Guid? sourceQuoteId = null, decimal discountAmount = 0)
+    public static WorkOrder Create(Guid companyId, Guid customerId, Guid equipmentId, Guid serviceId, Guid? professionalId, Guid createdByUserId, WorkOrderPriority priority, string? reportedProblem, IReadOnlyCollection<WorkOrderItemDefinition> items, IReadOnlyCollection<WorkOrderChecklistItemDefinition> checklistItems, DateTimeOffset now, Guid? sourceQuoteId = null, decimal discountAmount = 0, Guid? sourceAppointmentId = null)
     {
         RequireId(companyId, "Company"); RequireId(customerId, "Customer"); RequireId(equipmentId, "Equipment"); RequireId(serviceId, "Service"); RequireId(createdByUserId, "Creator");
         if (discountAmount < 0) throw new DomainException("Work order discount cannot be negative.");
         if (!Enum.IsDefined(priority)) throw new DomainException("Work order priority is invalid.");
         var utcNow = now.ToUniversalTime();
-        var workOrder = new WorkOrder { Id = Guid.NewGuid(), CompanyId = companyId, CustomerId = customerId, EquipmentId = equipmentId, ServiceId = serviceId, ProfessionalId = professionalId, CreatedByUserId = createdByUserId, Priority = priority, ReportedProblem = NormalizeOptionalText(reportedProblem), SourceQuoteId = NormalizeOptionalId(sourceQuoteId), DiscountAmount = discountAmount, Status = WorkOrderStatus.Pending, CreatedAtUtc = utcNow, UpdatedAtUtc = utcNow };
+        var workOrder = new WorkOrder { Id = Guid.NewGuid(), CompanyId = companyId, CustomerId = customerId, EquipmentId = equipmentId, ServiceId = serviceId, ProfessionalId = professionalId, CreatedByUserId = createdByUserId, Priority = priority, ReportedProblem = NormalizeOptionalText(reportedProblem), SourceQuoteId = NormalizeOptionalId(sourceQuoteId), SourceAppointmentId = NormalizeOptionalId(sourceAppointmentId), DiscountAmount = discountAmount, Status = WorkOrderStatus.Pending, CreatedAtUtc = utcNow, UpdatedAtUtc = utcNow };
         workOrder.ReplaceItems(items, utcNow);
         workOrder.ReplaceChecklistItems(checklistItems);
         return workOrder;

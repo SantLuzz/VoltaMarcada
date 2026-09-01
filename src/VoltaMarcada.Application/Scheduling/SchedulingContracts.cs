@@ -70,6 +70,9 @@ public sealed record AppointmentCustomerDetailsDto(
 public sealed record AppointmentDetailsDto(
     Guid Id,
     Guid ProfessionalId,
+    Guid? CustomerId,
+    Guid? EquipmentId,
+    Guid? ServiceId,
     Guid? WorkOrderId,
     DateTimeOffset StartAtUtc,
     DateTimeOffset EndAtUtc,

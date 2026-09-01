@@ -5,7 +5,7 @@ namespace VoltaMarcada.Application.ServiceRequests;
 public enum ServiceRequestResolution
 {
     PrepareQuote,
-    CreateWorkOrder
+    ScheduleVisit
 }
 
 public sealed record ServiceRequestDto(
@@ -26,11 +26,11 @@ public sealed record ServiceRequestDto(
 
 public sealed record ResolveServiceRequestCommand(
     Guid AppointmentRequestId,
-    Guid ProfessionalId,
     ServiceRequestResolution Resolution,
     Guid EquipmentId,
-    string AppointmentDescription,
+    Guid? ProfessionalId,
+    string? AppointmentDescription,
     decimal? ServiceUnitPrice,
     bool ApplyCustomerProfileProposal);
 
-public sealed record ServiceRequestResolutionResult(Guid AppointmentId, Guid? QuoteId, Guid? WorkOrderId);
+public sealed record ServiceRequestResolutionResult(Guid? AppointmentId, Guid? QuoteId);

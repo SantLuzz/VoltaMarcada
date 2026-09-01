@@ -105,6 +105,7 @@ public sealed class QuotePdfUseCaseTests
         Guid.NewGuid(),
         Guid.NewGuid(),
         null,
+        null,
         [new QuoteItemDefinition("Air conditioner maintenance", 1, 150, QuoteItemType.Service)],
         0,
         null,

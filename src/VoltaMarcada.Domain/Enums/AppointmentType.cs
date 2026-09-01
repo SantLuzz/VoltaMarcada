@@ -2,7 +2,7 @@ namespace VoltaMarcada.Domain.Enums;
 
 public enum AppointmentType
 {
-    TechnicalVisit,
-    ServiceExecution,
-    Other
+    Visit = 0,
+    Service = 1,
+    Other = 2
 }

@@ -9,6 +9,20 @@ namespace VoltaMarcada.IntegrationTests.Persistence;
 public sealed class PhaseSevenMigrationTests
 {
     [Fact]
+    public void Migrations_ShouldDiscoverServiceRequestsAndQuotesMigration()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql("Host=localhost;Database=volta_marcada_migration_catalog;Username=test;Password=test")
+            .Options;
+
+        using var dbContext = new AppDbContext(options);
+        var migrations = dbContext.GetService<IMigrationsAssembly>().Migrations;
+
+        Assert.Contains("20260826110000_AddServiceRequestsAndQuotes", migrations.Keys);
+        Assert.Contains("20260901204245_SynchronizeAppointmentCommercialSources", migrations.Keys);
+    }
+
+    [Fact]
     public void Migrations_ShouldDiscoverEveryPhaseSevenMigration()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
