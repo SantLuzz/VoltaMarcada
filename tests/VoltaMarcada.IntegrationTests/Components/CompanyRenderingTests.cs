@@ -74,6 +74,7 @@ public sealed class CompanyRenderingTests
             60,
             VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending,
             false,
+            false,
             null,
             null,
             null,
