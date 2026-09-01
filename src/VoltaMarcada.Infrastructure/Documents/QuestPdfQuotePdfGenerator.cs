@@ -39,7 +39,7 @@ public sealed class QuestPdfQuotePdfGenerator : IQuotePdfGenerator
                 text.Span(" de ");
                 text.TotalPages();
             });
-        }).GeneratePdf());
+        })).GeneratePdf());
     }
 
     private static void ComposeHeader(IContainer container, QuotePdfDocument document) => container.Row(row =>

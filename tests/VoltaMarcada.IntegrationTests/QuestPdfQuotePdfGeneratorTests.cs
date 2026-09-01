@@ -1,5 +1,6 @@
 using VoltaMarcada.Application.Abstractions.Documents;
 using VoltaMarcada.Infrastructure.Documents;
+using QuestPDF.Infrastructure;
 using Xunit;
 
 namespace VoltaMarcada.IntegrationTests;
@@ -9,6 +10,7 @@ public sealed class QuestPdfQuotePdfGeneratorTests
     [Fact]
     public async Task GenerateAsync_WhenDocumentIsProvided_ReturnsPdfBytes()
     {
+        QuestPDF.Settings.License = LicenseType.Community;
         var generator = new QuestPdfQuotePdfGenerator();
         var document = new QuotePdfDocument(
             "Volta Marcada", "Volta Marcada Ltda", "11222333000181", "11999999999",
@@ -18,7 +20,7 @@ public sealed class QuestPdfQuotePdfGeneratorTests
 
         var content = await generator.GenerateAsync(document);
 
-        Assert.StartsWith("%PDF"u8.ToArray(), content);
+        Assert.True(content.AsSpan().StartsWith("%PDF"u8));
         Assert.True(content.Length > 1_000);
     }
 }

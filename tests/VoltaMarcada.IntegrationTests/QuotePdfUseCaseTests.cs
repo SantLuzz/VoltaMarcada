@@ -6,6 +6,7 @@ using VoltaMarcada.Application.PublicBooking;
 using VoltaMarcada.Application.Quotes;
 using VoltaMarcada.Domain.Entities;
 using VoltaMarcada.Domain.Enums;
+using VoltaMarcada.Domain.ValueObjects;
 using VoltaMarcada.Infrastructure.Persistence;
 using VoltaMarcada.Infrastructure.Persistence.Repositories;
 using Xunit;
@@ -32,8 +33,9 @@ public sealed class QuotePdfUseCaseTests
     public async Task CreateAsync_WhenLogoIsUnavailable_MapsCommercialDataWithoutLogo()
     {
         var now = new DateTimeOffset(2026, 9, 1, 12, 0, 0, TimeSpan.Zero);
-        var quote = CreateQuote(now);
-        var customer = CreateCustomer(quote.CompanyId, now);
+        var companyId = Guid.NewGuid();
+        var customer = CreateCustomer(companyId, now);
+        var quote = CreateQuote(now, companyId, customer.Id);
         var profile = new CompanyQuotePdfProfile(
             quote.CompanyId,
             "Volta Marcada Ltda",
@@ -96,9 +98,9 @@ public sealed class QuotePdfUseCaseTests
         Assert.Equal("SP", profile.StateAbbreviation);
     }
 
-    private static Quote CreateQuote(DateTimeOffset now) => Quote.Create(
-        Guid.NewGuid(),
-        Guid.NewGuid(),
+    private static Quote CreateQuote(DateTimeOffset now, Guid? companyId = null, Guid? customerId = null) => Quote.Create(
+        companyId ?? Guid.NewGuid(),
+        customerId ?? Guid.NewGuid(),
         Guid.NewGuid(),
         Guid.NewGuid(),
         Guid.NewGuid(),
@@ -116,7 +118,7 @@ public sealed class QuotePdfUseCaseTests
         "11999999999",
         null,
         null,
-        [CustomerAddress.Create(CustomerAddressType.Home, true, "Test Street", "1", "01001000", null, Guid.NewGuid(), Guid.NewGuid())],
+        [CustomerAddress.Create(CustomerAddressType.Residence, true, "Test Street", "1", "01001000", null, Guid.NewGuid(), Guid.NewGuid())],
         now);
 
     private sealed class QuoteRepositoryStub(Quote publicQuote) : IQuoteRepository
