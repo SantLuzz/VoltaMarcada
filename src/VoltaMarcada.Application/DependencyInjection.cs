@@ -119,6 +119,10 @@ public static class DependencyInjection
         services.AddScoped<GetQuotesUseCase>();
         services.AddScoped<UpdateQuoteUseCase>();
         services.AddScoped<SendQuoteUseCase>();
+        services.AddScoped<PublicQuoteAccessService>();
+        services.AddScoped<QuotePdfDocumentFactory>();
+        services.AddScoped<GetQuotePdfUseCase>();
+        services.AddScoped<GetPublicQuotePdfUseCase>();
         services.AddScoped<GetPublicQuoteUseCase>();
         services.AddScoped<ApproveQuoteUseCase>();
         services.AddScoped<RejectQuoteUseCase>();

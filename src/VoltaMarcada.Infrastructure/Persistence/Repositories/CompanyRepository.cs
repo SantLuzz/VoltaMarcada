@@ -28,22 +28,6 @@ public sealed class CompanyRepository(AppDbContext dbContext) : ICompanyReposito
                 company.LogoKey))
             .SingleOrDefaultAsync(cancellationToken);
 
-    public Task<CompanyQuotePdfProfile?> GetQuotePdfProfileAsync(Guid companyId, CancellationToken cancellationToken = default) =>
-        dbContext.Companies.AsNoTracking()
-            .Where(company => company.Id == companyId)
-            .Select(company => new CompanyQuotePdfProfile(
-                company.Id,
-                company.LegalName,
-                company.TradeName,
-                company.Document,
-                company.WhatsApp,
-                company.PostalCode,
-                company.Address,
-                dbContext.Cities.Where(city => city.Id == company.CityId).Select(city => city.Name).Single(),
-                dbContext.States.Where(state => state.Id == company.StateId).Select(state => state.Abbreviation).Single(),
-                company.LogoKey))
-            .SingleOrDefaultAsync(cancellationToken);
-
     public Task AddAsync(Company company, CancellationToken cancellationToken = default) =>
         dbContext.Companies.AddAsync(company, cancellationToken).AsTask();
 

@@ -15,6 +15,9 @@ using VoltaMarcada.Infrastructure.Storage;
 using VoltaMarcada.Application.Abstractions.Storage;
 using VoltaMarcada.Application.Abstractions.Communication;
 using VoltaMarcada.Infrastructure.Communication;
+using VoltaMarcada.Application.Abstractions.Documents;
+using VoltaMarcada.Infrastructure.Documents;
+using QuestPDF.Infrastructure;
 
 namespace VoltaMarcada.Infrastructure;
 
@@ -22,6 +25,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        QuestPDF.Settings.License = LicenseType.Community;
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
 
@@ -51,6 +55,7 @@ public static class DependencyInjection
         services.AddScoped<ICustomerContactRepository, CustomerContactRepository>();
         services.AddScoped<IServiceRequestRepository, ServiceRequestRepository>();
         services.AddScoped<IQuoteRepository, QuoteRepository>();
+        services.AddScoped<IQuotePdfGenerator, QuestPdfQuotePdfGenerator>();
         services.AddScoped<IWhatsAppLinkBuilder, WhatsAppLinkBuilder>();
         services.AddScoped<IEmployeeInvitationRepository, EmployeeInvitationRepository>();
         services.AddScoped<IEmployeeInvitationAccountService, EmployeeInvitationAccountService>();

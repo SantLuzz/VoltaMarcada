@@ -149,6 +149,7 @@ app.MapWorkOrderEndpoints();
 app.MapMaintenanceOpportunityEndpoints();
 app.MapAppointmentEndpoints();
 app.MapScheduleBlockRequestEndpoints();
+app.MapQuoteEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

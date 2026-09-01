@@ -50,6 +50,7 @@ else
             <MudButton Color="Color.Error" Variant="Variant.Outlined" Class="mt-4 ml-2" Disabled="@isApproving" OnClick="RejectAsync">Recusar</MudButton>
         }
         @if (!string.IsNullOrWhiteSpace(quote.Notes)) { <MudText Class="mt-3">@quote.Notes</MudText> }
+        <MudButton Href="@GetPdfUrl()" Target="_blank" Variant="Variant.Outlined" Class="mt-3">Baixar PDF</MudButton>
         <MudButton Href="@GetWhatsAppUrl()" Target="_blank" Variant="Variant.Text" Class="mt-3">Falar com a empresa</MudButton>
     </MudPaper>
 }
@@ -91,4 +92,8 @@ else
         var digits = new string(quote.CompanyWhatsApp.Where(char.IsDigit).ToArray());
         return string.IsNullOrWhiteSpace(digits) ? string.Empty : $"https://wa.me/55{digits}";
     }
+
+    private string GetPdfUrl() => string.IsNullOrWhiteSpace(Token)
+        ? string.Empty
+        : $"/q/{Uri.EscapeDataString(Token)}/pdf";
 }
