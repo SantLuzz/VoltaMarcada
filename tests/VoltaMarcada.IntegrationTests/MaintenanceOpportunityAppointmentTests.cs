@@ -55,6 +55,60 @@ public sealed class MaintenanceOpportunityAppointmentTests
         Assert.Null(appointments.AddedAppointment.WorkOrderId);
     }
 
+    [Fact]
+    public async Task AcceptAsync_ShouldRejectAnInactiveSelectedProfessional()
+    {
+        var companyId = Guid.NewGuid();
+        var customer = CreateCustomer(companyId);
+        var equipment = Equipment.Create(companyId, customer.Id, "Air conditioner", null, null, null, null, null, null, null, Now);
+        var service = Service.Create(companyId, "Maintenance", null, 60, ServicePriceType.Fixed, 150, true, false, false, [], Now);
+        var professional = Professional.Create(companyId, Guid.NewGuid(), [service.Id], "America/Sao_Paulo", Now);
+        professional.Deactivate(Now);
+        var request = AppointmentRequest.CreatePublicPreference(
+            companyId,
+            customer.Id,
+            service.Id,
+            equipment.Id,
+            null,
+            new DateOnly(2026, 9, 9),
+            new TimeOnly(9, 0),
+            60,
+            null,
+            Now);
+        var appointments = new AppointmentRepositoryStub();
+        var professionals = new ProfessionalRepositoryStub(professional);
+        var authorization = new WorkOrderAuthorization(
+            new CurrentCompanyStub(companyId),
+            new CurrentUserStub(),
+            new OwnerInvitationRepositoryStub(),
+            professionals);
+        var availability = new AppointmentAvailability(
+            new AvailabilityRepositoryStub(ProfessionalAvailability.Create(
+                companyId,
+                professional.Id,
+                [new ProfessionalDailyScheduleDefinition(DayOfWeek.Wednesday, new TimeOnly(8, 0), new TimeOnly(18, 0), null, null)],
+                Now)),
+            appointments);
+        var opportunity = MaintenanceOpportunity.Create(companyId, customer.Id, equipment.Id, Guid.NewGuid(), service.Id, new DateOnly(2026, 9, 2), "Maintenance reminder", Now);
+        var useCase = new AcceptAppointmentRequestUseCase(
+            authorization,
+            new AppointmentRequestRepositoryStub(request),
+            professionals,
+            new ServiceRepositoryStub(service),
+            appointments,
+            new MaintenanceOpportunityRepositoryStub(opportunity),
+            new CustomerRepositoryStub(customer),
+            availability,
+            new FixedTimeProvider(Now));
+
+        var result = await useCase.ExecuteAsync(request.Id, professional.Id);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(SchedulingErrors.ProfessionalNotQualified.Code, result.Error?.Code);
+        Assert.Equal(AppointmentRequestStatus.Pending, request.Status);
+        Assert.Null(appointments.AddedAppointment);
+    }
+
     private static CreateAppointmentUseCase CreateUseCase(
         Guid companyId,
         Professional professional,
@@ -99,6 +153,19 @@ public sealed class MaintenanceOpportunityAppointmentTests
     {
         public Task<Guid?> FindCompanyIdAsync(CancellationToken cancellationToken = default) => Task.FromResult<Guid?>(companyId);
         public Task<Guid> GetCompanyIdAsync(CancellationToken cancellationToken = default) => Task.FromResult(companyId);
+    }
+
+    private sealed class AppointmentRequestRepositoryStub(AppointmentRequest request) : IAppointmentRequestRepository
+    {
+        public Task AddAsync(AppointmentRequest value, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<AppointmentRequest?> GetForCompanyAsync(Guid requestId, Guid companyId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<AppointmentRequest?>(request.Id == requestId && request.CompanyId == companyId ? request : null);
+        public Task<AppointmentRequest?> GetForAppointmentAsync(Guid appointmentId, Guid companyId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<AppointmentRequest?> GetForResponseTokenAsync(string tokenHash, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<AppointmentRequestResponseContext?> GetResponseContextAsync(string tokenHash, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<AppointmentRequestListItem>> GetOpenForCompanyAsync(Guid companyId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> HasOpenForMaintenanceOpportunityAsync(Guid companyId, Guid opportunityId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class CurrentUserStub : ICurrentUser
@@ -163,6 +230,7 @@ public sealed class MaintenanceOpportunityAppointmentTests
         public Task<IReadOnlyList<EquipmentListItem>> GetAllForCompanyAsync(Guid companyId, GetEquipmentQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<EquipmentListItem>> GetAllForCustomerAsync(Guid customerId, Guid companyId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<global::VoltaMarcada.Domain.Entities.Equipment?> GetForCompanyAsync(Guid equipmentId, Guid companyId, CancellationToken cancellationToken = default) => Task.FromResult<global::VoltaMarcada.Domain.Entities.Equipment?>(equipment.Id == equipmentId && equipment.CompanyId == companyId ? equipment : null);
+        public Task<global::VoltaMarcada.Domain.Entities.Equipment?> GetActiveForCustomerByTypeAndManufacturerAsync(Guid companyId, Guid customerId, string type, string? manufacturer, CancellationToken cancellationToken = default) => Task.FromResult<global::VoltaMarcada.Domain.Entities.Equipment?>(null);
         public Task<bool> ExistsForCustomerAsync(Guid customerId, Guid companyId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public void Remove(global::VoltaMarcada.Domain.Entities.Equipment equipment) => throw new NotSupportedException();
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;

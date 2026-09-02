@@ -220,6 +220,7 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 }
 
 .work-order-tab-content { padding: 24px; }
+.work-order-appointments-panel { padding-top: 16px; }
 .work-order-list-toolbar { margin-bottom: 20px; }
 .work-order-selection-row { flex-wrap: nowrap; width: 100%; }
 .work-order-selection-row > .mud-tooltip-root { display: block; flex: 1 1 0; min-width: 0; }
@@ -230,6 +231,7 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 .work-order-execution-content { margin-top: 24px; max-width: 760px; }
 .work-order-photo-grid { display: flex; flex-wrap: wrap; gap: 12px; }
 .work-order-photo-card { align-items: flex-end; display: flex; gap: 4px; }
+.maintenance-filters { padding-bottom: 4px; }
 
 @media (max-width: 599.95px) {
     .work-order-tab-content { padding: 16px; }
@@ -237,4 +239,17 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
     .work-order-list-toolbar > * { width: 100%; }
     .work-order-item-row { gap: 0; }
     .work-order-photo-card { width: 100%; }
+    .maintenance-actions { align-items: stretch; flex-direction: column; }
+    .maintenance-actions .mud-button-root { justify-content: flex-start; width: 100%; }
+}
+@media (max-width: 599.95px) {
+    .agenda-request-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .agenda-request-actions .mud-button-root {
+        justify-content: flex-start;
+        width: 100%;
+    }
 }

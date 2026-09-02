@@ -1,5 +1,6 @@
 @implements IAsyncDisposable
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
 @using VoltaMarcada.Application.WorkOrders
 @using VoltaMarcada.Application.Services
 @using VoltaMarcada.Domain.Enums
@@ -10,6 +11,7 @@
 @inject RemoveWorkOrderPhotoUseCase RemoveWorkOrderPhotoUseCase
 @inject GetServicesUseCase GetServicesUseCase
 @inject ISnackbar Snackbar
+@inject IJSRuntime JsRuntime
 
 @if (WorkOrder.Status == WorkOrderStatus.Pending)
 {
@@ -139,6 +141,7 @@ else
     private readonly Dictionary<Guid, bool> progress = [];
     private readonly SemaphoreSlim operationLock = new(1, 1);
     private CancellationTokenSource? autosaveCancellation;
+    private IJSObjectReference? photoStagingModule;
     private WorkOrderDetailDto? loadedWorkOrder;
     private string? executionNotes;
     private string? observedExecutionNotes;
@@ -155,6 +158,7 @@ else
     private DateTime? recommendedDueDate;
     private Guid? recommendedServiceId;
     private string? recommendationNotes;
+    private Guid? restoredStagedPhotosForWorkOrderId;
 
     private bool CanExecute => WorkOrder.Status == WorkOrderStatus.InProgress && WorkOrder.Capabilities.CanExecute;
     private bool IsRemovingPhoto => photoPendingRemoval is not null;
@@ -204,6 +208,17 @@ else
     }
 
     protected override async Task OnInitializedAsync() => services = (await GetServicesUseCase.ExecuteAsync()).Where(service => service.IsActive).ToArray();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (restoredStagedPhotosForWorkOrderId == WorkOrder.Id || !CanExecute)
+        {
+            return;
+        }
+
+        await RestoreStagedPhotosAsync();
+        restoredStagedPhotosForWorkOrderId = WorkOrder.Id;
+    }
 
     private async Task StartAsync()
     {
@@ -385,18 +400,13 @@ else
         await OnPhotoUploadChanged.InvokeAsync(true);
         try
         {
-            await using var stream = file.OpenReadStream(10 * 1024 * 1024 + 1);
-            var result = await AddWorkOrderPhotoUseCase.ExecuteAsync(
-                WorkOrder.Id,
-                new WorkOrderPhotoUpload(stream, file.Name, file.ContentType, file.Size, type, null));
-            if (result.IsSuccess)
-            {
-                Snackbar.Add("Foto enviada.", Severity.Success);
-                await OnChanged.InvokeAsync();
-                return;
-            }
-
-            ShowOperationError(result.Error?.Code);
+            var content = await ReadPhotoAsync(file);
+            await StagePhotoAsync(type, file.Name, file.ContentType, content);
+            await UploadStagedPhotoAsync(type, file.Name, file.ContentType, content);
+        }
+        catch (Exception exception) when (exception is IOException or JSException)
+        {
+            Snackbar.Add("Não foi possível preparar a foto para envio. Tente novamente.", Severity.Warning);
         }
         finally
         {
@@ -405,6 +415,99 @@ else
             operationLock.Release();
         }
     }
+
+    private async Task RestoreStagedPhotosAsync()
+    {
+        foreach (var type in Enum.GetValues<WorkOrderPhotoType>())
+        {
+            try
+            {
+                var stagedPhoto = await RestoreStagedPhotoAsync(type);
+                if (stagedPhoto is null)
+                {
+                    continue;
+                }
+
+                var content = Convert.FromBase64String(stagedPhoto.ContentBase64);
+                if (content.Length is 0 or > 10 * 1024 * 1024)
+                {
+                    await ClearStagedPhotoAsync(type);
+                    Snackbar.Add("Uma foto pendente não pôde ser restaurada.", Severity.Warning);
+                    continue;
+                }
+
+                await operationLock.WaitAsync();
+                isUploadingPhoto = true;
+                await OnPhotoUploadChanged.InvokeAsync(true);
+                try
+                {
+                    await UploadStagedPhotoAsync(type, stagedPhoto.FileName, stagedPhoto.ContentType, content);
+                }
+                finally
+                {
+                    isUploadingPhoto = false;
+                    await OnPhotoUploadChanged.InvokeAsync(false);
+                    operationLock.Release();
+                }
+            }
+            catch (Exception exception) when (exception is FormatException or JSException)
+            {
+                Snackbar.Add("Não foi possível restaurar uma foto pendente.", Severity.Warning);
+            }
+        }
+    }
+
+    private async Task<byte[]> ReadPhotoAsync(IBrowserFile file)
+    {
+        await using var stream = file.OpenReadStream(10 * 1024 * 1024 + 1);
+        await using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer);
+        return buffer.ToArray();
+    }
+
+    private async Task UploadStagedPhotoAsync(WorkOrderPhotoType type, string fileName, string contentType, byte[] content)
+    {
+        await using var stream = new MemoryStream(content, writable: false);
+        var result = await AddWorkOrderPhotoUseCase.ExecuteAsync(
+            WorkOrder.Id,
+            new WorkOrderPhotoUpload(stream, fileName, contentType, content.Length, type, null));
+        if (!result.IsSuccess)
+        {
+            ShowOperationError(result.Error?.Code);
+            return;
+        }
+
+        await ClearStagedPhotoAsync(type);
+        Snackbar.Add("Foto enviada.", Severity.Success);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task StagePhotoAsync(WorkOrderPhotoType type, string fileName, string contentType, byte[] content)
+    {
+        var module = await GetPhotoStagingModuleAsync();
+        await module.InvokeVoidAsync(
+            "stagePhoto",
+            WorkOrder.Id,
+            type,
+            fileName,
+            contentType,
+            Convert.ToBase64String(content));
+    }
+
+    private async Task<StagedWorkOrderPhoto?> RestoreStagedPhotoAsync(WorkOrderPhotoType type)
+    {
+        var module = await GetPhotoStagingModuleAsync();
+        return await module.InvokeAsync<StagedWorkOrderPhoto?>("restoreStagedPhoto", WorkOrder.Id, type);
+    }
+
+    private async Task ClearStagedPhotoAsync(WorkOrderPhotoType type)
+    {
+        var module = await GetPhotoStagingModuleAsync();
+        await module.InvokeVoidAsync("clearStagedPhoto", WorkOrder.Id, type);
+    }
+
+    private async Task<IJSObjectReference> GetPhotoStagingModuleAsync() =>
+        photoStagingModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/work-order-photo-staging.js");
 
     private async Task RemovePhotoAsync(Guid photoId)
     {
@@ -448,11 +551,22 @@ else
         Snackbar.Add(OperationErrorMessages.GetMessage(code), Severity.Warning);
     }
 
-    public ValueTask DisposeAsync()
+    private sealed record StagedWorkOrderPhoto(string FileName, string ContentType, string ContentBase64);
+
+    public async ValueTask DisposeAsync()
     {
         isDisposed = true;
         autosaveCancellation?.Cancel();
         autosaveCancellation?.Dispose();
-        return ValueTask.CompletedTask;
+        if (photoStagingModule is not null)
+        {
+            try
+            {
+                await photoStagingModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
     }
 }

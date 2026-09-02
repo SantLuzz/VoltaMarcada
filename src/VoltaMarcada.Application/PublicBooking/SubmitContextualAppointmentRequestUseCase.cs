@@ -1,5 +1,7 @@
 using VoltaMarcada.Application.Abstractions.Operations;
 using VoltaMarcada.Application.Abstractions.Persistence;
+using VoltaMarcada.Application.Abstractions.Communication;
+using VoltaMarcada.Application.Abstractions.Routing;
 using VoltaMarcada.Application.Scheduling;
 using VoltaMarcada.Domain.Entities;
 using VoltaMarcada.Domain.Enums;
@@ -15,6 +17,8 @@ public sealed class SubmitContextualAppointmentRequestUseCase(
     IMaintenanceOpportunityRepository opportunityRepository,
     ICompanyRepository companyRepository,
     IAppointmentRequestRepository requestRepository,
+    IPublicBookingNotificationSender notificationSender,
+    IApplicationUrlBuilder applicationUrlBuilder,
     TimeProvider timeProvider)
 {
     public async Task<OperationResult<Guid>> ExecuteAsync(
@@ -50,6 +54,18 @@ public sealed class SubmitContextualAppointmentRequestUseCase(
         await requestRepository.AddAsync(request, cancellationToken);
         opportunity.RevokeBookingToken(timeProvider.GetUtcNow());
         await requestRepository.SaveChangesAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(company.NotificationEmail))
+        {
+            await notificationSender.SendNewAppointmentRequestAsync(
+                company.NotificationEmail,
+                company.TradeName ?? company.LegalName,
+                context.CustomerName,
+                context.ServiceName,
+                command.Date,
+                command.StartTime,
+                applicationUrlBuilder.BuildApplicationUrl($"solicitacoes/{request.Id}"),
+                cancellationToken);
+        }
         return OperationResult<Guid>.Success(request.Id);
     }
 }

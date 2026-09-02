@@ -52,6 +52,25 @@ public sealed class EquipmentRepository(AppDbContext dbContext) : IEquipmentRepo
             equipment => equipment.Id == equipmentId && equipment.CompanyId == companyId,
             cancellationToken);
 
+    public Task<global::VoltaMarcada.Domain.Entities.Equipment?> GetActiveForCustomerByTypeAndManufacturerAsync(
+        Guid companyId,
+        Guid customerId,
+        string type,
+        string? manufacturer,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedType = type.Trim().ToUpperInvariant();
+        var normalizedManufacturer = string.IsNullOrWhiteSpace(manufacturer) ? null : manufacturer.Trim().ToUpperInvariant();
+        var equipment = dbContext.Equipment.Where(
+            equipment => equipment.CompanyId == companyId &&
+                         equipment.CustomerId == customerId &&
+                         equipment.IsActive &&
+                         equipment.Type.ToUpper() == normalizedType);
+        return normalizedManufacturer is null
+            ? equipment.SingleOrDefaultAsync(item => item.Manufacturer == null, cancellationToken)
+            : equipment.SingleOrDefaultAsync(item => item.Manufacturer != null && item.Manufacturer.ToUpper() == normalizedManufacturer, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<EquipmentListItem>> GetAllForCustomerAsync(
         Guid customerId,
         Guid companyId,

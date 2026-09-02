@@ -47,6 +47,8 @@ public sealed class AppointmentRequestRepository(AppDbContext dbContext) : IAppo
             from request in dbContext.AppointmentRequests.AsNoTracking()
             join customer in dbContext.Customers.AsNoTracking().Where(item => item.CompanyId == companyId) on request.CustomerId equals customer.Id
             join service in dbContext.Services.AsNoTracking().Where(item => item.CompanyId == companyId) on request.ServiceId equals service.Id
+            join equipment in dbContext.Equipment.AsNoTracking().Where(item => item.CompanyId == companyId) on request.EquipmentId equals (Guid?)equipment.Id into equipmentGroup
+            from equipment in equipmentGroup.DefaultIfEmpty()
             where request.CompanyId == companyId &&
                   (request.Status == AppointmentRequestStatus.Pending || request.Status == AppointmentRequestStatus.RescheduleRequested)
             orderby request.RequestedDate, request.RequestedStartTime
@@ -56,7 +58,9 @@ public sealed class AppointmentRequestRepository(AppDbContext dbContext) : IAppo
                 customer.WhatsApp,
                 service.Name,
                 string.Empty,
-                null)
+                equipment == null
+                    ? null
+                    : equipment.Type + (equipment.Manufacturer == null ? string.Empty : " - " + equipment.Manufacturer))
         ).ToArrayAsync(cancellationToken);
 
     public Task<bool> HasOpenForMaintenanceOpportunityAsync(Guid companyId, Guid opportunityId, CancellationToken cancellationToken = default) =>

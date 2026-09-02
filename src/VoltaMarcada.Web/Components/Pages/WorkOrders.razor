@@ -46,8 +46,8 @@
                 <MudTd DataLabel="Cliente"><GridTextCell Value="@context.CustomerName" /></MudTd>
                 <MudTd DataLabel="Equipamento"><GridTextCell Value="@context.EquipmentDescription" /></MudTd>
                 <MudTd DataLabel="Serviço"><GridTextCell Value="@context.ServiceName" /></MudTd>
-                <MudTd DataLabel="Status">@GetStatusName(context.Status)</MudTd>
-                <MudTd DataLabel="Prioridade">@GetPriorityName(context.Priority)</MudTd>
+                <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@GetStatusName(context.Status)</MudChip></MudTd>
+                <MudTd DataLabel="Prioridade"><MudChip T="string" Size="Size.Small" Color="@GetPriorityColor(context.Priority)">@GetPriorityName(context.Priority)</MudChip></MudTd>
                 <MudTd><MudIconButton Href="@($"/ordens-servico/registro?id={context.Id}")" Icon="@Icons.Material.Filled.OpenInNew" AriaLabel="Abrir ordem de serviço" /></MudTd>
             </RowTemplate>
         </MudTable>
@@ -83,5 +83,21 @@
         WorkOrderPriority.High => "Alta",
         WorkOrderPriority.Urgent => "Urgente",
         _ => "Normal"
+    };
+
+    private static Color GetPriorityColor(WorkOrderPriority value) => value switch
+    {
+        WorkOrderPriority.Urgent => Color.Error,
+        WorkOrderPriority.High => Color.Warning,
+        WorkOrderPriority.Low => Color.Info,
+        _ => Color.Default
+    };
+
+    private static Color GetStatusColor(WorkOrderStatus value) => value switch
+    {
+        WorkOrderStatus.Completed => Color.Success,
+        WorkOrderStatus.InProgress => Color.Info,
+        WorkOrderStatus.Cancelled => Color.Default,
+        _ => Color.Warning
     };
 }

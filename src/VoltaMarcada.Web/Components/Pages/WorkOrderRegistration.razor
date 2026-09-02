@@ -41,6 +41,10 @@ else
 {
     <PageHeader Title="@(WorkOrderId is null ? "Nova ordem de serviço" : "Ordem de serviço")" Description="Registre os dados, itens e a execução do atendimento.">
         <Actions>
+            @if (detail is not null)
+            {
+                <MudChip T="string" Color="@GetStatusColor(detail.Status)">@GetStatusName(detail.Status)</MudChip>
+            }
             <MudButton OnClick="ReturnToListAsync" Variant="Variant.Outlined" Color="Color.Default" Disabled="@(isExecutionSaving || isPhotoUploading || isReturningToList)">@ReturnButtonText</MudButton>
         </Actions>
     </PageHeader>
@@ -139,12 +143,6 @@ else
                                               IsServicePriceReadOnly="@(WorkOrderId is not null)"
                                               ReadOnly="@(!CanManageAdditionalItems)" />
                     </MudItem>
-                    @if (detail is not null)
-                    {
-                        <MudItem xs="12">
-                            <MudChip T="string" Color="@GetStatusColor(detail.Status)">@GetStatusName(detail.Status)</MudChip>
-                        </MudItem>
-                    }
                     @if (CanEdit || CanManageAdditionalItems)
                     {
                         <MudItem xs="12">
@@ -166,7 +164,7 @@ else
                 <WorkOrderExecutionPanel @ref="executionPanel" WorkOrder="detail" OnChanged="LoadAsync" OnSavingChanged="SetExecutionSavingAsync" OnPhotoUploadChanged="SetPhotoUploadStateAsync" />
             </MudTabPanel>
             <MudTabPanel Text="Agendamentos">
-                <WorkOrderAppointmentsPanel WorkOrderId="@detail.Id"
+                <WorkOrderAppointmentsPanel Class="work-order-appointments-panel" WorkOrderId="@detail.Id"
                                            IsOwner="@isOwner"
                                            CanCreateAppointments="@(isOwner || currentProfessionalId is { } currentProfessionalIdValue && detail.ProfessionalId == currentProfessionalIdValue)" />
             </MudTabPanel>

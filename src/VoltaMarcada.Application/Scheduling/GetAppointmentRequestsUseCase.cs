@@ -22,7 +22,8 @@ public sealed record AppointmentRequestDto(
     string? ProposedCustomerEmail,
     string? ProposedAddress,
     IReadOnlyList<AvailableProfessionalDto> RequestedTimeProfessionals,
-    IReadOnlyList<AppointmentAlternativeDto> Alternatives);
+    IReadOnlyList<AppointmentAlternativeDto> Alternatives,
+    string? EquipmentDescription = null);
 
 public sealed class GetAppointmentRequestsUseCase(
     WorkOrderAuthorization authorization,
@@ -33,11 +34,16 @@ public sealed class GetAppointmentRequestsUseCase(
     public async Task<IReadOnlyList<AppointmentRequestDto>> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var scope = await authorization.GetAccessScopeAsync(cancellationToken);
+        if (!scope.IsOwner)
+        {
+            return [];
+        }
+
         var requests = await repository.GetOpenForCompanyAsync(scope.CompanyId, cancellationToken);
         var result = new List<AppointmentRequestDto>();
-        foreach (var item in requests.Where(item => scope.IsOwner || item.Request.ProfessionalId == scope.ProfessionalId))
+        foreach (var item in requests)
         {
-            var analysis = scope.IsOwner && item.Request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending
+            var analysis = item.Request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending
                 ? await availabilityAnalysis.ExecuteAsync(item.Request.Id, scope.CompanyId, cancellationToken)
                 : null;
             var serviceRequest = await serviceRequests.GetForAppointmentRequestAsync(item.Request.Id, scope.CompanyId, cancellationToken);
@@ -62,7 +68,8 @@ public sealed class GetAppointmentRequestsUseCase(
                     ? null
                     : $"{item.Request.ProposedAddressStreet}, {item.Request.ProposedAddressNumber} - CEP {item.Request.ProposedAddressPostalCode}",
                 analysis?.RequestedTimeProfessionals ?? [],
-                analysis?.Alternatives ?? []));
+                analysis?.Alternatives ?? [],
+                item.EquipmentName));
         }
 
         return result;

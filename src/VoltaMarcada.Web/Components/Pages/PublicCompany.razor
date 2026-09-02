@@ -103,6 +103,12 @@ else
                 <MudDivider Class="my-6" />
                 <MudText Typo="Typo.h6">Seus dados</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">O CPF ou CNPJ identifica seu cadastro nesta empresa. Os dados informados serão usados somente para tratar esta solicitação.</MudText>
+                <MudText Typo="Typo.h6">Equipamento</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">Informe o equipamento que precisa de atendimento.</MudText>
+                <MudGrid Spacing="2" Class="mb-3">
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="equipmentType" Label="Tipo ou nome do equipamento" Required="true" RequiredError="Informe o equipamento." MaxLength="200" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="equipmentManufacturer" Label="Marca" MaxLength="200" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" /></MudItem>
+                </MudGrid>
                 <MudTextField @bind-Value="problemDescription" Label="Descreva o atendimento necessário" Lines="3" MaxLength="2000" Counter="2000" Variant="Variant.Outlined" FullWidth="@true" Disabled="@isSubmitting" Class="mb-3" />
                 <MudGrid Spacing="2">
                     <MudItem xs="12" sm="6"><BrazilianDocumentInput Id="public-customer-document" Name="customerDocument" @bind-Value="customerDocument" Required="true" Disabled="@isSubmitting" /></MudItem>
@@ -148,6 +154,8 @@ else
     private string customerDocument = string.Empty;
     private string customerWhatsApp = string.Empty;
     private string? customerEmail;
+    private string equipmentType = string.Empty;
+    private string? equipmentManufacturer;
     private string postalCode = string.Empty;
     private string street = string.Empty;
     private string number = string.Empty;
@@ -206,7 +214,19 @@ else
         try
         {
             var address = new CustomerAddressInput(CustomerAddressType.Residence, true, street, number, postalCode, complement, stateId, cityId);
-            var result = await SubmitPublicAppointmentRequestUseCase.ExecuteAsync(new SubmitPublicAppointmentRequestCommand(CompanySlug ?? string.Empty, serviceId, DateOnly.FromDateTime(bookingDate.Value), selectedSlot.StartTime, customerName, customerDocument, customerWhatsApp, customerEmail, [address], problemDescription));
+            var result = await SubmitPublicAppointmentRequestUseCase.ExecuteAsync(new SubmitPublicAppointmentRequestCommand(
+                CompanySlug ?? string.Empty,
+                serviceId,
+                DateOnly.FromDateTime(bookingDate.Value),
+                selectedSlot.StartTime,
+                customerName,
+                customerDocument,
+                customerWhatsApp,
+                customerEmail,
+                [address],
+                problemDescription,
+                equipmentType,
+                equipmentManufacturer));
             if (result.IsSuccess) { isSubmitted = true; return; }
             submitError = result.Error?.Code == "PublicBooking.RateLimited"
                 ? "Muitas tentativas foram realizadas. Aguarde alguns minutos antes de tentar novamente."
