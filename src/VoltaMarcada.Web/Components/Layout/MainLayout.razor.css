@@ -67,12 +67,21 @@
     display: flex;
     justify-content: center;
 
+    position: relative;
+
     height: 170px;
     min-height: 170px;
 
     padding: 16px 24px;
 
     overflow: hidden;
+}
+
+.drawer-close-button {
+    color: #FFFFFF;
+    position: absolute;
+    right: 12px;
+    top: 12px;
 }
 
 .drawer-logo {

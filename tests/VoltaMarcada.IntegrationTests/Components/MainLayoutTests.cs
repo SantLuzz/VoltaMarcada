@@ -76,6 +76,42 @@ public sealed class MainLayoutTests
     }
 
     [Fact]
+    public async Task RenderAsync_ShouldDisplayOnlyTheUserNameInTheAppBar()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var userId = Guid.NewGuid();
+        var company = Company.Create("VoltaMarcada Test Company Ltd.", "VoltaMarcada Test Company", "04.252.011/0001-10", "11999999999", "01001-000", "Praca da Se, 1", Guid.NewGuid(), Guid.NewGuid(), null, "volta-marcada-layout-name", DateTimeOffset.UtcNow);
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddMudServices();
+        services.AddSingleton<IJSRuntime, NoopJsRuntime>();
+        services.AddSingleton<NavigationManager, TestNavigationManager>();
+        services.AddDbContextFactory<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));
+        services.AddSingleton<ICurrentCompany>(new UserWithCompany(company.Id));
+
+        await using var serviceProvider = services.BuildServiceProvider();
+        await using (var dbContext = await serviceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContextAsync())
+        {
+            dbContext.Companies.Add(company);
+            dbContext.Users.Add(new ApplicationUser { Id = userId, FullName = "Owner Name", UserName = "owner@voltamarcada.test", Email = "owner@voltamarcada.test" });
+            dbContext.CompanyUsers.Add(CompanyUser.Create(userId, company.Id, CompanyUserRole.Owner, company.CreatedAtUtc));
+            await dbContext.SaveChangesAsync();
+        }
+
+        var renderer = new HtmlRenderer(serviceProvider, serviceProvider.GetRequiredService<ILoggerFactory>());
+        var authenticationState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId.ToString())], "Test")));
+        var html = await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var component = renderer.BeginRenderingComponent<MainLayoutHost>(ParameterView.FromDictionary(new Dictionary<string, object?> { [nameof(MainLayoutHost.AuthenticationStateTask)] = Task.FromResult(authenticationState) }));
+            await component.QuiescenceTask;
+            return component.ToHtmlString();
+        });
+
+        Assert.Contains("Owner Name", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("owner@voltamarcada.test", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RenderAsync_ShouldNotThrow_WhenAuthenticatedUserDoesNotBelongToACompany()
     {
         var services = new ServiceCollection();
