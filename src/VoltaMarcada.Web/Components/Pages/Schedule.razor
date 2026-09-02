@@ -10,6 +10,7 @@
 @using VoltaMarcada.Application.ServiceRequests
 @using VoltaMarcada.Application.Abstractions.Routing
 @using VoltaMarcada.Application.Abstractions.Communication
+@using VoltaMarcada.Web.Formatting
 @using Microsoft.JSInterop
 @inject GetAppointmentsUseCase GetAppointmentsUseCase
 @inject GetAppointmentRequestsUseCase GetAppointmentRequestsUseCase
@@ -40,6 +41,8 @@
 @inject IApplicationUrlBuilder ApplicationUrlBuilder
 @inject IWhatsAppLinkBuilder WhatsAppLinkBuilder
 @inject IJSRuntime JsRuntime
+@inject ICurrentDisplayTimeZone CurrentDisplayTimeZone
+@inject IBrazilianDisplayFormatter DisplayFormatter
 
 <PageTitle>Agenda | VoltaMarcada</PageTitle>
 
@@ -54,7 +57,7 @@
     </Actions>
 </PageHeader>
 
-@if (appointmentRequests.Count > 0)
+@if (isOwner && appointmentRequests.Count > 0)
 {
     <MudPaper Outlined="true" Class="pa-4 mt-4">
         <MudText Typo="Typo.h6">Solicitações externas pendentes</MudText>
@@ -64,6 +67,10 @@
                 <MudListItem T="AppointmentRequestDto" Value="@request" Icon="@Icons.Material.Filled.EventAvailable">
                     <MudText Typo="Typo.subtitle2">@request.CustomerName · @request.ServiceName</MudText>
                     <MudText Typo="Typo.body2">@request.Date.ToString("dd/MM/yyyy") às @request.StartTime.ToString("HH:mm")</MudText>
+                    @if (!string.IsNullOrWhiteSpace(request.EquipmentDescription))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Equipamento: @request.EquipmentDescription</MudText>
+                    }
                     <MudStack Spacing="1" Class="my-1">
                         <MudChip T="string" Size="Size.Small" Color="@(request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending ? Color.Warning : Color.Info)">@(request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending ? "Aguardando empresa" : "Aguardando cliente")</MudChip>
                         @if (request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending && request.RequestedTimeProfessionals.Count > 0)
@@ -106,7 +113,20 @@
                                     <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionForAlternativeAsync(request, alternative))">@alternative.Date.ToString("dd/MM") às @alternative.StartTime.ToString("HH:mm") · @alternative.ProfessionalName</MudButton>
                                 }
                             }
-                            <MudStack Row="true" Spacing="1">
+                            @if (request.RequestedTimeProfessionals.Count > 0)
+                            {
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Class="agenda-request-actions">
+                                    <MudSelect T="Guid?" Label="Profissional para confirmar" Value="@GetSelectedRequestProfessional(request)" ValueChanged="@(value => SetSelectedRequestProfessional(request.Id, value))" Dense="true" Class="agenda-request-professional-select">
+                                        <MudSelectItem Value="@((Guid?)null)">Selecione um profissional</MudSelectItem>
+                                        @foreach (var professional in request.RequestedTimeProfessionals)
+                                        {
+                                            <MudSelectItem Value="@((Guid?)professional.ProfessionalId)">@professional.ProfessionalName</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(GetSelectedRequestProfessional(request) is null)" OnClick="@(() => AcceptRequestAsync(request))">Confirmar horário</MudButton>
+                                </MudStack>
+                            }
+                            <MudStack Row="true" Spacing="1" Class="agenda-request-actions">
                                 <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionDialogAsync(request))">Escolher outro horário</MudButton>
                                 <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => OpenRequestRejectionDialog(request))">Recusar</MudButton>
                             </MudStack>
@@ -141,11 +161,7 @@
     </MudGrid>
 </MudPaper>
 
-@if (isOwner)
-{
-    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">Visão administrativa: todos os profissionais da empresa no período selecionado.</MudAlert>
-}
-else
+@if (!isOwner)
 {
     <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">Sua agenda pessoal: veja os atendimentos de hoje, da semana ou de outro período.</MudAlert>
 }
@@ -165,7 +181,7 @@ else
         {
             <MudListItem T="AppointmentDto" Value="@appointment" Icon="@Icons.Material.Filled.Event" OnClick="@(() => OpenAppointmentDetails(appointment.Id))">
                 <MudStack Spacing="0">
-                    <MudText Typo="Typo.subtitle2">@AppointmentCalendarTime.ToLocalDateTime(appointment.StartAtUtc, appointment.ProfessionalTimeZoneId).ToString("dd/MM HH:mm") — @GetStatusName(appointment.Status)</MudText>
+                    <MudText Typo="Typo.subtitle2">@DisplayFormatter.FormatDateTime(appointment.StartAtUtc, displayTimeZone) — @GetStatusName(appointment.Status)</MudText>
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(appointment.Origin == VoltaMarcada.Domain.Enums.AppointmentOrigin.External ? Color.Info : Color.Default)">@(appointment.Origin == VoltaMarcada.Domain.Enums.AppointmentOrigin.External ? "Externo" : "Interno")</MudChip>
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@GetAppointmentTypeName(appointment.Type)</MudChip>
                     <MudText Typo="Typo.body2">@(appointment.CustomerName ?? "Cliente não informado") · @(appointment.ServiceName ?? "Serviço não informado")</MudText>
@@ -558,6 +574,7 @@ else
     private TimeOnly? suggestionStartTime;
     private IReadOnlyList<AppointmentSlotDto> suggestionSlots = [];
     private readonly Dictionary<Guid, bool> applyCustomerProfile = [];
+    private readonly Dictionary<Guid, Guid?> selectedRequestProfessionals = [];
     private ServiceRequestDto? serviceRequestToResolve;
     private IReadOnlyList<EquipmentDto> commercialEquipment = [];
     private IReadOnlyList<ProfessionalDto> commercialProfessionals = [];
@@ -569,9 +586,11 @@ else
     private bool applyCommercialCustomerProfileProposal;
     private bool isCommercialResolutionDialogOpen;
     private bool isResolvingCommercialRequest;
+    private TimeZoneInfo displayTimeZone = TimeZoneInfo.Utc;
 
     protected override async Task OnInitializedAsync()
     {
+        displayTimeZone = await CurrentDisplayTimeZone.GetTimeZoneAsync();
         var today = GetCurrentDate();
         startDate = today.ToDateTime(TimeOnly.MinValue);
         endDate = today.AddDays(6).ToDateTime(TimeOnly.MinValue);
@@ -654,7 +673,14 @@ else
 
     private async Task AcceptRequestAsync(AppointmentRequestDto request)
     {
-        var result = await AcceptAppointmentRequestUseCase.ExecuteAsync(request.Id, request.HasCustomerProfileProposal && isOwner && ShouldApplyCustomerProfile(request.Id));
+        var selectedProfessionalId = GetSelectedRequestProfessional(request);
+        if (selectedProfessionalId is null)
+        {
+            Snackbar.Add("Selecione um profissional disponível para confirmar o horário.", Severity.Warning);
+            return;
+        }
+
+        var result = await AcceptAppointmentRequestUseCase.ExecuteAsync(request.Id, selectedProfessionalId.Value, request.HasCustomerProfileProposal && isOwner && ShouldApplyCustomerProfile(request.Id));
         if (!result.IsSuccess)
         {
             Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
@@ -869,6 +895,15 @@ else
     private bool ShouldApplyCustomerProfile(Guid requestId) => applyCustomerProfile.GetValueOrDefault(requestId);
 
     private void SetApplyCustomerProfile(Guid requestId, bool value) => applyCustomerProfile[requestId] = value;
+
+    private Guid? GetSelectedRequestProfessional(AppointmentRequestDto request) =>
+        selectedRequestProfessionals.TryGetValue(request.Id, out var selectedProfessionalId)
+            ? selectedProfessionalId
+            : request.RequestedTimeProfessionals.Count == 1
+                ? request.RequestedTimeProfessionals[0].ProfessionalId
+                : null;
+
+    private void SetSelectedRequestProfessional(Guid requestId, Guid? professionalId) => selectedRequestProfessionals[requestId] = professionalId;
 
     private void OpenAppointmentEditor() => isAppointmentEditorOpen = true;
 
@@ -1275,8 +1310,7 @@ else
         " ",
         new[] { equipment.Type, equipment.Manufacturer, equipment.Model }.Where(value => !string.IsNullOrWhiteSpace(value)));
 
-    private DateOnly GetCurrentDate() => DateOnly.FromDateTime(
-        AppointmentCalendarTime.ToLocalDateTime(TimeProvider.GetUtcNow(), SchedulingConfiguration.DefaultTimeZoneId));
+    private DateOnly GetCurrentDate() => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(TimeProvider.GetUtcNow(), displayTimeZone).DateTime);
 
 
     private static string GetStatusName(VoltaMarcada.Domain.Enums.AppointmentStatus status) => status switch

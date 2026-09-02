@@ -1,3 +1,4 @@
+-- Active: 1787061991244@@127.0.0.1@5432@voltamarcada_dev
 # VoltaMarcada
 
 ## Plano de Negócio e Desenvolvimento --- Estrutura Atualizada

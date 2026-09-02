@@ -20,6 +20,8 @@
         else
         {
             <MudGrid>
+                @if (isOwner)
+                {
                 <MudItem xs="12">
                     <MudSelect T="AppointmentType?" Label="Tipo do agendamento" Placeholder="Selecione o tipo" @bind-Value="appointmentType" @bind-Value:after="OnAppointmentTypeChanged" Disabled="@(isCreating || FixedWorkOrderId is not null)">
                         <MudSelectItem Value="@((AppointmentType?)AppointmentType.Service)">Execução de serviço</MudSelectItem>
@@ -27,13 +29,14 @@
                         <MudSelectItem Value="@((AppointmentType?)AppointmentType.Other)">Outro atendimento</MudSelectItem>
                     </MudSelect>
                 </MudItem>
+                }
                 @if (FixedWorkOrderId is { })
                 {
                     <MudItem xs="12">
                         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">Este agendamento será vinculado a esta ordem de serviço.</MudAlert>
                     </MudItem>
                 }
-                else if (isOwner)
+                else if (isOwner && IsServiceAppointment)
                 {
                     <MudItem xs="12">
                         <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Obrigatória para execução de serviço" Clearable="true" @bind-Value="workOrderId" @bind-Value:after="OnWorkOrderChangedAsync" Disabled="@(isCreating || appointmentType != AppointmentType.Service)">
@@ -44,7 +47,7 @@
                         </MudSelect>
                     </MudItem>
                 }
-                else
+                else if (IsServiceAppointment)
                 {
                     <MudItem xs="12">
                         <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Obrigatória para execução de serviço" @bind-Value="workOrderId" @bind-Value:after="OnWorkOrderChangedAsync" Disabled="@(isCreating || appointmentType != AppointmentType.Service)">
@@ -56,7 +59,7 @@
                     </MudItem>
                 }
 
-                @if (isOwner)
+                @if (isOwner && IsManualAppointment)
                 {
                     <MudItem xs="12" sm="6">
                         <MudSelect T="Guid?" Label="Cliente" Placeholder="Selecione um cliente" Clearable="true" @bind-Value="customerId" @bind-Value:after="LoadEquipmentAsync" Disabled="@(isCreating || workOrderId is not null)">
@@ -75,21 +78,10 @@
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12" sm="6">
-                        <MudSelect T="Guid?" Label="Serviço" Placeholder="Selecione um serviço" @bind-Value="serviceId" @bind-Value:after="OnServiceChangedAsync" Disabled="@(isCreating || workOrderId is not null)">
-                            @foreach (var service in services)
-                            {
-                                <MudSelectItem Value="@((Guid?)service.Id)">@service.Name (@service.DurationMinutes min)</MudSelectItem>
-                            }
-                        </MudSelect>
+                        <MudNumericField T="int?" Label="Duração (minutos)" Min="1" @bind-Value="manualDurationMinutes" @bind-Value:after="LoadSlotsAsync" Disabled="@isCreating" />
                     </MudItem>
-                    @if (serviceId is null)
-                    {
-                        <MudItem xs="12" sm="6">
-                            <MudNumericField T="int?" Label="Duração (minutos)" Min="1" @bind-Value="manualDurationMinutes" @bind-Value:after="LoadSlotsAsync" Disabled="@(isCreating || workOrderId is not null)" />
-                        </MudItem>
-                    }
                     <MudItem xs="12" sm="6">
-                        <MudSelect T="Guid?" Label="Profissional" Placeholder="Selecione um profissional" @bind-Value="professionalId" @bind-Value:after="LoadSlotsAsync" Disabled="@(isCreating || (serviceId is null && manualDurationMinutes is null) || workOrderId is not null)">
+                        <MudSelect T="Guid?" Label="Profissional" Placeholder="Selecione um profissional" @bind-Value="professionalId" @bind-Value:after="LoadSlotsAsync" Disabled="@(isCreating || manualDurationMinutes is not > 0)">
                             @foreach (var professional in AvailableProfessionals)
                             {
                                 <MudSelectItem Value="@((Guid?)professional.Id)">@professional.CompanyMemberName</MudSelectItem>
@@ -170,6 +162,10 @@
         ? professionals.Where(professional => professional.ServiceIds.Contains(selectedServiceId)).ToArray()
         : professionals;
 
+    private bool IsServiceAppointment => appointmentType == AppointmentType.Service;
+
+    private bool IsManualAppointment => appointmentType is AppointmentType.Visit or AppointmentType.Other;
+
     protected override async Task OnParametersSetAsync()
     {
         if (Visible && !wasVisible)
@@ -191,7 +187,7 @@
         manualDurationMinutes = null;
         startTime = null;
         notes = null;
-        appointmentType = FixedWorkOrderId is null ? null : AppointmentType.Service;
+        appointmentType = isOwner && FixedWorkOrderId is null ? null : AppointmentType.Service;
         equipment = [];
         professionals = [];
         workOrders = [];
@@ -246,12 +242,14 @@
 
     private void OnAppointmentTypeChanged()
     {
-        if (appointmentType != AppointmentType.Service)
-        {
-            workOrderId = null;
-            startTime = null;
-            slots = [];
-        }
+        customerId = null;
+        equipmentId = null;
+        serviceId = null;
+        professionalId = null;
+        workOrderId = FixedWorkOrderId;
+        manualDurationMinutes = null;
+        startTime = null;
+        slots = [];
     }
 
     private async Task OnWorkOrderChangedAsync()
@@ -267,6 +265,9 @@
         {
             return;
         }
+
+        appointmentType = AppointmentType.Service;
+        manualDurationMinutes = null;
 
         var workOrder = await GetWorkOrderDetailsUseCase.ExecuteAsync(selectedWorkOrderId);
         if (workOrder is null || workOrder.ProfessionalId is null || !isOwner && workOrder.ProfessionalId != professionalId)
@@ -307,7 +308,7 @@
             startTime is null ||
             GetDurationMinutes() is not { } durationMinutes ||
             appointmentType is null ||
-            appointmentType == AppointmentType.Service && workOrderId is null ||
+            IsServiceAppointment && workOrderId is null ||
             !isOwner && workOrderId is null)
         {
             Snackbar.Add("Selecione tipo, serviço, profissional, data e horário.", Severity.Warning);
@@ -356,13 +357,12 @@
 
     private int? GetDurationMinutes()
     {
-        var service = GetSelectedService();
-        if (service is not null)
+        if (IsServiceAppointment && GetSelectedService() is { } service)
         {
             return service.DurationMinutes;
         }
 
-        return isOwner && manualDurationMinutes is > 0 ? manualDurationMinutes : null;
+        return IsManualAppointment && isOwner && manualDurationMinutes is > 0 ? manualDurationMinutes : null;
     }
 
     private DateOnly GetCurrentDate() => DateOnly.FromDateTime(

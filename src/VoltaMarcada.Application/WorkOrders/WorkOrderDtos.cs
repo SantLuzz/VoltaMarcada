@@ -2,7 +2,7 @@ using VoltaMarcada.Domain.Enums;
 
 namespace VoltaMarcada.Application.WorkOrders;
 
-public sealed record WorkOrderListItem(Guid Id, string CustomerName, string EquipmentDescription, string ServiceName, WorkOrderStatus Status, WorkOrderPriority Priority, DateTimeOffset CreatedAtUtc, Guid? ProfessionalId);
+public sealed record WorkOrderListItem(Guid Id, string CustomerName, string EquipmentDescription, string ServiceName, WorkOrderStatus Status, WorkOrderPriority Priority, DateTimeOffset CreatedAtUtc, Guid? ProfessionalId, DateTimeOffset? ScheduledAtUtc = null);
 public sealed record WorkOrderItemDto(Guid Id, string Description, decimal Quantity, decimal UnitPrice, WorkOrderItemType Type, decimal TotalAmount, int DisplayOrder);
 public sealed record WorkOrderChecklistItemDto(Guid Id, string Description, bool IsRequired, bool IsCompleted, DateTimeOffset? CompletedAtUtc, int DisplayOrder);
 public sealed record WorkOrderPhotoDto(Guid Id, WorkOrderPhotoType Type, string? Description, DateTimeOffset CreatedAtUtc);

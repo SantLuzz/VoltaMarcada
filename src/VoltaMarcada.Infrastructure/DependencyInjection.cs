@@ -40,6 +40,11 @@ public static class DependencyInjection
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders();
+        services.AddOptions<SmtpOptions>()
+            .Bind(configuration.GetSection(SmtpOptions.SectionName))
+            .Validate(options => !options.Enabled || (!string.IsNullOrWhiteSpace(options.Host) && options.Port is > 0 and <= 65535 && !string.IsNullOrWhiteSpace(options.SenderEmail)), "SMTP host, port, and sender email are required when SMTP is enabled.");
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<IPublicBookingNotificationSender, PublicBookingNotificationSender>();
 
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<ICompanyOnboardingRepository, CompanyOnboardingRepository>();

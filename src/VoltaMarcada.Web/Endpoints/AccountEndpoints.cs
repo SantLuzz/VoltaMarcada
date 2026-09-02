@@ -6,6 +6,12 @@ using VoltaMarcada.Infrastructure.Identity;
 using VoltaMarcada.Infrastructure.Persistence;
 using VoltaMarcada.Web.Routing;
 using VoltaMarcada.Domain.ValueObjects;
+using VoltaMarcada.Application.Abstractions.Communication;
+using VoltaMarcada.Application.Abstractions.Routing;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Text;
+using System.Security.Claims;
 
 namespace VoltaMarcada.Web.Endpoints;
 
@@ -15,6 +21,10 @@ public static class AccountEndpoints
     {
         endpoints.MapPost("/account/register", RegisterAsync);
         endpoints.MapPost("/account/login", LoginAsync);
+        endpoints.MapPost("/account/forgot-password", ForgotPasswordAsync);
+        endpoints.MapPost("/account/reset-password", ResetPasswordAsync);
+        endpoints.MapPost("/account/change-password", ChangePasswordAsync)
+            .RequireAuthorization();
         endpoints.MapPost("/account/logout", LogoutAsync)
             .RequireAuthorization();
 
@@ -107,7 +117,7 @@ public static class AccountEndpoints
             email,
             request.Password,
             isPersistent: false,
-            lockoutOnFailure: false);
+            lockoutOnFailure: true);
 
         if (!signInResult.Succeeded)
         {
@@ -132,6 +142,57 @@ public static class AccountEndpoints
         return hasMembership || isPlatformAdministrator
             ? Results.Redirect(LocalReturnUrl.Normalize(request.ReturnUrl, "/"))
             : RedirectToOnboarding(request.ReturnUrl);
+    }
+
+    private static async Task<IResult> ForgotPasswordAsync(
+        [FromForm] ForgotPasswordRequest request,
+        UserManager<ApplicationUser> userManager,
+        IEmailSender emailSender,
+        IApplicationUrlBuilder applicationUrlBuilder,
+        CancellationToken cancellationToken)
+    {
+        const string confirmation = "Se o e-mail estiver cadastrado, você receberá instruções para redefinir sua senha.";
+        if (!IsValidEmail(request.Email)) return Results.Redirect("/account/forgot-password" + QueryString.Create("message", confirmation));
+
+        var user = await userManager.FindByEmailAsync(request.Email.Trim());
+        if (user is not null)
+        {
+            var token = await userManager.GeneratePasswordResetTokenAsync(user);
+            var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+            var resetUrl = new Uri(applicationUrlBuilder.BuildApplicationUrl($"account/reset-password?userId={user.Id}&token={Uri.EscapeDataString(encodedToken)}"));
+            var email = AccountPasswordResetEmail.Create(user.FullName ?? user.Email!, resetUrl);
+            await emailSender.SendAsync(new EmailMessage(user.Email!, email.Subject, email.HtmlBody), cancellationToken);
+        }
+
+        return Results.Redirect("/account/forgot-password" + QueryString.Create("message", confirmation));
+    }
+
+    private static async Task<IResult> ResetPasswordAsync([FromForm] ResetPasswordRequest request, UserManager<ApplicationUser> userManager)
+    {
+        if (!Guid.TryParse(request.UserId, out var userId) || string.IsNullOrWhiteSpace(request.Token) || string.IsNullOrWhiteSpace(request.Password) || request.Password != request.ConfirmPassword)
+            return Results.Redirect("/account/reset-password" + QueryString.Create("error", "Não foi possível redefinir a senha."));
+
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null) return Results.Redirect("/account/reset-password" + QueryString.Create("error", "Não foi possível redefinir a senha."));
+        string token;
+        try { token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Token)); }
+        catch (FormatException) { return Results.Redirect("/account/reset-password" + QueryString.Create("error", "Não foi possível redefinir a senha.")); }
+        var result = await userManager.ResetPasswordAsync(user, token, request.Password);
+        return result.Succeeded
+            ? Results.Redirect("/account/login" + QueryString.Create("message", "Senha redefinida. Entre com a nova senha."))
+            : Results.Redirect("/account/reset-password" + QueryString.Create("error", "Não foi possível redefinir a senha."));
+    }
+
+    private static async Task<IResult> ChangePasswordAsync([FromForm] ChangePasswordRequest request, ClaimsPrincipal principal, UserManager<ApplicationUser> userManager)
+    {
+        var user = await userManager.GetUserAsync(principal);
+        if (user is null) return Results.Challenge();
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword != request.ConfirmPassword)
+            return Results.Redirect("/account/change-password" + QueryString.Create("error", "Revise os dados da senha."));
+        var result = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        return result.Succeeded
+            ? Results.Redirect("/account/change-password" + QueryString.Create("message", "Senha alterada com sucesso."))
+            : Results.Redirect("/account/change-password" + QueryString.Create("error", "Não foi possível alterar a senha. Verifique a senha atual e os requisitos."));
     }
 
     private static async Task<IResult> LogoutAsync(SignInManager<ApplicationUser> signInManager)
@@ -167,4 +228,8 @@ public static class AccountEndpoints
         string? ReturnUrl);
 
     public sealed record LoginAccountRequest(string Email, string Password, string? ReturnUrl);
+
+    public sealed record ForgotPasswordRequest(string Email);
+    public sealed record ResetPasswordRequest(string UserId, string Token, string Password, string ConfirmPassword);
+    public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword, string ConfirmPassword);
 }
