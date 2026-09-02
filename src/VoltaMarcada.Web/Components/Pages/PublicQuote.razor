@@ -1,0 +1,99 @@
+@page "/q/{Token}"
+@layout PublicLayout
+@using VoltaMarcada.Application.Quotes
+@using VoltaMarcada.Web.Configuration
+@inject GetPublicQuoteUseCase GetPublicQuoteUseCase
+@inject ApprovePublicQuoteUseCase ApprovePublicQuoteUseCase
+@inject RejectPublicQuoteUseCase RejectPublicQuoteUseCase
+@inject PublicQuoteActionLimiter PublicQuoteActionLimiter
+
+<PageTitle>Orçamento | VoltaMarcada</PageTitle>
+
+@if (isLoading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (quote is null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">Este orçamento não está disponível.</MudAlert>
+}
+else
+{
+    <MudPaper Class="pa-6" Outlined="true">
+        @if (actionError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">@actionError</MudAlert>
+        }
+        <MudText Typo="Typo.h4">Orçamento</MudText>
+        <MudText Typo="Typo.subtitle1" Class="mb-2">@quote.CompanyName</MudText>
+        <MudText Typo="Typo.body2" Class="mb-4">Válido até @quote.ValidUntil.ToString("dd/MM/yyyy")</MudText>
+        @foreach (var item in quote.Items)
+        {
+            <MudStack Row="true" Justify="Justify.SpaceBetween" Class="py-2">
+                <MudText>@item.Description (@item.Quantity)</MudText><MudText>@item.TotalAmount.ToString("C")</MudText>
+            </MudStack>
+        }
+        @if (quote.DiscountAmount > 0) { <MudText>Desconto: -@quote.DiscountAmount.ToString("C")</MudText> }
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.h6">Total: @quote.TotalAmount.ToString("C")</MudText>
+        @if (quote.Status == VoltaMarcada.Domain.Enums.QuoteStatus.Approved)
+        {
+            <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mt-4">Orçamento aprovado. A empresa dará continuidade ao atendimento.</MudAlert>
+        }
+        else if (quote.Status == VoltaMarcada.Domain.Enums.QuoteStatus.Rejected)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">Orçamento recusado.</MudAlert>
+        }
+        @if (quote.Status == VoltaMarcada.Domain.Enums.QuoteStatus.Sent)
+        {
+            <MudButton Color="Color.Success" Variant="Variant.Filled" Class="mt-4" Disabled="@isApproving" OnClick="ApproveAsync">@(isApproving ? "Aprovando..." : "Aprovar orçamento")</MudButton>
+            <MudButton Color="Color.Error" Variant="Variant.Outlined" Class="mt-4 ml-2" Disabled="@isApproving" OnClick="RejectAsync">Recusar</MudButton>
+        }
+        @if (!string.IsNullOrWhiteSpace(quote.Notes)) { <MudText Class="mt-3">@quote.Notes</MudText> }
+        <MudButton Href="@GetPdfUrl()" Target="_blank" Variant="Variant.Outlined" Class="mt-3">Baixar PDF</MudButton>
+        <MudButton Href="@GetWhatsAppUrl()" Target="_blank" Variant="Variant.Text" Class="mt-3">Falar com a empresa</MudButton>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public string? Token { get; set; }
+    private PublicQuoteDto? quote;
+    private bool isLoading = true;
+    private bool isApproving;
+    private string? actionError;
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        quote = await GetPublicQuoteUseCase.ExecuteAsync(Token);
+        isLoading = false;
+    }
+    private async Task ApproveAsync()
+    {
+        if (!PublicQuoteActionLimiter.TryAcquire(Token)) { actionError = "Tente novamente em alguns minutos."; return; }
+        isApproving = true;
+        var result = await ApprovePublicQuoteUseCase.ExecuteAsync(Token);
+        actionError = result.IsSuccess ? null : "Não foi possível aprovar este orçamento.";
+        quote = await GetPublicQuoteUseCase.ExecuteAsync(Token);
+        isApproving = false;
+    }
+    private async Task RejectAsync()
+    {
+        if (!PublicQuoteActionLimiter.TryAcquire(Token)) { actionError = "Tente novamente em alguns minutos."; return; }
+        isApproving = true;
+        var result = await RejectPublicQuoteUseCase.ExecuteAsync(Token);
+        actionError = result.IsSuccess ? null : "Não foi possível recusar este orçamento.";
+        quote = await GetPublicQuoteUseCase.ExecuteAsync(Token);
+        isApproving = false;
+    }
+
+    private string GetWhatsAppUrl()
+    {
+        if (quote is null || string.IsNullOrWhiteSpace(quote.CompanyWhatsApp)) return string.Empty;
+        var digits = new string(quote.CompanyWhatsApp.Where(char.IsDigit).ToArray());
+        return string.IsNullOrWhiteSpace(digits) ? string.Empty : $"https://wa.me/55{digits}";
+    }
+
+    private string GetPdfUrl() => string.IsNullOrWhiteSpace(Token)
+        ? string.Empty
+        : $"/q/{Uri.EscapeDataString(Token)}/pdf";
+}

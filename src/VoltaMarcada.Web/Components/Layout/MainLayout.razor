@@ -30,21 +30,67 @@
             <header class="drawer-brand">
                 <img src="/logos/icone.png" alt="VoltaMarcada" class="drawer-logo" />
             </header>
+<div class="drawer-navigation-scroll">
 
-            <MudNavMenu Class="drawer-navigation">
-                <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Painel</MudNavLink>
-                <MudNavLink Href="/clientes" Icon="@Icons.Material.Filled.People">Clientes</MudNavLink>
-                <MudNavLink Href="/equipamentos" Icon="@Icons.Material.Filled.Hvac">Equipamentos</MudNavLink>
-                <MudNavLink Href="/ordens-servico" Icon="@Icons.Material.Filled.Assignment">Ordens de serviço</MudNavLink>
-                <MudNavLink Href="/agenda" Icon="@Icons.Material.Filled.CalendarMonth">Agenda</MudNavLink>
-                <MudNavLink Href="/servicos" Icon="@Icons.Material.Filled.DesignServices">Serviços</MudNavLink>
-                <MudNavLink Href="/profissionais" Icon="@Icons.Material.Filled.Engineering">Profissionais</MudNavLink>
-                @if (isOwner)
-                {
-                    <MudNavLink Href="/manutencoes" Icon="@Icons.Material.Filled.BuildCircle">Manuten&#231;&#245;es</MudNavLink>
-                    <MudNavLink Href="/empresa" Icon="@Icons.Material.Filled.Business">Empresa</MudNavLink>
-                }
-            </MudNavMenu>
+    <MudNavMenu Class="drawer-navigation">
+
+        <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
+            Painel
+        </MudNavLink>
+
+        <MudNavLink Href="/agenda" Icon="@Icons.Material.Filled.CalendarMonth">
+            Agenda
+        </MudNavLink>
+
+        <MudNavGroup Title="Cadastros"
+                 Icon="@Icons.Material.Filled.Apps"
+                 Expanded="true">
+            <MudNavLink Href="/clientes" Icon="@Icons.Material.Filled.People">
+                Clientes
+            </MudNavLink>
+
+            @if(isOwner)
+            {
+                <MudNavLink Href="/empresa" Icon="@Icons.Material.Filled.Business">
+                    Empresa
+                </MudNavLink>
+            }
+
+            <MudNavLink Href="/equipamentos" Icon="@Icons.Material.Filled.Hvac">
+                Equipamentos
+            </MudNavLink>
+
+            
+            <MudNavLink Href="/profissionais" Icon="@Icons.Material.Filled.Engineering">
+                Profissionais
+            </MudNavLink>
+
+            <MudNavLink Href="/servicos" Icon="@Icons.Material.Filled.DesignServices">
+                Serviços
+            </MudNavLink>
+
+
+        </MudNavGroup>
+
+        @if (isOwner)
+        {
+            <MudNavLink Href="/manutencoes" Icon="@Icons.Material.Filled.BuildCircle">
+                Manutenções
+            </MudNavLink>  
+        }
+
+        <MudNavLink Href="/orcamentos" Icon="@Icons.Material.Filled.RequestQuote">
+            Orçamentos
+        </MudNavLink>
+
+        <MudNavLink Href="/ordens-servico" Icon="@Icons.Material.Filled.Assignment">
+            Ordens de serviço
+        </MudNavLink>
+
+
+    </MudNavMenu>
+
+</div>
 
             <footer class="drawer-footer">
                 <form method="post" action="/account/logout" class="logout-form">

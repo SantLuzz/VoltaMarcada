@@ -34,6 +34,8 @@ public sealed class GetWorkOrderAppointmentsUseCase(WorkOrderAuthorization autho
             item.Appointment.EndAtUtc,
             item.Appointment.Status,
             item.Appointment.Origin,
+            item.Appointment.Type,
+            item.Appointment.Description,
             item.Appointment.Notes,
             timeZoneIds[item.Appointment.ProfessionalId],
             item.ProfessionalName,

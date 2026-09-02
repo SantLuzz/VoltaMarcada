@@ -11,6 +11,8 @@ using VoltaMarcada.Application.Scheduling;
 using VoltaMarcada.Application.MaintenanceOpportunities;
 using VoltaMarcada.Application.CompanySettings;
 using VoltaMarcada.Application.PublicBooking;
+using VoltaMarcada.Application.Quotes;
+using VoltaMarcada.Application.ServiceRequests;
 
 namespace VoltaMarcada.Application;
 
@@ -42,13 +44,10 @@ public static class DependencyInjection
         services.AddScoped<GetMaintenanceOpportunitiesUseCase>();
         services.AddScoped<GetMaintenanceOpportunitySummaryUseCase>();
         services.AddScoped<GetMaintenanceOpportunityForSchedulingUseCase>();
-        services.AddScoped<MaintenanceOpportunityActionExecutor>();
+        services.AddScoped<GetMaintenanceOpportunityForQuoteUseCase>();
         services.AddScoped<PrepareMaintenanceOpportunityWhatsAppContactUseCase>();
         services.AddScoped<ConfirmMaintenanceOpportunityContactSentUseCase>();
-        services.AddScoped<MarkMaintenanceOpportunityAsBookingRequestedUseCase>();
-        services.AddScoped<MarkMaintenanceOpportunityAsBookedUseCase>();
-        services.AddScoped<CompleteMaintenanceOpportunityUseCase>();
-        services.AddScoped<DismissMaintenanceOpportunityUseCase>();
+        services.AddScoped<DiscardMaintenanceOpportunityUseCase>();
         services.AddScoped<CreateWorkOrderUseCase>();
         services.AddScoped<GetWorkOrdersUseCase>();
         services.AddScoped<GetWorkOrderDetailsUseCase>();
@@ -113,6 +112,21 @@ public static class DependencyInjection
         services.AddScoped<SuggestAppointmentRequestTimeUseCase>();
         services.AddScoped<GetAppointmentRequestResponseUseCase>();
         services.AddScoped<RespondToAppointmentRequestUseCase>();
+        services.AddScoped<CreateQuoteUseCase>();
+        services.AddScoped<GetQuotesUseCase>();
+        services.AddScoped<UpdateQuoteUseCase>();
+        services.AddScoped<SendQuoteUseCase>();
+        services.AddScoped<PublicQuoteAccessService>();
+        services.AddScoped<QuotePdfDocumentFactory>();
+        services.AddScoped<GetQuotePdfUseCase>();
+        services.AddScoped<GetPublicQuotePdfUseCase>();
+        services.AddScoped<GetPublicQuoteUseCase>();
+        services.AddScoped<ApproveQuoteUseCase>();
+        services.AddScoped<RejectQuoteUseCase>();
+        services.AddScoped<ApprovePublicQuoteUseCase>();
+        services.AddScoped<RejectPublicQuoteUseCase>();
+        services.AddScoped<GetServiceRequestsUseCase>();
+        services.AddScoped<ResolveServiceRequestUseCase>();
         return services;
     }
 }

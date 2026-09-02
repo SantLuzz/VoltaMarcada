@@ -17,7 +17,8 @@ public sealed record GetMaintenanceOpportunitiesQuery(
 public sealed record MaintenanceOpportunitySummary(
     int OverdueCount,
     int NextSevenDaysCount,
-    int NextThirtyDaysCount);
+    int NextThirtyDaysCount,
+    int AwaitingCustomerCount);
 
 public sealed record MaintenanceOpportunityListItem(
     Guid Id,
@@ -30,7 +31,18 @@ public sealed record MaintenanceOpportunityListItem(
     string Notes,
     MaintenanceOpportunityStatus Status,
     MaintenanceOpportunityUrgency Urgency,
+    MaintenanceOpportunityConversionType? ConversionType,
+    Guid? ConvertedEntityId,
+    DateTimeOffset? ConvertedAtUtc,
+    DateTimeOffset? ClosedAtUtc,
+    string? ClosureReason,
+    MaintenanceOpportunityConversionReference? ConversionReference,
     IReadOnlyList<CustomerContactHistoryItem> Contacts);
+
+public sealed record MaintenanceOpportunityConversionReference(
+    Guid EntityId,
+    DateTimeOffset? AppointmentStartAtUtc,
+    QuoteStatus? QuoteStatus);
 
 public sealed record MaintenanceOpportunityContactContext(
     Guid OpportunityId,
@@ -53,6 +65,12 @@ public sealed record CustomerContactHistoryItem(
 public sealed record PreparedWhatsAppContact(Guid ContactId, string Link);
 
 public sealed record MaintenanceOpportunityScheduleContext(
+    Guid OpportunityId,
+    Guid CustomerId,
+    Guid EquipmentId,
+    Guid RecommendedServiceId);
+
+public sealed record MaintenanceOpportunityQuoteContext(
     Guid OpportunityId,
     Guid CustomerId,
     Guid EquipmentId,

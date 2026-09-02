@@ -19,7 +19,15 @@
                     <MudText Typo="Typo.overline">Status</MudText>
                     <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(appointmentDetails.Status)">@GetStatusName(appointmentDetails.Status)</MudChip>
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(appointmentDetails.Origin == VoltaMarcada.Domain.Enums.AppointmentOrigin.External ? Color.Info : Color.Default)">@(appointmentDetails.Origin == VoltaMarcada.Domain.Enums.AppointmentOrigin.External ? "Externo" : "Interno")</MudChip>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@GetTypeName(appointmentDetails.Type)</MudChip>
                 </div>
+                @if (!string.IsNullOrWhiteSpace(appointmentDetails.Description))
+                {
+                    <div>
+                        <MudText Typo="Typo.overline">Descrição do atendimento</MudText>
+                        <MudText>@appointmentDetails.Description</MudText>
+                    </div>
+                }
                 @if (!string.IsNullOrWhiteSpace(appointmentDetails.Notes))
                 {
                     <div>
@@ -52,6 +60,13 @@
         }
     </DialogContent>
     <DialogActions>
+        @if (appointmentDetails is not null &&
+             appointmentDetails.Status == VoltaMarcada.Domain.Enums.AppointmentStatus.Completed &&
+             (appointmentDetails.Type == VoltaMarcada.Domain.Enums.AppointmentType.Visit || appointmentDetails.Type == VoltaMarcada.Domain.Enums.AppointmentType.Other))
+        {
+            <MudButton Href="@($"/orcamentos/registro?sourceAppointmentId={appointmentDetails.Id}")" Variant="Variant.Outlined">Gerar orçamento</MudButton>
+            <MudButton Href="@($"/ordens-servico/registro?sourceAppointmentId={appointmentDetails.Id}")" Variant="Variant.Outlined">Gerar OS</MudButton>
+        }
         @if (appointmentDetails?.WorkOrderId is { } workOrderId)
         {
             <MudButton Href="@($"/ordens-servico/registro?id={workOrderId}")" Color="Color.Primary" Variant="Variant.Filled">Abrir OS</MudButton>
@@ -121,5 +136,12 @@
         VoltaMarcada.Domain.Enums.AppointmentStatus.Cancelled => "Cancelado",
         VoltaMarcada.Domain.Enums.AppointmentStatus.InProgress => "Em andamento",
         _ => "Agendado"
+    };
+
+    private static string GetTypeName(VoltaMarcada.Domain.Enums.AppointmentType type) => type switch
+    {
+        VoltaMarcada.Domain.Enums.AppointmentType.Visit => "Visita técnica",
+        VoltaMarcada.Domain.Enums.AppointmentType.Service => "Execução de serviço",
+        _ => "Outro atendimento"
     };
 }

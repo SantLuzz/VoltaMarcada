@@ -109,6 +109,11 @@ public sealed class MaintenanceOpportunityRepository(AppDbContext dbContext) : I
             }).ToArrayAsync(cancellationToken);
 
         var opportunityIds = items.Select(item => item.Opportunity.Id).ToArray();
+        var convertedEntityIds = items
+            .Select(item => item.Opportunity.ConvertedEntityId)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .ToArray();
         var contacts = await dbContext.CustomerContacts.AsNoTracking()
             .Where(contact => contact.CompanyId == companyId && opportunityIds.Contains(contact.OpportunityId))
             .OrderByDescending(contact => contact.CreatedAtUtc)
@@ -128,6 +133,16 @@ public sealed class MaintenanceOpportunityRepository(AppDbContext dbContext) : I
             .GroupBy(item => item.OpportunityId)
             .ToDictionary(group => group.Key, group => (IReadOnlyList<CustomerContactHistoryItem>)group.Select(item => item.Contact).ToArray());
 
+        var convertedAppointments = await dbContext.Appointments.AsNoTracking()
+            .Where(appointment => appointment.CompanyId == companyId &&
+                                  convertedEntityIds.Contains(appointment.Id))
+            .Select(appointment => new { appointment.Id, appointment.StartAtUtc })
+            .ToDictionaryAsync(item => item.Id, item => item.StartAtUtc, cancellationToken);
+        var convertedQuotes = await dbContext.Quotes.AsNoTracking()
+            .Where(quote => quote.CompanyId == companyId && convertedEntityIds.Contains(quote.Id))
+            .Select(quote => new { quote.Id, quote.Status })
+            .ToDictionaryAsync(item => item.Id, item => item.Status, cancellationToken);
+
         return items.Select(item => new MaintenanceOpportunityListItem(
             item.Opportunity.Id,
             item.CustomerName,
@@ -139,6 +154,12 @@ public sealed class MaintenanceOpportunityRepository(AppDbContext dbContext) : I
             item.Opportunity.Notes,
             item.Opportunity.Status,
             GetUrgency(item.Opportunity.DueDate, today),
+            item.Opportunity.ConversionType,
+            item.Opportunity.ConvertedEntityId,
+            item.Opportunity.ConvertedAtUtc,
+            item.Opportunity.ClosedAtUtc,
+            item.Opportunity.ClosureReason,
+            GetConversionReference(item.Opportunity, convertedAppointments, convertedQuotes),
             contactsByOpportunity.GetValueOrDefault(item.Opportunity.Id, []))).ToArray();
     }
 
@@ -146,14 +167,15 @@ public sealed class MaintenanceOpportunityRepository(AppDbContext dbContext) : I
     {
         var openOpportunities = dbContext.MaintenanceOpportunities.AsNoTracking().Where(
             opportunity => opportunity.CompanyId == companyId &&
-                           opportunity.Status != MaintenanceOpportunityStatus.Completed &&
-                           opportunity.Status != MaintenanceOpportunityStatus.Dismissed);
+                           opportunity.Status != MaintenanceOpportunityStatus.Converted &&
+                           opportunity.Status != MaintenanceOpportunityStatus.ClosedWithoutConversion);
         var nextSevenDays = today.AddDays(7);
         var nextThirtyDays = today.AddDays(30);
         return new MaintenanceOpportunitySummary(
             await openOpportunities.CountAsync(opportunity => opportunity.DueDate < today, cancellationToken),
             await openOpportunities.CountAsync(opportunity => opportunity.DueDate >= today && opportunity.DueDate <= nextSevenDays, cancellationToken),
-            await openOpportunities.CountAsync(opportunity => opportunity.DueDate >= today && opportunity.DueDate <= nextThirtyDays, cancellationToken));
+            await openOpportunities.CountAsync(opportunity => opportunity.DueDate >= today && opportunity.DueDate <= nextThirtyDays, cancellationToken),
+            await openOpportunities.CountAsync(opportunity => opportunity.Status == MaintenanceOpportunityStatus.AwaitingCustomer, cancellationToken));
     }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);
@@ -167,8 +189,8 @@ public sealed class MaintenanceOpportunityRepository(AppDbContext dbContext) : I
         DateOnly today)
     {
         opportunities = opportunities.Where(opportunity =>
-            opportunity.Status != MaintenanceOpportunityStatus.Completed &&
-            opportunity.Status != MaintenanceOpportunityStatus.Dismissed);
+            opportunity.Status != MaintenanceOpportunityStatus.Converted &&
+            opportunity.Status != MaintenanceOpportunityStatus.ClosedWithoutConversion);
         return urgency switch
         {
             MaintenanceOpportunityUrgency.Overdue => opportunities.Where(opportunity => opportunity.DueDate < today),
@@ -185,6 +207,29 @@ public sealed class MaintenanceOpportunityRepository(AppDbContext dbContext) : I
             : dueDate <= today.AddDays(30)
                 ? MaintenanceOpportunityUrgency.NextThirtyDays
                 : MaintenanceOpportunityUrgency.Future;
+
+    private static MaintenanceOpportunityConversionReference? GetConversionReference(
+        MaintenanceOpportunity opportunity,
+        IReadOnlyDictionary<Guid, DateTimeOffset> appointments,
+        IReadOnlyDictionary<Guid, QuoteStatus> quotes)
+    {
+        if (opportunity.ConvertedEntityId is not { } entityId || opportunity.ConversionType is not { } conversionType)
+        {
+            return null;
+        }
+
+        if (conversionType == MaintenanceOpportunityConversionType.Appointment && appointments.TryGetValue(entityId, out var startAtUtc))
+        {
+            return new MaintenanceOpportunityConversionReference(entityId, startAtUtc, null);
+        }
+
+        if (conversionType == MaintenanceOpportunityConversionType.Quote && quotes.TryGetValue(entityId, out var status))
+        {
+            return new MaintenanceOpportunityConversionReference(entityId, null, status);
+        }
+
+        return null;
+    }
 
     private static string FormatEquipment(string type, string? manufacturer, string? model) => string.Join(
         " ",

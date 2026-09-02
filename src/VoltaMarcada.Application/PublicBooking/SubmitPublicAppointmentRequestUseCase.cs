@@ -1,7 +1,6 @@
 using VoltaMarcada.Application.Abstractions.Operations;
 using VoltaMarcada.Application.Abstractions.Persistence;
 using VoltaMarcada.Application.Customers;
-using VoltaMarcada.Application.Scheduling;
 using VoltaMarcada.Domain.Entities;
 using VoltaMarcada.Domain.ValueObjects;
 using FluentValidation;
@@ -13,6 +12,7 @@ public sealed class SubmitPublicAppointmentRequestUseCase(
     IServiceRepository serviceRepository,
     ICustomerRepository customerRepository,
     IAppointmentRequestRepository requestRepository,
+    IServiceRequestRepository serviceRequestRepository,
     IValidator<CreateCustomerCommand> customerValidator,
     IPublicBookingSubmissionLimiter submissionLimiter,
     TimeProvider timeProvider)
@@ -55,8 +55,12 @@ public sealed class SubmitPublicAppointmentRequestUseCase(
             await customerRepository.AddAsync(customer, cancellationToken);
             proposal = null;
         }
-        var request = AppointmentRequest.CreatePublicPreference(company.Id, customer.Id, service.Id, null, null, command.Date, command.StartTime, service.DurationMinutes, proposal, timeProvider.GetUtcNow());
+        if (command.ProblemDescription?.Trim().Length > 2000) return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
+        var now = timeProvider.GetUtcNow();
+        var request = AppointmentRequest.CreatePublicPreference(company.Id, customer.Id, service.Id, null, null, command.Date, command.StartTime, service.DurationMinutes, proposal, now);
+        var serviceRequest = ServiceRequest.Create(company.Id, customer.Id, request.Id, command.ProblemDescription, now);
         await requestRepository.AddAsync(request, cancellationToken);
+        await serviceRequestRepository.AddAsync(serviceRequest, cancellationToken);
         await requestRepository.SaveChangesAsync(cancellationToken);
         return OperationResult<Guid>.Success(request.Id);
     }

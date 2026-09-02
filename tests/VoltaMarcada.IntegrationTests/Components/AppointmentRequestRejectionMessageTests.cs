@@ -23,6 +23,7 @@ public sealed class AppointmentRequestRejectionMessageTests
             60,
             AppointmentRequestStatus.Pending,
             false,
+            false,
             null,
             null,
             null,
@@ -45,7 +46,7 @@ public sealed class AppointmentRequestRejectionMessageTests
         var request = new AppointmentRequestDto(
             Guid.NewGuid(), "João", "11999999999", Guid.NewGuid(), "Limpeza",
             null, string.Empty, new DateOnly(2026, 9, 1), new TimeOnly(8, 30), 60,
-            AppointmentRequestStatus.Pending, false, null, null, null, null, [], []);
+            AppointmentRequestStatus.Pending, false, false, null, null, null, null, [], []);
 
         Assert.Throws<ArgumentException>(() =>
             AppointmentRequestRejectionMessage.Create(request, "   "));

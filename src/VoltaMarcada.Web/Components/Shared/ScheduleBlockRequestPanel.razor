@@ -2,10 +2,7 @@
 @using VoltaMarcada.Application.Scheduling
 @using VoltaMarcada.Domain.Enums
 @using VoltaMarcada.Application.WorkOrders
-@inject CreateScheduleBlockRequestUseCase CreateScheduleBlockRequestUseCase
-@inject GetScheduleBlockRequestsUseCase GetScheduleBlockRequestsUseCase
-@inject ApproveScheduleBlockRequestUseCase ApproveScheduleBlockRequestUseCase
-@inject RejectScheduleBlockRequestUseCase RejectScheduleBlockRequestUseCase
+@inherits CircuitIsolatedComponentBase
 @inject ISnackbar Snackbar
 @inject TimeProvider TimeProvider
 
@@ -69,6 +66,11 @@
     private DateTime? startDate;
     private DateTime? endDate;
     private string? notes;
+
+    private CreateScheduleBlockRequestUseCase CreateScheduleBlockRequestUseCase => GetScopedService<CreateScheduleBlockRequestUseCase>();
+    private GetScheduleBlockRequestsUseCase GetScheduleBlockRequestsUseCase => GetScopedService<GetScheduleBlockRequestsUseCase>();
+    private ApproveScheduleBlockRequestUseCase ApproveScheduleBlockRequestUseCase => GetScopedService<ApproveScheduleBlockRequestUseCase>();
+    private RejectScheduleBlockRequestUseCase RejectScheduleBlockRequestUseCase => GetScopedService<RejectScheduleBlockRequestUseCase>();
 
     protected override async Task OnInitializedAsync()
     {

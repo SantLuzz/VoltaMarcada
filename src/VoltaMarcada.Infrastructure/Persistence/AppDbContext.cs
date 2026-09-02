@@ -64,6 +64,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<CustomerContact> CustomerContacts => Set<CustomerContact>();
 
+    public DbSet<ServiceRequest> ServiceRequests => Set<ServiceRequest>();
+
+    public DbSet<Quote> Quotes => Set<Quote>();
+
+    public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

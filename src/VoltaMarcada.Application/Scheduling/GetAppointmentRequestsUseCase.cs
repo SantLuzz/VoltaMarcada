@@ -15,6 +15,7 @@ public sealed record AppointmentRequestDto(
     TimeOnly StartTime,
     int DurationMinutes,
     VoltaMarcada.Domain.Enums.AppointmentRequestStatus Status,
+    bool RequiresCommercialResolution,
     bool HasCustomerProfileProposal,
     string? ProposedCustomerName,
     string? ProposedCustomerWhatsApp,
@@ -23,7 +24,11 @@ public sealed record AppointmentRequestDto(
     IReadOnlyList<AvailableProfessionalDto> RequestedTimeProfessionals,
     IReadOnlyList<AppointmentAlternativeDto> Alternatives);
 
-public sealed class GetAppointmentRequestsUseCase(WorkOrderAuthorization authorization, IAppointmentRequestRepository repository, AnalyzeAppointmentRequestAvailabilityUseCase availabilityAnalysis)
+public sealed class GetAppointmentRequestsUseCase(
+    WorkOrderAuthorization authorization,
+    IAppointmentRequestRepository repository,
+    IServiceRequestRepository serviceRequests,
+    AnalyzeAppointmentRequestAvailabilityUseCase availabilityAnalysis)
 {
     public async Task<IReadOnlyList<AppointmentRequestDto>> ExecuteAsync(CancellationToken cancellationToken = default)
     {
@@ -35,6 +40,7 @@ public sealed class GetAppointmentRequestsUseCase(WorkOrderAuthorization authori
             var analysis = scope.IsOwner && item.Request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending
                 ? await availabilityAnalysis.ExecuteAsync(item.Request.Id, scope.CompanyId, cancellationToken)
                 : null;
+            var serviceRequest = await serviceRequests.GetForAppointmentRequestAsync(item.Request.Id, scope.CompanyId, cancellationToken);
             result.Add(new AppointmentRequestDto(
                 item.Request.Id,
                 item.CustomerName,
@@ -47,6 +53,7 @@ public sealed class GetAppointmentRequestsUseCase(WorkOrderAuthorization authori
                 item.Request.ProposedStartTime ?? item.Request.RequestedStartTime,
                 item.Request.ProposedDurationMinutes ?? item.Request.DurationMinutes,
                 item.Request.Status,
+                serviceRequest?.Status == VoltaMarcada.Domain.Enums.ServiceRequestStatus.Pending,
                 item.Request.ProposedCustomerName is not null,
                 item.Request.ProposedCustomerName,
                 item.Request.ProposedCustomerWhatsApp,

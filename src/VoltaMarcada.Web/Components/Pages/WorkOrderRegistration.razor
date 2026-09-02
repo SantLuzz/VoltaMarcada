@@ -22,6 +22,7 @@
 @inject CreateCustomerUseCase CreateCustomerUseCase
 @inject CreateEquipmentUseCase CreateEquipmentUseCase
 @inject GetAvailableAppointmentSlotsUseCase GetAvailableAppointmentSlotsUseCase
+@inject GetAppointmentDetailsUseCase GetAppointmentDetailsUseCase
 @inject IDbContextFactory<AppDbContext> DbContextFactory
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -220,6 +221,9 @@ else
     [SupplyParameterFromQuery(Name = "id")]
     public Guid? WorkOrderId { get; set; }
 
+    [SupplyParameterFromQuery(Name = "sourceAppointmentId")]
+    public Guid? SourceAppointmentId { get; set; }
+
     private WorkOrderDetailDto? detail;
     private IReadOnlyList<CustomerDto> customers = [];
     private IReadOnlyList<EquipmentDto> equipment = [];
@@ -285,6 +289,18 @@ else
                 .ToArrayAsync();
         }
         await LoadAsync();
+        if (WorkOrderId is null && SourceAppointmentId is { } sourceAppointmentId)
+        {
+            var source = await GetAppointmentDetailsUseCase.ExecuteAsync(sourceAppointmentId);
+            if (source is not null)
+            {
+                customerId = source.CustomerId;
+                equipmentId = source.EquipmentId;
+                serviceId = source.ServiceId;
+                await LoadEquipmentAsync(false);
+                await LoadProfessionalOptions();
+            }
+        }
         isLoading = false;
     }
 
@@ -518,7 +534,7 @@ else
             var appointment = createAppointment
                 ? new WorkOrderAppointmentInput(DateOnly.FromDateTime(newAppointmentDate!.Value), newAppointmentStartTime!.Value)
                 : null;
-            var result = await CreateWorkOrderUseCase.ExecuteAsync(new CreateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items, appointment));
+            var result = await CreateWorkOrderUseCase.ExecuteAsync(new CreateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items, appointment, SourceAppointmentId));
             if (result.IsSuccess && result.Value?.WorkOrderId is { } createdId)
             {
                 NavigationManager.NavigateTo($"/ordens-servico/registro?id={createdId}");

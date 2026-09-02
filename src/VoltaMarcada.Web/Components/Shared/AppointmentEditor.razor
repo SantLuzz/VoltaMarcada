@@ -4,15 +4,8 @@
 @using VoltaMarcada.Application.Scheduling
 @using VoltaMarcada.Application.Services
 @using VoltaMarcada.Application.WorkOrders
-@inject WorkOrderAuthorization WorkOrderAuthorization
-@inject GetAvailableAppointmentSlotsUseCase GetAvailableAppointmentSlotsUseCase
-@inject CreateAppointmentUseCase CreateAppointmentUseCase
-@inject GetCustomersUseCase GetCustomersUseCase
-@inject GetCustomerEquipmentUseCase GetCustomerEquipmentUseCase
-@inject GetServicesUseCase GetServicesUseCase
-@inject GetProfessionalsUseCase GetProfessionalsUseCase
-@inject GetWorkOrdersUseCase GetWorkOrdersUseCase
-@inject GetWorkOrderDetailsUseCase GetWorkOrderDetailsUseCase
+@using VoltaMarcada.Domain.Enums
+@inherits CircuitIsolatedComponentBase
 @inject ISchedulingConfiguration SchedulingConfiguration
 @inject ISnackbar Snackbar
 @inject TimeProvider TimeProvider
@@ -27,6 +20,13 @@
         else
         {
             <MudGrid>
+                <MudItem xs="12">
+                    <MudSelect T="AppointmentType?" Label="Tipo do agendamento" Placeholder="Selecione o tipo" @bind-Value="appointmentType" @bind-Value:after="OnAppointmentTypeChanged" Disabled="@(isCreating || FixedWorkOrderId is not null)">
+                        <MudSelectItem Value="@((AppointmentType?)AppointmentType.Service)">Execução de serviço</MudSelectItem>
+                        <MudSelectItem Value="@((AppointmentType?)AppointmentType.Visit)">Visita técnica</MudSelectItem>
+                        <MudSelectItem Value="@((AppointmentType?)AppointmentType.Other)">Outro atendimento</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
                 @if (FixedWorkOrderId is { })
                 {
                     <MudItem xs="12">
@@ -36,7 +36,7 @@
                 else if (isOwner)
                 {
                     <MudItem xs="12">
-                        <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Opcional: vincule a uma OS" Clearable="true" @bind-Value="workOrderId" @bind-Value:after="OnWorkOrderChangedAsync" Disabled="@isCreating">
+                        <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Obrigatória para execução de serviço" Clearable="true" @bind-Value="workOrderId" @bind-Value:after="OnWorkOrderChangedAsync" Disabled="@(isCreating || appointmentType != AppointmentType.Service)">
                             @foreach (var workOrder in workOrders)
                             {
                                 <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
@@ -47,7 +47,7 @@
                 else
                 {
                     <MudItem xs="12">
-                        <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Selecione uma ordem de serviço" @bind-Value="workOrderId" @bind-Value:after="OnWorkOrderChangedAsync" Disabled="@isCreating">
+                        <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Obrigatória para execução de serviço" @bind-Value="workOrderId" @bind-Value:after="OnWorkOrderChangedAsync" Disabled="@(isCreating || appointmentType != AppointmentType.Service)">
                             @foreach (var workOrder in workOrders)
                             {
                                 <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
@@ -154,6 +154,17 @@
     private DateTime? date;
     private TimeOnly? startTime;
     private string? notes;
+    private AppointmentType? appointmentType;
+
+    private WorkOrderAuthorization WorkOrderAuthorization => GetScopedService<WorkOrderAuthorization>();
+    private GetAvailableAppointmentSlotsUseCase GetAvailableAppointmentSlotsUseCase => GetScopedService<GetAvailableAppointmentSlotsUseCase>();
+    private CreateAppointmentUseCase CreateAppointmentUseCase => GetScopedService<CreateAppointmentUseCase>();
+    private GetCustomersUseCase GetCustomersUseCase => GetScopedService<GetCustomersUseCase>();
+    private GetCustomerEquipmentUseCase GetCustomerEquipmentUseCase => GetScopedService<GetCustomerEquipmentUseCase>();
+    private GetServicesUseCase GetServicesUseCase => GetScopedService<GetServicesUseCase>();
+    private GetProfessionalsUseCase GetProfessionalsUseCase => GetScopedService<GetProfessionalsUseCase>();
+    private GetWorkOrdersUseCase GetWorkOrdersUseCase => GetScopedService<GetWorkOrdersUseCase>();
+    private GetWorkOrderDetailsUseCase GetWorkOrderDetailsUseCase => GetScopedService<GetWorkOrderDetailsUseCase>();
 
     private IReadOnlyList<ProfessionalDto> AvailableProfessionals => serviceId is { } selectedServiceId
         ? professionals.Where(professional => professional.ServiceIds.Contains(selectedServiceId)).ToArray()
@@ -180,6 +191,7 @@
         manualDurationMinutes = null;
         startTime = null;
         notes = null;
+        appointmentType = FixedWorkOrderId is null ? null : AppointmentType.Service;
         equipment = [];
         professionals = [];
         workOrders = [];
@@ -230,6 +242,16 @@
         startTime = null;
         slots = [];
         return Task.CompletedTask;
+    }
+
+    private void OnAppointmentTypeChanged()
+    {
+        if (appointmentType != AppointmentType.Service)
+        {
+            workOrderId = null;
+            startTime = null;
+            slots = [];
+        }
     }
 
     private async Task OnWorkOrderChangedAsync()
@@ -284,9 +306,11 @@
             date is null ||
             startTime is null ||
             GetDurationMinutes() is not { } durationMinutes ||
+            appointmentType is null ||
+            appointmentType == AppointmentType.Service && workOrderId is null ||
             !isOwner && workOrderId is null)
         {
-            Snackbar.Add("Selecione serviço, profissional, data e horário.", Severity.Warning);
+            Snackbar.Add("Selecione tipo, serviço, profissional, data e horário.", Severity.Warning);
             return;
         }
 
@@ -302,7 +326,8 @@
                 equipmentId,
                 serviceId,
                 workOrderId,
-                notes));
+                notes,
+                Type: appointmentType.Value));
 
             if (result.IsSuccess && result.Value is { } appointmentId)
             {

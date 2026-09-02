@@ -23,6 +23,8 @@ public sealed class Appointment : ICompanyScopedEntity
     public DateTimeOffset EndAtUtc { get; private set; }
     public AppointmentStatus Status { get; private set; }
     public AppointmentOrigin Origin { get; private set; }
+    public AppointmentType Type { get; private set; }
+    public string? Description { get; private set; }
     public string? Notes { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public DateTimeOffset UpdatedAtUtc { get; private set; }
@@ -39,7 +41,9 @@ public sealed class Appointment : ICompanyScopedEntity
         DateTimeOffset endAtUtc,
         string? notes,
         DateTimeOffset now,
-        AppointmentOrigin origin = AppointmentOrigin.Internal)
+        AppointmentOrigin origin = AppointmentOrigin.Internal,
+        AppointmentType type = AppointmentType.Other,
+        string? description = null)
     {
         EnsureIdentifiers(companyId, professionalId);
         EnsureValidInterval(startAtUtc, endAtUtc);
@@ -47,6 +51,8 @@ public sealed class Appointment : ICompanyScopedEntity
         {
             throw new DomainException("Appointment origin is invalid.");
         }
+        if (!Enum.IsDefined(type)) throw new DomainException("Appointment type is invalid.");
+        if (type != AppointmentType.Service && NormalizeOptionalId(workOrderId) is not null) throw new DomainException("Only a service appointment can be linked to a work order.");
         var utcNow = now.ToUniversalTime();
 
         return new Appointment
@@ -62,6 +68,8 @@ public sealed class Appointment : ICompanyScopedEntity
             EndAtUtc = endAtUtc.ToUniversalTime(),
             Status = AppointmentStatus.Scheduled,
             Origin = origin,
+            Type = type,
+            Description = NormalizeDescription(description),
             Notes = NormalizeNotes(notes),
             CreatedAtUtc = utcNow,
             UpdatedAtUtc = utcNow
@@ -96,6 +104,11 @@ public sealed class Appointment : ICompanyScopedEntity
     public void UpdateWorkOrderAssociation(Guid? workOrderId, Guid? customerId, Guid? equipmentId, Guid? serviceId, DateTimeOffset now)
     {
         EnsureScheduled();
+        if (NormalizeOptionalId(workOrderId) is not null && Type != AppointmentType.Service)
+        {
+            throw new DomainException("Only a service appointment can be linked to a work order.");
+        }
+
         WorkOrderId = NormalizeOptionalId(workOrderId);
         CustomerId = NormalizeOptionalId(customerId);
         EquipmentId = NormalizeOptionalId(equipmentId);
@@ -181,6 +194,13 @@ public sealed class Appointment : ICompanyScopedEntity
             throw new DomainException("Appointment notes cannot exceed 1000 characters.");
         }
 
+        return normalized;
+    }
+
+    private static string? NormalizeDescription(string? value)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        if (normalized?.Length > 1000) throw new DomainException("Appointment description cannot exceed 1000 characters.");
         return normalized;
     }
 }

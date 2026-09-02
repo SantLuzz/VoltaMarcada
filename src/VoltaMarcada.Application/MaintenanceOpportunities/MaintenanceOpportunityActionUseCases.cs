@@ -1,46 +1,24 @@
+using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Application.Abstractions.Operations;
 using VoltaMarcada.Application.Abstractions.Persistence;
-using VoltaMarcada.Domain.Entities;
-using VoltaMarcada.Domain.Enums;
+using VoltaMarcada.Domain.Exceptions;
 
 namespace VoltaMarcada.Application.MaintenanceOpportunities;
 
-public sealed class MarkMaintenanceOpportunityAsBookingRequestedUseCase(MaintenanceOpportunityActionExecutor executor)
-{
-    public Task<OperationResult> ExecuteAsync(Guid opportunityId, CancellationToken cancellationToken = default) =>
-        executor.ExecuteAsync(opportunityId, status => status is MaintenanceOpportunityStatus.Pending or MaintenanceOpportunityStatus.Contacted, (opportunity, now) => opportunity.MarkAsBookingRequested(now), cancellationToken);
-}
+public sealed record DiscardMaintenanceOpportunityCommand(string Reason);
 
-public sealed class MarkMaintenanceOpportunityAsBookedUseCase(MaintenanceOpportunityActionExecutor executor)
-{
-    public Task<OperationResult> ExecuteAsync(Guid opportunityId, CancellationToken cancellationToken = default) =>
-        executor.ExecuteAsync(opportunityId, status => status == MaintenanceOpportunityStatus.BookingRequested, (opportunity, now) => opportunity.MarkAsBooked(now), cancellationToken);
-}
-
-public sealed class CompleteMaintenanceOpportunityUseCase(MaintenanceOpportunityActionExecutor executor)
-{
-    public Task<OperationResult> ExecuteAsync(Guid opportunityId, CancellationToken cancellationToken = default) =>
-        executor.ExecuteAsync(opportunityId, status => status == MaintenanceOpportunityStatus.Booked, (opportunity, now) => opportunity.Complete(now), cancellationToken);
-}
-
-public sealed class DismissMaintenanceOpportunityUseCase(MaintenanceOpportunityActionExecutor executor)
-{
-    public Task<OperationResult> ExecuteAsync(Guid opportunityId, CancellationToken cancellationToken = default) =>
-        executor.ExecuteAsync(opportunityId, status => status is not MaintenanceOpportunityStatus.Completed and not MaintenanceOpportunityStatus.Dismissed, (opportunity, now) => opportunity.Dismiss(now), cancellationToken);
-}
-
-public sealed class MaintenanceOpportunityActionExecutor(
+public sealed class DiscardMaintenanceOpportunityUseCase(
     IMaintenanceOpportunityRepository repository,
     MaintenanceOpportunityOwnerAuthorization authorization,
+    ICurrentUser currentUser,
     TimeProvider timeProvider)
 {
     public async Task<OperationResult> ExecuteAsync(
         Guid opportunityId,
-        Func<MaintenanceOpportunityStatus, bool> canTransition,
-        Action<MaintenanceOpportunity, DateTimeOffset> transition,
-        CancellationToken cancellationToken)
+        DiscardMaintenanceOpportunityCommand command,
+        CancellationToken cancellationToken = default)
     {
-        if (opportunityId == Guid.Empty)
+        if (opportunityId == Guid.Empty || string.IsNullOrWhiteSpace(command.Reason))
         {
             return OperationResult.Failure(MaintenanceOpportunityErrors.InvalidInput);
         }
@@ -57,13 +35,15 @@ public sealed class MaintenanceOpportunityActionExecutor(
             return OperationResult.Failure(MaintenanceOpportunityErrors.NotFound);
         }
 
-        if (!canTransition(opportunity.Status))
+        try
+        {
+            opportunity.CloseWithoutConversion(currentUser.UserId, command.Reason, timeProvider.GetUtcNow());
+            await repository.SaveChangesAsync(cancellationToken);
+            return OperationResult.Success();
+        }
+        catch (DomainException)
         {
             return OperationResult.Failure(MaintenanceOpportunityErrors.InvalidStatus);
         }
-
-        transition(opportunity, timeProvider.GetUtcNow());
-        await repository.SaveChangesAsync(cancellationToken);
-        return OperationResult.Success();
     }
 }

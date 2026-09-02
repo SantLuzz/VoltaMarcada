@@ -1,0 +1,79 @@
+@page "/orcamentos/registro"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@using VoltaMarcada.Application.Customers
+@using VoltaMarcada.Application.Equipment
+@using VoltaMarcada.Application.MaintenanceOpportunities
+@using VoltaMarcada.Application.Quotes
+@using VoltaMarcada.Application.Services
+@using VoltaMarcada.Application.Scheduling
+@using VoltaMarcada.Domain.Enums
+@inject GetQuotesUseCase GetQuotesUseCase
+@inject CreateQuoteUseCase CreateQuoteUseCase
+@inject UpdateQuoteUseCase UpdateQuoteUseCase
+@inject GetCustomersUseCase GetCustomersUseCase
+@inject GetCustomerEquipmentUseCase GetCustomerEquipmentUseCase
+@inject GetServicesUseCase GetServicesUseCase
+@inject GetAppointmentDetailsUseCase GetAppointmentDetailsUseCase
+@inject GetMaintenanceOpportunityForQuoteUseCase GetMaintenanceOpportunityForQuoteUseCase
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Orçamento | VoltaMarcada</PageTitle>
+@if (isLoading) { <MudProgressLinear Indeterminate="true" /> }
+else if (QuoteId is not null && quote is null) { <MudAlert Severity="Severity.Warning">Orçamento não encontrado.</MudAlert> }
+else
+{
+    <PageHeader Title="@(quote is null ? "Novo orçamento" : "Orçamento")" Description="Revise os itens e condições antes do envio." />
+    <MudPaper Class="pa-4" Outlined="true"><MudStack Spacing="3">
+        @if (quote is null)
+        {
+            <MudSelect T="Guid?" Label="Cliente" @bind-Value="customerId" @bind-Value:after="LoadEquipmentAsync"><MudSelectItem Value="@((Guid?)null)">Selecione um cliente</MudSelectItem>@foreach (var customer in customers) { <MudSelectItem Value="@((Guid?)customer.Id)">@customer.Name</MudSelectItem> }</MudSelect>
+            <MudSelect T="Guid?" Label="Equipamento" @bind-Value="equipmentId"><MudSelectItem Value="@((Guid?)null)">Selecione um equipamento</MudSelectItem>@foreach (var option in equipment) { <MudSelectItem Value="@((Guid?)option.Id)">@option.Type @option.Model</MudSelectItem> }</MudSelect>
+            <MudSelect T="Guid?" Label="Serviço" @bind-Value="primaryServiceId" @bind-Value:after="SetServiceItemAsync"><MudSelectItem Value="@((Guid?)null)">Selecione um serviço</MudSelectItem>@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect>
+        }
+        else
+        {
+            <MudGrid>
+                <MudItem xs="12" sm="6"><MudTextField Label="Cliente" Value="@quote.CustomerName" ReadOnly="true" /></MudItem>
+                <MudItem xs="12" sm="6"><MudTextField Label="Equipamento" Value="@quote.EquipmentDescription" ReadOnly="true" /></MudItem>
+            </MudGrid>
+        }
+        <MudTextField @bind-Value="notes" Label="Observações para o cliente" Lines="4" Disabled="@IsReadOnly" />
+        <MudDatePicker @bind-Date="validUntil" Label="Válido até" Disabled="@IsReadOnly" />
+        <BrazilianCurrencyInput Id="quote-discount" Name="quote-discount" Label="Desconto" Value="@discountAmount" ValueChanged="@(value => discountAmount = value ?? 0m)" Disabled="@IsReadOnly" />
+        @foreach (var item in items) { <MudPaper Outlined="true" Class="pa-3"><MudGrid><MudItem xs="12" md="5"><MudTextField @bind-Value="item.Description" Label="Descrição" Disabled="@IsReadOnly" /></MudItem><MudItem xs="12" md="2"><MudNumericField T="decimal" @bind-Value="item.Quantity" Label="Quantidade" Disabled="@IsReadOnly" /></MudItem><MudItem xs="12" md="3"><BrazilianCurrencyInput Id="@($"quote-item-{items.IndexOf(item)}-unit-price")" Name="@($"quote-item-{items.IndexOf(item)}-unit-price")" Label="Valor unitário" Value="@item.UnitPrice" ValueChanged="@(value => item.UnitPrice = value ?? 0m)" Disabled="@IsReadOnly" /></MudItem><MudItem xs="12" md="2"><MudSelect T="QuoteItemType" @bind-Value="item.Type" Label="Tipo" Disabled="@(IsReadOnly || item.Type == QuoteItemType.Service)">@foreach (var type in Enum.GetValues<QuoteItemType>()) { <MudSelectItem Value="@type">@GetQuoteItemTypeName(type)</MudSelectItem> }</MudSelect></MudItem></MudGrid>@if (!IsReadOnly && item.Type != QuoteItemType.Service) { <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@(() => RemoveItem(item))">Remover item</MudButton> }</MudPaper> }
+        @if (!IsReadOnly) { <MudButton Variant="Variant.Outlined" OnClick="AddItem">Adicionar item</MudButton> }
+        <MudText Typo="Typo.h6">Total: @GetTotal().ToString("C")</MudText>
+        <MudStack Row="true"><MudButton Variant="Variant.Outlined" OnClick="@(() => NavigationManager.NavigateTo("/orcamentos"))">Voltar</MudButton>@if (quote is not null) { <MudButton Variant="Variant.Outlined" Href="@($"/quotes/{quote.Id}/pdf")" Target="_blank">Baixar PDF</MudButton> }@if (!IsReadOnly) { <MudButton Color="Color.Primary" OnClick="SaveAsync">@(quote is null ? "Criar orçamento" : "Salvar alterações")</MudButton> }</MudStack>
+    </MudStack></MudPaper>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "id")] public Guid? QuoteId { get; set; }
+    [SupplyParameterFromQuery(Name = "sourceAppointmentId")] public Guid? SourceAppointmentId { get; set; }
+    [SupplyParameterFromQuery(Name = "maintenanceOpportunityId")] public Guid? MaintenanceOpportunityId { get; set; }
+    private QuoteDto? quote;
+    private IReadOnlyList<CustomerDto> customers = [];
+    private IReadOnlyList<EquipmentDto> equipment = [];
+    private IReadOnlyList<ServiceDto> services = [];
+    private List<QuoteItemForm> items = [];
+    private Guid? customerId; private Guid? equipmentId; private Guid? primaryServiceId;
+    private string? notes; private DateTime? validUntil = DateTime.Today.AddDays(30); private decimal discountAmount; private bool isLoading = true;
+    private bool IsReadOnly => quote is not null && quote.Status != QuoteStatus.Draft;
+    protected override async Task OnParametersSetAsync() { isLoading = true; quote = QuoteId is { } id ? await GetQuotesUseCase.ExecuteAsync(id) : null; if (quote is null && QuoteId is null) { customers = await GetCustomersUseCase.ExecuteAsync(); services = (await GetServicesUseCase.ExecuteAsync()).Where(item => item.IsActive).ToArray(); if (MaintenanceOpportunityId is { } opportunityId) { var source = await GetMaintenanceOpportunityForQuoteUseCase.ExecuteAsync(opportunityId); if (!source.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(source.Error?.Code), Severity.Warning); NavigationManager.NavigateTo("/manutencoes"); return; } customerId = source.Value!.CustomerId; primaryServiceId = source.Value.RecommendedServiceId; await LoadEquipmentAsync(); equipmentId = source.Value.EquipmentId; await SetServiceItemAsync(); } else if (SourceAppointmentId is { } sourceAppointmentId) { var source = await GetAppointmentDetailsUseCase.ExecuteAsync(sourceAppointmentId); if (source is not null) { customerId = source.CustomerId; primaryServiceId = source.ServiceId; await LoadEquipmentAsync(); equipmentId = source.EquipmentId; await SetServiceItemAsync(); } } } else if (quote is not null) { items = quote.Items.Select(item => new QuoteItemForm { Description = item.Description, Quantity = item.Quantity, UnitPrice = item.UnitPrice, Type = item.Type }).ToList(); notes = quote.Notes; validUntil = quote.ValidUntil.ToDateTime(TimeOnly.MinValue); discountAmount = quote.DiscountAmount; } isLoading = false; }
+    private async Task LoadEquipmentAsync() { equipment = customerId is { } id ? await GetCustomerEquipmentUseCase.ExecuteAsync(id) : []; equipmentId = null; }
+    private Task SetServiceItemAsync() { var service = services.SingleOrDefault(item => item.Id == primaryServiceId); items = service is null ? [] : [new QuoteItemForm { Description = service.Name, Quantity = 1, UnitPrice = service.BasePrice ?? 0, Type = QuoteItemType.Service }]; return Task.CompletedTask; }
+    private decimal GetTotal() => items.Sum(item => item.Quantity * item.UnitPrice) - discountAmount;
+    private static string GetQuoteItemTypeName(QuoteItemType type) => type switch
+    {
+        QuoteItemType.Service => "Serviço",
+        QuoteItemType.Part => "Peça",
+        QuoteItemType.Material => "Material",
+        QuoteItemType.Travel => "Deslocamento",
+        _ => "Outro"
+    };
+    private void AddItem() => items.Add(new QuoteItemForm { Type = QuoteItemType.Custom });
+    private void RemoveItem(QuoteItemForm item) => items.Remove(item);
+    private async Task SaveAsync() { if (validUntil is null) return; var quoteItems = items.Select(item => new QuoteItemInput(item.Description, item.Quantity, item.UnitPrice, item.Type)).ToArray(); if (quote is null) { if (customerId is null || equipmentId is null || primaryServiceId is null) { Snackbar.Add("Selecione cliente, equipamento e serviço.", Severity.Warning); return; } var create = await CreateQuoteUseCase.ExecuteAsync(new CreateQuoteCommand(customerId.Value, equipmentId.Value, primaryServiceId.Value, quoteItems, discountAmount, notes, DateOnly.FromDateTime(validUntil.Value), SourceAppointmentId, MaintenanceOpportunityId)); if (!create.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(create.Error?.Code), Severity.Error); return; } NavigationManager.NavigateTo($"/orcamentos/registro?id={create.Value}"); return; } var update = await UpdateQuoteUseCase.ExecuteAsync(quote.Id, new UpdateQuoteCommand(quoteItems, discountAmount, notes, DateOnly.FromDateTime(validUntil.Value))); if (!update.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(update.Error?.Code), Severity.Error); return; } Snackbar.Add("Orçamento atualizado.", Severity.Success); }
+    private sealed class QuoteItemForm { public string Description { get; set; } = string.Empty; public decimal Quantity { get; set; } = 1; public decimal UnitPrice { get; set; } public QuoteItemType Type { get; set; } }
+}

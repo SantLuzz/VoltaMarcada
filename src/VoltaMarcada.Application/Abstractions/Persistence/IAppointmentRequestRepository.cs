@@ -6,6 +6,7 @@ public interface IAppointmentRequestRepository
 {
     Task AddAsync(AppointmentRequest request, CancellationToken cancellationToken = default);
     Task<AppointmentRequest?> GetForCompanyAsync(Guid requestId, Guid companyId, CancellationToken cancellationToken = default);
+    Task<AppointmentRequest?> GetForAppointmentAsync(Guid appointmentId, Guid companyId, CancellationToken cancellationToken = default);
     Task<AppointmentRequest?> GetForResponseTokenAsync(string tokenHash, CancellationToken cancellationToken = default);
     Task<AppointmentRequestResponseContext?> GetResponseContextAsync(string tokenHash, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AppointmentRequestListItem>> GetOpenForCompanyAsync(Guid companyId, CancellationToken cancellationToken = default);

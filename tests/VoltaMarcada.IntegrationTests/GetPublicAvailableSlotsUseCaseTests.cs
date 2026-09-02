@@ -44,6 +44,7 @@ public sealed class GetPublicAvailableSlotsUseCaseTests
     {
         public Task<Company?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult<Company?>(id == company.Id ? company : null);
         public Task<Company?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default) => Task.FromResult<Company?>(slug == company.Slug ? company : null);
+        public Task<CompanyQuotePdfProfile?> GetQuotePdfProfileAsync(Guid companyId, CancellationToken cancellationToken = default) => Task.FromResult<CompanyQuotePdfProfile?>(null);
         public Task AddAsync(Company value, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }

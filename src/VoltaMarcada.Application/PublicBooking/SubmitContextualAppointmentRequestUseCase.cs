@@ -27,7 +27,7 @@ public sealed class SubmitContextualAppointmentRequestUseCase(
         var context = await opportunityRepository.GetBookingContextAsync(PublicTokenGenerator.Hash(command.Token), cancellationToken);
         var opportunity = context?.Opportunity;
         if (context is null || opportunity is null || !context.ServiceIsActive || opportunity.BookingTokenExpiresAtUtc <= timeProvider.GetUtcNow() ||
-            opportunity.Status != MaintenanceOpportunityStatus.BookingRequested)
+            opportunity.Status != MaintenanceOpportunityStatus.AwaitingCustomer)
             return OperationResult<Guid>.Failure(PublicBookingErrors.NotFound);
         if (await requestRepository.HasOpenForMaintenanceOpportunityAsync(opportunity.CompanyId, opportunity.Id, cancellationToken))
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);

@@ -62,20 +62,25 @@ public sealed class RespondToAppointmentRequestUseCase(
         var professional = await professionalRepository.GetForCompanyAsync(professionalId, request.CompanyId, cancellationToken);
         if (service is null || !service.IsActive || professional is null || !professional.IsActive || professional.ProfessionalServices.All(link => link.ServiceId != request.ServiceId))
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
+        MaintenanceOpportunity? maintenanceOpportunity = null;
+        if (request.MaintenanceOpportunityId is { } opportunityId)
+        {
+            maintenanceOpportunity = await opportunityRepository.GetForCompanyAsync(opportunityId, request.CompanyId, cancellationToken);
+            if (maintenanceOpportunity is null || maintenanceOpportunity.Status != MaintenanceOpportunityStatus.AwaitingCustomer)
+            {
+                return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
+            }
+        }
 
         await using var transaction = await appointmentRepository.BeginSchedulingTransactionAsync(request.CompanyId, professional.Id, cancellationToken);
         if (!await availability.IsAvailableAsync(professional, date, startTime, durationMinutes, cancellationToken: cancellationToken) ||
             !AppointmentAvailability.TryGetUtcInterval(professional.TimeZoneId, date, startTime, durationMinutes, out var start, out var end) || start <= timeProvider.GetUtcNow())
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);
 
-        var appointment = Appointment.Create(request.CompanyId, professional.Id, request.CustomerId, request.EquipmentId, request.ServiceId, null, start, end, null, timeProvider.GetUtcNow(), AppointmentOrigin.External);
+        var appointment = Appointment.Create(request.CompanyId, professional.Id, request.CustomerId, request.EquipmentId, request.ServiceId, null, start, end, null, timeProvider.GetUtcNow(), AppointmentOrigin.External, AppointmentType.Visit);
         await appointmentRepository.AddAsync(appointment, cancellationToken);
         request.AcceptProposal(appointment.Id, timeProvider.GetUtcNow());
-        if (request.MaintenanceOpportunityId is { } opportunityId)
-        {
-            var opportunity = await opportunityRepository.GetForCompanyAsync(opportunityId, request.CompanyId, cancellationToken);
-            if (opportunity is not null && opportunity.Status == MaintenanceOpportunityStatus.BookingRequested) opportunity.MarkAsBooked(timeProvider.GetUtcNow());
-        }
+        maintenanceOpportunity?.Convert(MaintenanceOpportunityConversionType.Appointment, appointment.Id, timeProvider.GetUtcNow());
 
         if (await appointmentRepository.TrySaveAppointmentChangesAsync(cancellationToken) == AppointmentPersistenceOutcome.Conflict)
             return OperationResult<Guid>.Failure(PublicBookingErrors.InvalidInput);

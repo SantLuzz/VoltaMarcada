@@ -16,6 +16,11 @@ public sealed class AppointmentRequestRepository(AppDbContext dbContext) : IAppo
             request => request.Id == requestId && request.CompanyId == companyId,
             cancellationToken);
 
+    public Task<AppointmentRequest?> GetForAppointmentAsync(Guid appointmentId, Guid companyId, CancellationToken cancellationToken = default) =>
+        dbContext.AppointmentRequests.SingleOrDefaultAsync(
+            request => request.AppointmentId == appointmentId && request.CompanyId == companyId,
+            cancellationToken);
+
     public Task<AppointmentRequest?> GetForResponseTokenAsync(string tokenHash, CancellationToken cancellationToken = default) =>
         dbContext.AppointmentRequests.SingleOrDefaultAsync(
             request => request.ResponseTokenHash == tokenHash && request.ResponseTokenRevokedAtUtc == null,

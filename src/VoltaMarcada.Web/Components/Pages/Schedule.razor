@@ -7,6 +7,7 @@
 @using VoltaMarcada.Application.Professionals
 @using VoltaMarcada.Application.Services
 @using VoltaMarcada.Application.MaintenanceOpportunities
+@using VoltaMarcada.Application.ServiceRequests
 @using VoltaMarcada.Application.Abstractions.Routing
 @using VoltaMarcada.Application.Abstractions.Communication
 @using Microsoft.JSInterop
@@ -30,6 +31,8 @@
 @inject GetWorkOrdersUseCase GetWorkOrdersUseCase
 @inject GetWorkOrderDetailsUseCase GetWorkOrderDetailsUseCase
 @inject GetMaintenanceOpportunityForSchedulingUseCase GetMaintenanceOpportunityForSchedulingUseCase
+@inject GetServiceRequestsUseCase GetServiceRequestsUseCase
+@inject ResolveServiceRequestUseCase ResolveServiceRequestUseCase
 @inject ISnackbar Snackbar
 @inject ISchedulingConfiguration SchedulingConfiguration
 @inject TimeProvider TimeProvider
@@ -82,17 +85,32 @@
                     }
                     @if (request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending)
                     {
-                        @if (request.RequestedTimeProfessionals.Count == 0 && request.Alternatives.Count > 0)
+                        @if (request.RequiresCommercialResolution)
                         {
-                            @foreach (var alternative in request.Alternatives)
-                            {
-                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionForAlternativeAsync(request, alternative))">Propor horário: @alternative.Date.ToString("dd/MM") às @alternative.StartTime.ToString("HH:mm") · @alternative.ProfessionalName</MudButton>
-                            }
+                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenCommercialResolutionDialogAsync(request))">Definir próxima etapa</MudButton>
                         }
-                        <MudStack Row="true" Spacing="1">
-                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionDialogAsync(request))">Escolher outro horário</MudButton>
-                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => OpenRequestRejectionDialog(request))">Recusar</MudButton>
-                        </MudStack>
+                        else
+                        {
+                            @if (request.RequestedTimeProfessionals.Count == 0 && request.Alternatives.Count > 0)
+                            {
+                                @foreach (var alternative in request.Alternatives)
+                                {
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionForAlternativeAsync(request, alternative))">Propor horário: @alternative.Date.ToString("dd/MM") às @alternative.StartTime.ToString("HH:mm") · @alternative.ProfessionalName</MudButton>
+                                }
+                            }
+                            else if (request.Alternatives.Count > 0)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Warning">Alternativas: @string.Join(" · ", request.Alternatives.Select(item => $"{item.Date:dd/MM HH:mm} - {item.ProfessionalName}"))</MudText>
+                                @foreach (var alternative in request.Alternatives)
+                                {
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionForAlternativeAsync(request, alternative))">@alternative.Date.ToString("dd/MM") às @alternative.StartTime.ToString("HH:mm") · @alternative.ProfessionalName</MudButton>
+                                }
+                            }
+                            <MudStack Row="true" Spacing="1">
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionDialogAsync(request))">Escolher outro horário</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => OpenRequestRejectionDialog(request))">Recusar</MudButton>
+                            </MudStack>
+                        }
                     }
                     else
                     {
@@ -149,8 +167,13 @@ else
                 <MudStack Spacing="0">
                     <MudText Typo="Typo.subtitle2">@AppointmentCalendarTime.ToLocalDateTime(appointment.StartAtUtc, appointment.ProfessionalTimeZoneId).ToString("dd/MM HH:mm") — @GetStatusName(appointment.Status)</MudText>
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(appointment.Origin == VoltaMarcada.Domain.Enums.AppointmentOrigin.External ? Color.Info : Color.Default)">@(appointment.Origin == VoltaMarcada.Domain.Enums.AppointmentOrigin.External ? "Externo" : "Interno")</MudChip>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@GetAppointmentTypeName(appointment.Type)</MudChip>
                     <MudText Typo="Typo.body2">@(appointment.CustomerName ?? "Cliente não informado") · @(appointment.ServiceName ?? "Serviço não informado")</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment.ProfessionalName@(string.IsNullOrWhiteSpace(appointment.EquipmentName) ? string.Empty : $" · {appointment.EquipmentName}")</MudText>
+                    @if (!string.IsNullOrWhiteSpace(appointment.Description))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment.Description</MudText>
+                    }
                     @if (!string.IsNullOrWhiteSpace(appointment.Notes))
                     {
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment.Notes</MudText>
@@ -217,6 +240,14 @@ else
             <MudGrid>
                 @if (isOwner)
                 {
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="VoltaMarcada.Domain.Enums.AppointmentType" Label="Tipo de agendamento" @bind-Value="appointmentType" @bind-Value:after="OnAppointmentTypeChangedAsync" Disabled="@isCreatingAppointment">
+                        @foreach (var type in Enum.GetValues<VoltaMarcada.Domain.Enums.AppointmentType>())
+                        {
+                            <MudSelectItem Value="@type">@GetAppointmentTypeName(type)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
                 <MudItem xs="12">
                     <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Opcional: vincule a uma OS" Clearable="true" @bind-Value="appointmentWorkOrderId" @bind-Value:after="OnAppointmentWorkOrderChangedAsync" Disabled="@isCreatingAppointment">
                         @foreach (var workOrder in appointmentWorkOrders)
@@ -413,6 +444,49 @@ else
     </DialogActions>
 </MudDialog>
 
+<MudDialog @bind-Visible="isCommercialResolutionDialogOpen">
+    <TitleContent><MudText Typo="Typo.h6">Definir próxima etapa</MudText></TitleContent>
+    <DialogContent>
+        @if (serviceRequestToResolve is not null)
+        {
+            <MudStack Spacing="2">
+                <MudText>@serviceRequestToResolve.CustomerName · @serviceRequestToResolve.ServiceName</MudText>
+                <MudSelect T="Guid" Label="Equipamento" @bind-Value="commercialEquipmentId" Required="true">
+                    <MudSelectItem Value="@Guid.Empty">Selecione um equipamento</MudSelectItem>
+                    @foreach (var item in commercialEquipment)
+                    {
+                        <MudSelectItem Value="@item.Id">@item.Type @item.Manufacturer @item.Model</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudRadioGroup T="ServiceRequestResolution" @bind-Value="commercialResolution">
+                    <MudRadio Value="ServiceRequestResolution.PrepareQuote">Gerar orçamento</MudRadio>
+                    <MudRadio Value="ServiceRequestResolution.ScheduleVisit">Agendar visita técnica</MudRadio>
+                </MudRadioGroup>
+                @if (commercialResolution == ServiceRequestResolution.ScheduleVisit)
+                {
+                    <MudSelect T="Guid" Label="Profissional" @bind-Value="commercialProfessionalId" Required="true">
+                        <MudSelectItem Value="@Guid.Empty">Selecione um profissional</MudSelectItem>
+                        @foreach (var item in commercialProfessionals)
+                        {
+                            <MudSelectItem Value="@item.Id">@item.CompanyMemberName</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudTextField @bind-Value="commercialAppointmentDescription" Label="Descrição para o cliente" Required="true" MaxLength="1000" />
+                }
+                <MudNumericField T="decimal?" @bind-Value="commercialServiceUnitPrice" Label="Valor do serviço" Adornment="Adornment.Start" AdornmentText="R$" />
+                @if (serviceRequestToResolve.HasCustomerProfileProposal)
+                {
+                    <MudCheckBox T="bool" @bind-Value="applyCommercialCustomerProfileProposal" Color="Color.Primary">Aplicar os dados propostos pelo cliente ao cadastro</MudCheckBox>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCommercialResolutionDialog" Disabled="@isResolvingCommercialRequest">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Disabled="@isResolvingCommercialRequest" OnClick="ResolveCommercialRequestAsync">@(isResolvingCommercialRequest ? "Salvando..." : "Confirmar")</MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     [SupplyParameterFromQuery(Name = "new")]
     public bool OpenNewAppointment { get; set; }
@@ -456,6 +530,7 @@ else
     private DateTime? appointmentDate;
     private TimeOnly? appointmentStartTime;
     private string? appointmentNotes;
+    private VoltaMarcada.Domain.Enums.AppointmentType appointmentType = VoltaMarcada.Domain.Enums.AppointmentType.Service;
     private AppointmentDto? appointmentToAdjust;
     private AppointmentDto? appointmentToCancel;
     private IReadOnlyList<ProfessionalDto> adjustmentProfessionals = [];
@@ -483,6 +558,17 @@ else
     private TimeOnly? suggestionStartTime;
     private IReadOnlyList<AppointmentSlotDto> suggestionSlots = [];
     private readonly Dictionary<Guid, bool> applyCustomerProfile = [];
+    private ServiceRequestDto? serviceRequestToResolve;
+    private IReadOnlyList<EquipmentDto> commercialEquipment = [];
+    private IReadOnlyList<ProfessionalDto> commercialProfessionals = [];
+    private ServiceRequestResolution commercialResolution = ServiceRequestResolution.PrepareQuote;
+    private Guid commercialEquipmentId;
+    private Guid commercialProfessionalId;
+    private string commercialAppointmentDescription = string.Empty;
+    private decimal? commercialServiceUnitPrice;
+    private bool applyCommercialCustomerProfileProposal;
+    private bool isCommercialResolutionDialogOpen;
+    private bool isResolvingCommercialRequest;
 
     protected override async Task OnInitializedAsync()
     {
@@ -586,6 +672,84 @@ else
         suggestionDate = request.Date.ToDateTime(TimeOnly.MinValue);
         isRequestSuggestionDialogOpen = true;
         await LoadSuggestionSlotsAsync(request.StartTime);
+    }
+
+    private async Task OpenCommercialResolutionDialogAsync(AppointmentRequestDto request)
+    {
+        serviceRequestToResolve = (await GetServiceRequestsUseCase.ExecuteAsync())
+            .SingleOrDefault(item => item.AppointmentRequestId == request.Id);
+        if (serviceRequestToResolve is null)
+        {
+            Snackbar.Add("A solicitação comercial não está mais pendente.", Severity.Warning);
+            await LoadAsync();
+            return;
+        }
+
+        commercialEquipment = (await GetCustomerEquipmentUseCase.ExecuteAsync(serviceRequestToResolve.CustomerId))
+            .Where(item => item.IsActive)
+            .ToArray();
+        commercialProfessionals = (await GetProfessionalsUseCase.ExecuteAsync())
+            .Where(item => item.IsActive && item.ServiceIds.Contains(serviceRequestToResolve.ServiceId))
+            .ToArray();
+        commercialEquipmentId = Guid.Empty;
+        commercialProfessionalId = Guid.Empty;
+        commercialResolution = ServiceRequestResolution.PrepareQuote;
+        commercialAppointmentDescription = $"Visita técnica para {serviceRequestToResolve.ServiceName}";
+        commercialServiceUnitPrice = null;
+        applyCommercialCustomerProfileProposal = false;
+        isCommercialResolutionDialogOpen = true;
+    }
+
+    private void CloseCommercialResolutionDialog()
+    {
+        if (isResolvingCommercialRequest)
+        {
+            return;
+        }
+
+        isCommercialResolutionDialogOpen = false;
+        serviceRequestToResolve = null;
+    }
+
+    private async Task ResolveCommercialRequestAsync()
+    {
+        if (serviceRequestToResolve is null)
+        {
+            return;
+        }
+
+        isResolvingCommercialRequest = true;
+        try
+        {
+            var result = await ResolveServiceRequestUseCase.ExecuteAsync(new ResolveServiceRequestCommand(
+                serviceRequestToResolve.AppointmentRequestId,
+                commercialResolution,
+                commercialEquipmentId,
+                commercialProfessionalId == Guid.Empty ? null : commercialProfessionalId,
+                commercialAppointmentDescription,
+                commercialServiceUnitPrice,
+                applyCommercialCustomerProfileProposal));
+            if (!result.IsSuccess)
+            {
+                Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
+                return;
+            }
+
+            isCommercialResolutionDialogOpen = false;
+            serviceRequestToResolve = null;
+            Snackbar.Add(commercialResolution == ServiceRequestResolution.PrepareQuote ? "Orçamento preparado." : "Visita técnica agendada.", Severity.Success);
+            if (result.Value?.QuoteId is { } quoteId)
+            {
+                NavigationManager.NavigateTo($"/orcamentos/registro?id={quoteId}");
+                return;
+            }
+
+            await LoadAsync();
+        }
+        finally
+        {
+            isResolvingCommercialRequest = false;
+        }
     }
 
     private async Task OpenSuggestionForAlternativeAsync(AppointmentRequestDto request, AppointmentAlternativeDto alternative)
@@ -776,6 +940,7 @@ else
         appointmentWorkOrderId = null;
         appointmentStartTime = null;
         appointmentNotes = null;
+        appointmentType = VoltaMarcada.Domain.Enums.AppointmentType.Service;
         appointmentEquipment = [];
         appointmentProfessionals = [];
         appointmentWorkOrders = [];
@@ -833,6 +998,15 @@ else
         appointmentStartTime = null;
         availableAppointmentSlots = [];
         await Task.CompletedTask;
+    }
+
+    private async Task OnAppointmentTypeChangedAsync()
+    {
+        if (appointmentType != VoltaMarcada.Domain.Enums.AppointmentType.Service && appointmentWorkOrderId is not null)
+        {
+            appointmentWorkOrderId = null;
+            await OnAppointmentWorkOrderChangedAsync();
+        }
     }
 
     private async Task OnAppointmentWorkOrderChangedAsync()
@@ -901,7 +1075,8 @@ else
                 service.Id,
                 appointmentWorkOrderId,
                 appointmentNotes,
-                MaintenanceOpportunityId));
+                MaintenanceOpportunityId,
+                appointmentType));
 
             if (result.IsSuccess)
             {
@@ -1110,5 +1285,12 @@ else
         VoltaMarcada.Domain.Enums.AppointmentStatus.Cancelled => "Cancelado",
         VoltaMarcada.Domain.Enums.AppointmentStatus.InProgress => "Em andamento",
         _ => "Agendado"
+    };
+
+    private static string GetAppointmentTypeName(VoltaMarcada.Domain.Enums.AppointmentType type) => type switch
+    {
+        VoltaMarcada.Domain.Enums.AppointmentType.Visit => "Visita técnica",
+        VoltaMarcada.Domain.Enums.AppointmentType.Service => "Execução de serviço",
+        _ => "Outro atendimento"
     };
 }

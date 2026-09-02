@@ -19,9 +19,15 @@ public sealed class CircuitIsolatedComponentBaseTests
     }
 
     [Fact]
-    public void ScheduleBlockRequestPanel_ShouldUseTheCircuitServiceScope()
+    public void ScheduleBlockRequestPanel_ShouldOwnItsServiceScope()
     {
-        Assert.False(typeof(ScheduleBlockRequestPanel).IsSubclassOf(typeof(OwningComponentBase)));
+        Assert.True(typeof(ScheduleBlockRequestPanel).IsSubclassOf(typeof(CircuitIsolatedComponentBase)));
+    }
+
+    [Fact]
+    public void AppointmentEditor_ShouldOwnItsServiceScope()
+    {
+        Assert.True(typeof(AppointmentEditor).IsSubclassOf(typeof(CircuitIsolatedComponentBase)));
     }
 
     [Fact]
