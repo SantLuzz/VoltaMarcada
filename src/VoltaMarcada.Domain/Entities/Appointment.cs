@@ -52,7 +52,6 @@ public sealed class Appointment : ICompanyScopedEntity
             throw new DomainException("Appointment origin is invalid.");
         }
         if (!Enum.IsDefined(type)) throw new DomainException("Appointment type is invalid.");
-        if (type == AppointmentType.Service && NormalizeOptionalId(workOrderId) is null) throw new DomainException("A service appointment requires a work order.");
         if (type != AppointmentType.Service && NormalizeOptionalId(workOrderId) is not null) throw new DomainException("Only a service appointment can be linked to a work order.");
         var utcNow = now.ToUniversalTime();
 

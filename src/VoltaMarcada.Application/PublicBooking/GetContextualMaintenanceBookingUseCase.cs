@@ -21,7 +21,7 @@ public sealed class GetContextualMaintenanceBookingUseCase(IMaintenanceOpportuni
         var context = await repository.GetBookingContextAsync(PublicTokenGenerator.Hash(token), cancellationToken);
         var opportunity = context?.Opportunity;
         return context is not null && opportunity is not null && context.ServiceIsActive &&
-               opportunity.Status == VoltaMarcada.Domain.Enums.MaintenanceOpportunityStatus.BookingRequested &&
+               opportunity.Status == VoltaMarcada.Domain.Enums.MaintenanceOpportunityStatus.AwaitingCustomer &&
                opportunity.BookingTokenExpiresAtUtc > timeProvider.GetUtcNow()
             ? new ContextualMaintenanceBookingDto(
                 context.CompanySlug,

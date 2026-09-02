@@ -240,6 +240,14 @@ else
             <MudGrid>
                 @if (isOwner)
                 {
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="VoltaMarcada.Domain.Enums.AppointmentType" Label="Tipo de agendamento" @bind-Value="appointmentType" @bind-Value:after="OnAppointmentTypeChangedAsync" Disabled="@isCreatingAppointment">
+                        @foreach (var type in Enum.GetValues<VoltaMarcada.Domain.Enums.AppointmentType>())
+                        {
+                            <MudSelectItem Value="@type">@GetAppointmentTypeName(type)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
                 <MudItem xs="12">
                     <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Opcional: vincule a uma OS" Clearable="true" @bind-Value="appointmentWorkOrderId" @bind-Value:after="OnAppointmentWorkOrderChangedAsync" Disabled="@isCreatingAppointment">
                         @foreach (var workOrder in appointmentWorkOrders)
@@ -990,6 +998,15 @@ else
         appointmentStartTime = null;
         availableAppointmentSlots = [];
         await Task.CompletedTask;
+    }
+
+    private async Task OnAppointmentTypeChangedAsync()
+    {
+        if (appointmentType != VoltaMarcada.Domain.Enums.AppointmentType.Service && appointmentWorkOrderId is not null)
+        {
+            appointmentWorkOrderId = null;
+            await OnAppointmentWorkOrderChangedAsync();
+        }
     }
 
     private async Task OnAppointmentWorkOrderChangedAsync()

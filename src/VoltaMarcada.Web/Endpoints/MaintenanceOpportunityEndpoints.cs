@@ -15,9 +15,7 @@ public static class MaintenanceOpportunityEndpoints
         group.MapGet("/{opportunityId:guid}/schedule-context", async (Guid opportunityId, GetMaintenanceOpportunityForSchedulingUseCase useCase, CancellationToken cancellationToken) => (await useCase.ExecuteAsync(opportunityId, cancellationToken)).ToHttpResult(value => Results.Ok(value)));
         group.MapPost("/{opportunityId:guid}/contacts/whatsapp", async (Guid opportunityId, PrepareMaintenanceOpportunityWhatsAppContactUseCase useCase, CancellationToken cancellationToken) => (await useCase.ExecuteAsync(opportunityId, cancellationToken)).ToHttpResult(value => Results.Ok(value)));
         group.MapPost("/{opportunityId:guid}/contacts/{contactId:guid}/sent", async (Guid opportunityId, Guid contactId, ConfirmMaintenanceOpportunityContactSentUseCase useCase, CancellationToken cancellationToken) => (await useCase.ExecuteAsync(opportunityId, contactId, cancellationToken)).ToHttpResult(() => Results.Ok()));
-        group.MapPost("/{opportunityId:guid}/booking-request", async (Guid opportunityId, MarkMaintenanceOpportunityAsBookingRequestedUseCase useCase, CancellationToken cancellationToken) => (await useCase.ExecuteAsync(opportunityId, cancellationToken)).ToHttpResult(() => Results.Ok()));
-        group.MapPost("/{opportunityId:guid}/complete", async (Guid opportunityId, CompleteMaintenanceOpportunityUseCase useCase, CancellationToken cancellationToken) => (await useCase.ExecuteAsync(opportunityId, cancellationToken)).ToHttpResult(() => Results.Ok()));
-        group.MapPost("/{opportunityId:guid}/dismiss", async (Guid opportunityId, DismissMaintenanceOpportunityUseCase useCase, CancellationToken cancellationToken) => (await useCase.ExecuteAsync(opportunityId, cancellationToken)).ToHttpResult(() => Results.Ok()));
+        group.MapPost("/{opportunityId:guid}/discard", async (Guid opportunityId, DiscardMaintenanceOpportunityCommand command, DiscardMaintenanceOpportunityUseCase useCase, CancellationToken cancellationToken) => (await useCase.ExecuteAsync(opportunityId, command, cancellationToken)).ToHttpResult(() => Results.Ok()));
         return endpoints;
     }
 }

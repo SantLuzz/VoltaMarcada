@@ -19,6 +19,12 @@ public sealed class MaintenanceOpportunity : ICompanyScopedEntity
     public DateOnly DueDate { get; private set; }
     public string Notes { get; private set; } = string.Empty;
     public MaintenanceOpportunityStatus Status { get; private set; }
+    public MaintenanceOpportunityConversionType? ConversionType { get; private set; }
+    public Guid? ConvertedEntityId { get; private set; }
+    public DateTimeOffset? ConvertedAtUtc { get; private set; }
+    public DateTimeOffset? ClosedAtUtc { get; private set; }
+    public Guid? ClosedByUserId { get; private set; }
+    public string? ClosureReason { get; private set; }
     public DateTimeOffset? ContactedAtUtc { get; private set; }
     public DateTimeOffset? BookingRequestedAtUtc { get; private set; }
     public DateTimeOffset? BookedAtUtc { get; private set; }
@@ -69,61 +75,66 @@ public sealed class MaintenanceOpportunity : ICompanyScopedEntity
 
     public void MarkAsContacted(DateTimeOffset now)
     {
-        if (Status == MaintenanceOpportunityStatus.Contacted)
+        EnsureOpen();
+        if (Status == MaintenanceOpportunityStatus.AwaitingCustomer)
         {
             return;
         }
 
-        EnsureOpen();
-        if (Status != MaintenanceOpportunityStatus.Pending)
-        {
-            throw new DomainException("Maintenance opportunity cannot be marked as contacted in its current status.");
-        }
-
         var utcNow = now.ToUniversalTime();
         Status = MaintenanceOpportunityStatus.Contacted;
-        ContactedAtUtc = utcNow;
+        ContactedAtUtc ??= utcNow;
         UpdatedAtUtc = utcNow;
     }
 
-    public void MarkAsBookingRequested(DateTimeOffset now)
+    public void MarkAsAwaitingCustomer(DateTimeOffset now)
     {
         EnsureOpen();
+        if (Status == MaintenanceOpportunityStatus.AwaitingCustomer)
+        {
+            return;
+        }
+
         if (Status is not MaintenanceOpportunityStatus.Pending and not MaintenanceOpportunityStatus.Contacted)
         {
-            throw new DomainException("Maintenance opportunity cannot request booking in its current status.");
+            throw new DomainException("Maintenance opportunity cannot wait for customer in its current status.");
         }
 
         var utcNow = now.ToUniversalTime();
-        Status = MaintenanceOpportunityStatus.BookingRequested;
+        Status = MaintenanceOpportunityStatus.AwaitingCustomer;
         BookingRequestedAtUtc = utcNow;
         UpdatedAtUtc = utcNow;
     }
 
-    public void MarkAsBooked(DateTimeOffset now)
-    {
-        EnsureStatus(MaintenanceOpportunityStatus.BookingRequested);
-        var utcNow = now.ToUniversalTime();
-        Status = MaintenanceOpportunityStatus.Booked;
-        BookedAtUtc = utcNow;
-        UpdatedAtUtc = utcNow;
-    }
-
-    public void Complete(DateTimeOffset now)
-    {
-        EnsureStatus(MaintenanceOpportunityStatus.Booked);
-        var utcNow = now.ToUniversalTime();
-        Status = MaintenanceOpportunityStatus.Completed;
-        CompletedAtUtc = utcNow;
-        UpdatedAtUtc = utcNow;
-    }
-
-    public void Dismiss(DateTimeOffset now)
+    public void Convert(MaintenanceOpportunityConversionType conversionType, Guid convertedEntityId, DateTimeOffset now)
     {
         EnsureOpen();
+        if (!Enum.IsDefined(conversionType) || convertedEntityId == Guid.Empty)
+        {
+            throw new DomainException("Maintenance opportunity conversion is invalid.");
+        }
+
         var utcNow = now.ToUniversalTime();
-        Status = MaintenanceOpportunityStatus.Dismissed;
-        DismissedAtUtc = utcNow;
+        Status = MaintenanceOpportunityStatus.Converted;
+        ConversionType = conversionType;
+        ConvertedEntityId = convertedEntityId;
+        ConvertedAtUtc = utcNow;
+        UpdatedAtUtc = utcNow;
+    }
+
+    public void CloseWithoutConversion(Guid closedByUserId, string reason, DateTimeOffset now)
+    {
+        EnsureOpen();
+        if (closedByUserId == Guid.Empty)
+        {
+            throw new DomainException("Maintenance opportunity closing user ID is required.");
+        }
+
+        var utcNow = now.ToUniversalTime();
+        Status = MaintenanceOpportunityStatus.ClosedWithoutConversion;
+        ClosedAtUtc = utcNow;
+        ClosedByUserId = closedByUserId;
+        ClosureReason = NormalizeClosureReason(reason);
         UpdatedAtUtc = utcNow;
     }
 
@@ -137,10 +148,10 @@ public sealed class MaintenanceOpportunity : ICompanyScopedEntity
 
         if (Status is MaintenanceOpportunityStatus.Pending or MaintenanceOpportunityStatus.Contacted)
         {
-            MarkAsBookingRequested(now);
+            MarkAsAwaitingCustomer(now);
         }
 
-        if (Status != MaintenanceOpportunityStatus.BookingRequested)
+        if (Status != MaintenanceOpportunityStatus.AwaitingCustomer)
         {
             throw new DomainException("Maintenance opportunity cannot receive a booking token in its current status.");
         }
@@ -160,22 +171,19 @@ public sealed class MaintenanceOpportunity : ICompanyScopedEntity
         }
 
         BookingTokenRevokedAtUtc = now.ToUniversalTime();
+        if (Status == MaintenanceOpportunityStatus.AwaitingCustomer)
+        {
+            Status = MaintenanceOpportunityStatus.Contacted;
+        }
+
         UpdatedAtUtc = now.ToUniversalTime();
     }
 
     private void EnsureOpen()
     {
-        if (Status is MaintenanceOpportunityStatus.Completed or MaintenanceOpportunityStatus.Dismissed)
+        if (Status is MaintenanceOpportunityStatus.Converted or MaintenanceOpportunityStatus.ClosedWithoutConversion)
         {
             throw new DomainException("Maintenance opportunity is already closed.");
-        }
-    }
-
-    private void EnsureStatus(MaintenanceOpportunityStatus expectedStatus)
-    {
-        if (Status != expectedStatus)
-        {
-            throw new DomainException("Maintenance opportunity is not in the required status.");
         }
     }
 
@@ -193,6 +201,17 @@ public sealed class MaintenanceOpportunity : ICompanyScopedEntity
         if (normalized is null || normalized.Length > 2000)
         {
             throw new DomainException("Maintenance opportunity notes are required and cannot exceed 2000 characters.");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeClosureReason(string? value)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        if (normalized is null || normalized.Length > 2000)
+        {
+            throw new DomainException("Maintenance opportunity closure reason is required and cannot exceed 2000 characters.");
         }
 
         return normalized;

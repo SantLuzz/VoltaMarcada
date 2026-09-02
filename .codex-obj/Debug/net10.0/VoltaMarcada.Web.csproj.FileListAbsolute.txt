@@ -1,0 +1,2 @@
+D:\Code\VoltaMarcada\.codex-obj\Debug\net10.0\EmbeddedAttribute.cs
+D:\Code\VoltaMarcada\.codex-obj\Debug\net10.0\ValidatableTypeAttribute.cs

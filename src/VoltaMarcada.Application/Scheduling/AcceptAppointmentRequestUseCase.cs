@@ -29,6 +29,15 @@ public sealed class AcceptAppointmentRequestUseCase(
         if (service is null || !service.IsActive || service.DurationMinutes != request.DurationMinutes) return OperationResult<Guid>.Failure(SchedulingErrors.InvalidInput);
         var professional = await professionalRepository.GetForCompanyAsync(professionalId, scope.CompanyId, cancellationToken);
         if (professional is null || professional.ProfessionalServices.All(link => link.ServiceId != request.ServiceId)) return OperationResult<Guid>.Failure(SchedulingErrors.ProfessionalNotQualified);
+        MaintenanceOpportunity? maintenanceOpportunity = null;
+        if (request.MaintenanceOpportunityId is { } opportunityId)
+        {
+            maintenanceOpportunity = await opportunityRepository.GetForCompanyAsync(opportunityId, scope.CompanyId, cancellationToken);
+            if (maintenanceOpportunity is null || maintenanceOpportunity.Status != MaintenanceOpportunityStatus.AwaitingCustomer)
+            {
+                return OperationResult<Guid>.Failure(SchedulingErrors.InvalidStatus);
+            }
+        }
         await using var transaction = await appointmentRepository.BeginSchedulingTransactionAsync(scope.CompanyId, professional.Id, cancellationToken);
         if (!await availability.IsAvailableAsync(professional, request.RequestedDate, request.RequestedStartTime, request.DurationMinutes, cancellationToken: cancellationToken)) return OperationResult<Guid>.Failure(SchedulingErrors.ProfessionalUnavailable);
         if (!AppointmentAvailability.TryGetUtcInterval(professional.TimeZoneId, request.RequestedDate, request.RequestedStartTime, request.DurationMinutes, out var start, out var end)) return OperationResult<Guid>.Failure(SchedulingErrors.ProfessionalUnavailable);
@@ -36,12 +45,7 @@ public sealed class AcceptAppointmentRequestUseCase(
         var appointment = Appointment.Create(scope.CompanyId, professional.Id, request.CustomerId, request.EquipmentId, request.ServiceId, null, start, end, null, timeProvider.GetUtcNow(), AppointmentOrigin.External, AppointmentType.Visit);
         await appointmentRepository.AddAsync(appointment, cancellationToken);
         request.Accept(appointment.Id, timeProvider.GetUtcNow());
-        if (request.MaintenanceOpportunityId is { } opportunityId)
-        {
-            var opportunity = await opportunityRepository.GetForCompanyAsync(opportunityId, scope.CompanyId, cancellationToken);
-            if (opportunity is not null && opportunity.Status == MaintenanceOpportunityStatus.BookingRequested)
-                opportunity.MarkAsBooked(timeProvider.GetUtcNow());
-        }
+        maintenanceOpportunity?.Convert(MaintenanceOpportunityConversionType.Appointment, appointment.Id, timeProvider.GetUtcNow());
         if (applyCustomerProfileProposal && scope.IsOwner && request.ProposedCustomerName is not null &&
             request.ProposedCustomerWhatsApp is not null && request.ProposedAddressType is { } addressType &&
             request.ProposedAddressStreet is not null && request.ProposedAddressNumber is not null &&

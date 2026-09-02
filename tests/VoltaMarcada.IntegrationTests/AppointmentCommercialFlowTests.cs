@@ -73,17 +73,18 @@ public sealed class AppointmentCommercialFlowTests
     }
 
     [Fact]
-    public void ManualAppointmentTypes_AreSupportedAndServiceRequiresWorkOrder()
+    public void ManualAppointmentTypes_AreSupportedAndServiceCanBeIndependentFromWorkOrder()
     {
         var visit = CreateAppointment(AppointmentType.Visit);
         var other = CreateAppointment(AppointmentType.Other);
         var workOrder = CreateWorkOrder();
         var service = CreateAppointment(AppointmentType.Service, workOrder.Id);
+        var standaloneService = CreateAppointment(AppointmentType.Service);
 
         Assert.Equal(AppointmentType.Visit, visit.Type);
         Assert.Equal(AppointmentType.Other, other.Type);
         Assert.Equal(AppointmentType.Service, service.Type);
-        Assert.Throws<DomainException>(() => CreateAppointment(AppointmentType.Service));
+        Assert.Null(standaloneService.WorkOrderId);
     }
 
     private static Appointment CreateAppointment(AppointmentType type, Guid? workOrderId = null) => Appointment.Create(

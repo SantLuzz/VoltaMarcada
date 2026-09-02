@@ -905,6 +905,16 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("BookingTokenRevokedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("ClosedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ClosedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClosureReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
@@ -913,6 +923,15 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset?>("ContactedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ConversionType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ConvertedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ConvertedEntityId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");

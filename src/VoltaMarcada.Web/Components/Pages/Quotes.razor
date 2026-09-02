@@ -1,5 +1,6 @@
 @page "/orcamentos"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@using Microsoft.JSInterop
 @using VoltaMarcada.Application.Quotes
 @using VoltaMarcada.Domain.Enums
 @inject GetQuotesUseCase GetQuotesUseCase
@@ -7,6 +8,7 @@
 @inject ApproveQuoteUseCase ApproveQuoteUseCase
 @inject RejectQuoteUseCase RejectQuoteUseCase
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JsRuntime
 @inject ISnackbar Snackbar
 
 <PageTitle>Orçamentos | VoltaMarcada</PageTitle>
@@ -17,8 +19,10 @@ else if (quotes.Count == 0) { <EmptyState Title="Nenhum orçamento" Description=
 else
 {
     <MudTable Items="quotes" Hover="true" Class="servicesync-data-grid">
-        <HeaderContent><MudTh>Status</MudTh><MudTh>Validade</MudTh><MudTh>Total</MudTh><MudTh>Ações</MudTh></HeaderContent>
+        <HeaderContent><MudTh>Cliente</MudTh><MudTh>Equipamento</MudTh><MudTh>Status</MudTh><MudTh>Validade</MudTh><MudTh>Total</MudTh><MudTh>Ações</MudTh></HeaderContent>
         <RowTemplate>
+            <MudTd DataLabel="Cliente">@context.CustomerName</MudTd>
+            <MudTd DataLabel="Equipamento">@context.EquipmentDescription</MudTd>
             <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@GetStatusName(context.Status)</MudChip></MudTd>
             <MudTd DataLabel="Validade">@context.ValidUntil.ToString("dd/MM/yyyy")</MudTd>
             <MudTd DataLabel="Total">@context.TotalAmount.ToString("C")</MudTd>
@@ -37,7 +41,7 @@ else
     private bool isLoading = true;
     protected override async Task OnInitializedAsync() => await LoadAsync();
     private async Task LoadAsync() { isLoading = true; quotes = await GetQuotesUseCase.ExecuteAsync(); isLoading = false; }
-    private async Task SendAsync(Guid quoteId) { var result = await SendQuoteUseCase.ExecuteAsync(quoteId); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } if (!string.IsNullOrWhiteSpace(result.Value?.WhatsAppUrl)) { NavigationManager.NavigateTo(result.Value.WhatsAppUrl, true); } else { Snackbar.Add("Link do orçamento preparado.", Severity.Success); } await LoadAsync(); }
+    private async Task SendAsync(Guid quoteId) { var result = await SendQuoteUseCase.ExecuteAsync(quoteId); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } if (!string.IsNullOrWhiteSpace(result.Value?.WhatsAppUrl)) { await JsRuntime.InvokeVoidAsync("open", result.Value.WhatsAppUrl, "_blank"); } else { Snackbar.Add("Link do orçamento preparado.", Severity.Success); } await LoadAsync(); }
     private async Task ApproveAsync(Guid quoteId) { var result = await ApproveQuoteUseCase.ExecuteAsync(quoteId); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } Snackbar.Add("Orçamento aprovado e OS criada.", Severity.Success); await LoadAsync(); }
     private async Task RejectAsync(Guid quoteId) { var result = await RejectQuoteUseCase.ExecuteAsync(quoteId); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } Snackbar.Add("Orçamento recusado.", Severity.Success); await LoadAsync(); }
     private static Color GetStatusColor(QuoteStatus status) => status switch { QuoteStatus.Draft => Color.Default, QuoteStatus.Sent => Color.Warning, QuoteStatus.Approved => Color.Success, QuoteStatus.Rejected => Color.Error, _ => Color.Default };

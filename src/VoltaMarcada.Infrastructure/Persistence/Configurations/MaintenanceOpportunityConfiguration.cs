@@ -18,6 +18,12 @@ public sealed class MaintenanceOpportunityConfiguration : IEntityTypeConfigurati
         builder.Property(x => x.RecommendedServiceId).IsRequired();
         builder.Property(x => x.DueDate).IsRequired();
         builder.Property(x => x.Notes).HasMaxLength(2000).IsRequired();
+        builder.Property(x => x.ConversionType).IsRequired(false);
+        builder.Property(x => x.ConvertedEntityId).IsRequired(false);
+        builder.Property(x => x.ConvertedAtUtc).IsRequired(false);
+        builder.Property(x => x.ClosedAtUtc).IsRequired(false);
+        builder.Property(x => x.ClosedByUserId).IsRequired(false);
+        builder.Property(x => x.ClosureReason).HasMaxLength(2000).IsRequired(false);
         builder.Property(x => x.BookingTokenHash).HasMaxLength(128).IsRequired(false);
         builder.HasAlternateKey(x => new { x.CompanyId, x.Id })
             .HasName("AK_MaintenanceOpportunities_CompanyId_Id");

@@ -7,18 +7,42 @@ using VoltaMarcada.Domain.Exceptions;
 using VoltaMarcada.Domain.ValueObjects;
 using VoltaMarcada.Domain.Enums;
 namespace VoltaMarcada.Application.Quotes;
-public sealed class CreateQuoteUseCase(IQuoteRepository quotes, ICustomerRepository customers, IEquipmentRepository equipment, IServiceRepository services, IAppointmentRepository appointments, WorkOrderAuthorization authorization, ICurrentUser currentUser, TimeProvider timeProvider)
+public sealed class CreateQuoteUseCase(IQuoteRepository quotes, ICustomerRepository customers, IEquipmentRepository equipment, IServiceRepository services, IAppointmentRepository appointments, IMaintenanceOpportunityRepository maintenanceOpportunities, WorkOrderAuthorization authorization, ICurrentUser currentUser, TimeProvider timeProvider)
 {
     public async Task<OperationResult<Guid>> ExecuteAsync(CreateQuoteCommand command, CancellationToken cancellationToken = default)
     {
-        if (command.CustomerId == Guid.Empty || command.EquipmentId == Guid.Empty || command.PrimaryServiceId == Guid.Empty || command.Items.Count is 0 or > 100 || command.DiscountAmount < 0 || command.ValidUntil < DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime)) return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
+        if (command.Items.Count is 0 or > 100 || command.DiscountAmount < 0 || command.ValidUntil < DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime)) return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
         var scope = await authorization.GetAccessScopeAsync(cancellationToken);
-        var customer = await customers.GetForCompanyAsync(command.CustomerId, scope.CompanyId, cancellationToken);
-        var service = await services.GetForCompanyAsync(command.PrimaryServiceId, scope.CompanyId, cancellationToken);
+        var effectiveCommand = command;
+        MaintenanceOpportunity? maintenanceOpportunity = null;
+        if (command.MaintenanceOpportunityId is { } opportunityId)
+        {
+            if (!scope.IsOwner)
+            {
+                return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
+            }
+
+            maintenanceOpportunity = await maintenanceOpportunities.GetForCompanyAsync(opportunityId, scope.CompanyId, cancellationToken);
+            if (maintenanceOpportunity is null || maintenanceOpportunity.Status is MaintenanceOpportunityStatus.Converted or MaintenanceOpportunityStatus.ClosedWithoutConversion)
+            {
+                return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
+            }
+
+            effectiveCommand = command with
+            {
+                CustomerId = maintenanceOpportunity.CustomerId,
+                EquipmentId = maintenanceOpportunity.EquipmentId,
+                PrimaryServiceId = maintenanceOpportunity.RecommendedServiceId
+            };
+        }
+
+        if (effectiveCommand.CustomerId == Guid.Empty || effectiveCommand.EquipmentId == Guid.Empty || effectiveCommand.PrimaryServiceId == Guid.Empty) return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
+        var customer = await customers.GetForCompanyAsync(effectiveCommand.CustomerId, scope.CompanyId, cancellationToken);
+        var service = await services.GetForCompanyAsync(effectiveCommand.PrimaryServiceId, scope.CompanyId, cancellationToken);
         if (customer is null || service is null || !service.IsActive) return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
-        var selectedEquipment = await equipment.GetForCompanyAsync(command.EquipmentId, scope.CompanyId, cancellationToken);
+        var selectedEquipment = await equipment.GetForCompanyAsync(effectiveCommand.EquipmentId, scope.CompanyId, cancellationToken);
         if (selectedEquipment is null || selectedEquipment.CustomerId != customer.Id) return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
-        if (command.SourceAppointmentId is { } sourceAppointmentId)
+        if (effectiveCommand.SourceAppointmentId is { } sourceAppointmentId)
         {
             var sourceAppointment = await appointments.GetForAccessAsync(sourceAppointmentId, scope.CompanyId, scope.IsOwner ? null : scope.ProfessionalId, cancellationToken);
             if (sourceAppointment is null ||
@@ -32,8 +56,13 @@ public sealed class CreateQuoteUseCase(IQuoteRepository quotes, ICustomerReposit
         }
         try
         {
-            var quote = Quote.Create(scope.CompanyId, customer.Id, currentUser.UserId, command.EquipmentId, service.Id, null, command.SourceAppointmentId, command.Items.Select(x => new QuoteItemDefinition(x.Description, x.Quantity, x.UnitPrice, x.Type)).ToArray(), command.DiscountAmount, command.Notes, command.ValidUntil, timeProvider.GetUtcNow());
-            await quotes.AddAsync(quote, cancellationToken); await quotes.SaveChangesAsync(cancellationToken); return OperationResult<Guid>.Success(quote.Id);
+            var quote = Quote.Create(scope.CompanyId, customer.Id, currentUser.UserId, effectiveCommand.EquipmentId, service.Id, null, effectiveCommand.SourceAppointmentId, effectiveCommand.Items.Select(x => new QuoteItemDefinition(x.Description, x.Quantity, x.UnitPrice, x.Type)).ToArray(), effectiveCommand.DiscountAmount, effectiveCommand.Notes, effectiveCommand.ValidUntil, timeProvider.GetUtcNow());
+            await using var transaction = await quotes.BeginTransactionAsync(cancellationToken);
+            await quotes.AddAsync(quote, cancellationToken);
+            maintenanceOpportunity?.Convert(MaintenanceOpportunityConversionType.Quote, quote.Id, timeProvider.GetUtcNow());
+            await quotes.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return OperationResult<Guid>.Success(quote.Id);
         }
         catch (DomainException) { return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput); }
     }

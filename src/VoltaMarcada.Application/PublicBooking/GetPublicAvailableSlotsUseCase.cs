@@ -25,7 +25,7 @@ public sealed class GetPublicAvailableSlotsUseCase(
         if (string.IsNullOrWhiteSpace(token)) return [];
         var context = await opportunityRepository.GetBookingContextAsync(PublicTokenGenerator.Hash(token), cancellationToken);
         var opportunity = context?.Opportunity;
-        if (context is null || opportunity is null || !context.ServiceIsActive || opportunity.BookingTokenExpiresAtUtc <= timeProvider.GetUtcNow() || opportunity.Status != MaintenanceOpportunityStatus.BookingRequested)
+        if (context is null || opportunity is null || !context.ServiceIsActive || opportunity.BookingTokenExpiresAtUtc <= timeProvider.GetUtcNow() || opportunity.Status != MaintenanceOpportunityStatus.AwaitingCustomer)
             return [];
         var company = await companyRepository.GetByIdAsync(opportunity.CompanyId, cancellationToken);
         return company is null ? [] : GetSlots(company, date, timeProvider);

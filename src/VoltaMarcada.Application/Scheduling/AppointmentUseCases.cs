@@ -57,8 +57,7 @@ public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorizatio
             command.DurationMinutes <= 0 ||
             command.Notes?.Trim().Length > 1000 ||
             command.Description?.Trim().Length > 1000 ||
-            !Enum.IsDefined(command.Type) ||
-            command.Type == global::VoltaMarcada.Domain.Enums.AppointmentType.Service && command.WorkOrderId is null)
+            !Enum.IsDefined(command.Type))
         {
             return OperationResult<Guid>.Failure(SchedulingErrors.InvalidInput);
         }
@@ -84,7 +83,7 @@ public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorizatio
                 return OperationResult<Guid>.Failure(SchedulingErrors.NotFound);
             }
 
-            if (maintenanceOpportunity.Status != MaintenanceOpportunityStatus.BookingRequested)
+            if (maintenanceOpportunity.Status is MaintenanceOpportunityStatus.Converted or MaintenanceOpportunityStatus.ClosedWithoutConversion)
             {
                 return OperationResult<Guid>.Failure(SchedulingErrors.InvalidStatus);
             }
@@ -94,7 +93,7 @@ public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorizatio
                 CustomerId = maintenanceOpportunity.CustomerId,
                 EquipmentId = maintenanceOpportunity.EquipmentId,
                 ServiceId = maintenanceOpportunity.RecommendedServiceId,
-                WorkOrderId = null
+                WorkOrderId = null,
             };
         }
         if (!scope.IsOwner)
@@ -164,7 +163,7 @@ public sealed class CreateAppointmentUseCase(WorkOrderAuthorization authorizatio
 
         var appointment = Appointment.Create(scope.CompanyId, professional.Id, normalized.CustomerId, normalized.EquipmentId, normalized.ServiceId, normalized.WorkOrderId, startAtUtc, endAtUtc, normalized.Notes, timeProvider.GetUtcNow(), AppointmentOrigin.Internal, normalized.Type, normalized.Description);
         await appointmentRepository.AddAsync(appointment, cancellationToken);
-        maintenanceOpportunity?.MarkAsBooked(timeProvider.GetUtcNow());
+        maintenanceOpportunity?.Convert(MaintenanceOpportunityConversionType.Appointment, appointment.Id, timeProvider.GetUtcNow());
         if (await appointmentRepository.TrySaveAppointmentChangesAsync(cancellationToken) == AppointmentPersistenceOutcome.Conflict)
         {
             return OperationResult<Guid>.Failure(SchedulingErrors.AppointmentConflict);

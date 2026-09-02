@@ -39,7 +39,7 @@ public sealed class PrepareMaintenanceOpportunityWhatsAppContactUseCase(
             return OperationResult<PreparedWhatsAppContact>.Failure(CustomerContactErrors.NotFound);
         }
 
-        if (context.Status is not MaintenanceOpportunityStatus.Pending and not MaintenanceOpportunityStatus.Contacted and not MaintenanceOpportunityStatus.BookingRequested)
+        if (context.Status is not MaintenanceOpportunityStatus.Pending and not MaintenanceOpportunityStatus.Contacted and not MaintenanceOpportunityStatus.AwaitingCustomer)
         {
             return OperationResult<PreparedWhatsAppContact>.Failure(CustomerContactErrors.InvalidStatus);
         }
@@ -120,7 +120,7 @@ public sealed class ConfirmMaintenanceOpportunityContactSentUseCase(
         }
 
         if (contact.Status != CustomerContactStatus.Prepared ||
-            opportunity.Status is not MaintenanceOpportunityStatus.Pending and not MaintenanceOpportunityStatus.Contacted and not MaintenanceOpportunityStatus.BookingRequested)
+            opportunity.Status is not MaintenanceOpportunityStatus.Pending and not MaintenanceOpportunityStatus.Contacted and not MaintenanceOpportunityStatus.AwaitingCustomer)
         {
             return OperationResult.Failure(CustomerContactErrors.InvalidStatus);
         }

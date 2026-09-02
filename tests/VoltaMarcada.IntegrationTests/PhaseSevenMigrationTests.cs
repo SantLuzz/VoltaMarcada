@@ -20,6 +20,7 @@ public sealed class PhaseSevenMigrationTests
 
         Assert.Contains("20260826110000_AddServiceRequestsAndQuotes", migrations.Keys);
         Assert.Contains("20260901204245_SynchronizeAppointmentCommercialSources", migrations.Keys);
+        Assert.Contains("20260902135741_RefactorMaintenanceOpportunityLifecycle", migrations.Keys);
     }
 
     [Fact]

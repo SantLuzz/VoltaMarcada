@@ -28,6 +28,11 @@ public sealed class GetMaintenanceOpportunityForSchedulingUseCase(
             return OperationResult<MaintenanceOpportunityScheduleContext>.Failure(MaintenanceOpportunityErrors.NotFound);
         }
 
+        if (opportunity.Status is VoltaMarcada.Domain.Enums.MaintenanceOpportunityStatus.Converted or VoltaMarcada.Domain.Enums.MaintenanceOpportunityStatus.ClosedWithoutConversion)
+        {
+            return OperationResult<MaintenanceOpportunityScheduleContext>.Failure(MaintenanceOpportunityErrors.InvalidStatus);
+        }
+
         return OperationResult<MaintenanceOpportunityScheduleContext>.Success(
             new MaintenanceOpportunityScheduleContext(
                 opportunity.Id,

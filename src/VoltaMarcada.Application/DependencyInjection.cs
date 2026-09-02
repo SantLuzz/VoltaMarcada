@@ -44,13 +44,10 @@ public static class DependencyInjection
         services.AddScoped<GetMaintenanceOpportunitiesUseCase>();
         services.AddScoped<GetMaintenanceOpportunitySummaryUseCase>();
         services.AddScoped<GetMaintenanceOpportunityForSchedulingUseCase>();
-        services.AddScoped<MaintenanceOpportunityActionExecutor>();
+        services.AddScoped<GetMaintenanceOpportunityForQuoteUseCase>();
         services.AddScoped<PrepareMaintenanceOpportunityWhatsAppContactUseCase>();
         services.AddScoped<ConfirmMaintenanceOpportunityContactSentUseCase>();
-        services.AddScoped<MarkMaintenanceOpportunityAsBookingRequestedUseCase>();
-        services.AddScoped<MarkMaintenanceOpportunityAsBookedUseCase>();
-        services.AddScoped<CompleteMaintenanceOpportunityUseCase>();
-        services.AddScoped<DismissMaintenanceOpportunityUseCase>();
+        services.AddScoped<DiscardMaintenanceOpportunityUseCase>();
         services.AddScoped<CreateWorkOrderUseCase>();
         services.AddScoped<GetWorkOrdersUseCase>();
         services.AddScoped<GetWorkOrderDetailsUseCase>();
