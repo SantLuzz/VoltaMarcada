@@ -30,8 +30,9 @@ else
         @if (CanExecute)
         {
             <input id="@GetPhotoInputId(WorkOrderPhotoType.Before)" class="native-file-input" type="file" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
+            <MudText id="@GetPhotoStatusId(WorkOrderPhotoType.Before)" Typo="Typo.caption" Color="Color.Secondary" />
         }
-        <div class="work-order-photo-grid">
+        <div id="@GetPhotoPreviewId(WorkOrderPhotoType.Before)" class="work-order-photo-grid">
             @foreach (var photo in WorkOrder.Photos.Where(photo => photo.Type == WorkOrderPhotoType.Before))
             {
                 <div class="work-order-photo-card">
@@ -63,8 +64,9 @@ else
         @if (CanExecute)
         {
             <input id="@GetPhotoInputId(WorkOrderPhotoType.After)" class="native-file-input" type="file" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
+            <MudText id="@GetPhotoStatusId(WorkOrderPhotoType.After)" Typo="Typo.caption" Color="Color.Secondary" />
         }
-        <div class="work-order-photo-grid">
+        <div id="@GetPhotoPreviewId(WorkOrderPhotoType.After)" class="work-order-photo-grid">
             @foreach (var photo in WorkOrder.Photos.Where(photo => photo.Type == WorkOrderPhotoType.After))
             {
                 <div class="work-order-photo-card">
@@ -81,8 +83,9 @@ else
         @if (CanExecute)
         {
             <input id="@GetPhotoInputId(WorkOrderPhotoType.Other)" class="native-file-input" type="file" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
+            <MudText id="@GetPhotoStatusId(WorkOrderPhotoType.Other)" Typo="Typo.caption" Color="Color.Secondary" />
         }
-        <div class="work-order-photo-grid">
+        <div id="@GetPhotoPreviewId(WorkOrderPhotoType.Other)" class="work-order-photo-grid">
             @foreach (var photo in WorkOrder.Photos.Where(photo => photo.Type == WorkOrderPhotoType.Other))
             {
                 <div class="work-order-photo-card">
@@ -248,7 +251,7 @@ else
         var module = await GetPhotoStagingModuleAsync();
         foreach (var type in Enum.GetValues<WorkOrderPhotoType>())
         {
-            await module.InvokeVoidAsync("initializePhotoInput", GetPhotoInputId(type), WorkOrder.Id, type);
+            await module.InvokeVoidAsync("initializePhotoInput", GetPhotoInputId(type), GetPhotoPreviewId(type), GetPhotoStatusId(type), WorkOrder.Id, type);
             await module.InvokeVoidAsync("restoreAndUploadStagedPhoto", WorkOrder.Id, type);
         }
         restoredStagedPhotosForWorkOrderId = WorkOrder.Id;
@@ -326,7 +329,16 @@ else
         }
     }
 
-    private async Task SaveAsync() => await FlushProgressAsync(true);
+    private async Task SaveAsync()
+    {
+        if (changeVersion == savedChangeVersion)
+        {
+            Snackbar.Add("Não há alterações pendentes para salvar.", Severity.Info);
+            return;
+        }
+
+        await FlushProgressAsync(true);
+    }
 
     public async Task<bool> SavePendingChangesAsync()
     {
@@ -501,6 +513,8 @@ else
         : $"{length / 1024d / 1024d:N1} MB";
 
     private string GetPhotoInputId(WorkOrderPhotoType type) => $"work-order-photo-{WorkOrder.Id:N}-{type}";
+    private string GetPhotoPreviewId(WorkOrderPhotoType type) => $"work-order-photo-preview-{WorkOrder.Id:N}-{type}";
+    private string GetPhotoStatusId(WorkOrderPhotoType type) => $"work-order-photo-status-{WorkOrder.Id:N}-{type}";
 
     private async Task RestoreStagedPhotosAsync()
     {

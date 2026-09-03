@@ -255,3 +255,5 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
         width: 100%;
     }
 }
+
+.work-order-photo-preview-pending { height: 120px; object-fit: cover; width: 160px; }

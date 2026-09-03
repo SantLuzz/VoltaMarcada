@@ -286,7 +286,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        activePanelIndex = string.Equals(Tab, "execution", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+        activePanelIndex = string.Equals(Tab, "execution", StringComparison.OrdinalIgnoreCase) ? 1 : string.Equals(Tab, "appointments", StringComparison.OrdinalIgnoreCase) ? 2 : string.Equals(Tab, "history", StringComparison.OrdinalIgnoreCase) ? 3 : 0;
         var scope = await OperationExecutor.ExecuteAsync(
             (WorkOrderAuthorization authorization, CancellationToken cancellationToken) => authorization.GetAccessScopeAsync(cancellationToken));
         isOwner = scope.IsOwner;
@@ -322,7 +322,7 @@ else
     private Task OnActivePanelIndexChanged(int value)
     {
         activePanelIndex = value;
-        var tab = value == 1 ? "execution" : value == 2 ? "appointments" : "details";
+        var tab = value == 1 ? "execution" : value == 2 ? "appointments" : value == 3 ? "history" : "details";
         NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameter("tab", tab), forceLoad: false, replace: true);
         return Task.CompletedTask;
     }
