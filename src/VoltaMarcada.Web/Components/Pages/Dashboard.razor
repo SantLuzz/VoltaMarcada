@@ -3,12 +3,7 @@
 @using VoltaMarcada.Application.Scheduling
 @using VoltaMarcada.Application.WorkOrders
 @using VoltaMarcada.Application.MaintenanceOpportunities
-@inject WorkOrderAuthorization WorkOrderAuthorization
-@inject GetAppointmentsUseCase GetAppointmentsUseCase
-@inject GetAppointmentRequestsUseCase GetAppointmentRequestsUseCase
-@inject GetScheduleBlockRequestsUseCase GetScheduleBlockRequestsUseCase
-@inject GetWorkOrdersUseCase GetWorkOrdersUseCase
-@inject GetMaintenanceOpportunitySummaryUseCase GetMaintenanceOpportunitySummaryUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject ISchedulingConfiguration SchedulingConfiguration
 @inject TimeProvider TimeProvider
 @inject ILogger<Dashboard> Logger
@@ -153,7 +148,8 @@
         {
             today = DateOnly.FromDateTime(AppointmentCalendarTime.ToLocalDateTime(TimeProvider.GetUtcNow(), SchedulingConfiguration.DefaultTimeZoneId));
             currentDate = today;
-            accessScope = await WorkOrderAuthorization.GetAccessScopeAsync();
+            accessScope = await OperationExecutor.ExecuteAsync(
+                (WorkOrderAuthorization authorization, CancellationToken cancellationToken) => authorization.GetAccessScopeAsync(cancellationToken));
             isOwner = accessScope.IsOwner;
             await LoadAsync();
         }
@@ -205,17 +201,22 @@
                 : currentDate;
             var endDate = isOwner ? visibleStartDate.AddDays(7) : visibleStartDate.AddDays(1);
             var range = AppointmentCalendarTime.GetUtcRange(visibleStartDate, endDate, SchedulingConfiguration.AllowedTimeZoneIds);
-            appointments = await GetAppointmentsUseCase.ExecuteAsync(currentAccessScope, range.StartAtUtc, range.EndAtUtc);
+            appointments = await OperationExecutor.ExecuteAsync(
+                (GetAppointmentsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(currentAccessScope, range.StartAtUtc, range.EndAtUtc, cancellationToken));
 
             if (isOwner)
             {
-                pendingExternalAppointmentRequests = (await GetAppointmentRequestsUseCase.ExecuteAsync())
+                pendingExternalAppointmentRequests = (await OperationExecutor.ExecuteAsync(
+                    (GetAppointmentRequestsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken)))
                     .Count(request => request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending);
-                pendingBlockRequests = (await GetScheduleBlockRequestsUseCase.ExecuteAsync(currentAccessScope))
+                pendingBlockRequests = (await OperationExecutor.ExecuteAsync(
+                    (GetScheduleBlockRequestsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(currentAccessScope, cancellationToken)))
                     .Count(request => request.Status is VoltaMarcada.Domain.Enums.ScheduleBlockRequestStatus.Pending or VoltaMarcada.Domain.Enums.ScheduleBlockRequestStatus.RequiresAppointmentResolution);
-                openWorkOrders = (await GetWorkOrdersUseCase.ExecuteAsync(new GetWorkOrdersQuery(null, null)))
+                openWorkOrders = (await OperationExecutor.ExecuteAsync(
+                    (GetWorkOrdersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new GetWorkOrdersQuery(null, null), cancellationToken)))
                     .Count(workOrder => workOrder.Status is VoltaMarcada.Domain.Enums.WorkOrderStatus.Pending or VoltaMarcada.Domain.Enums.WorkOrderStatus.InProgress);
-                var summaryResult = await GetMaintenanceOpportunitySummaryUseCase.ExecuteAsync();
+                var summaryResult = await OperationExecutor.ExecuteAsync(
+                    (GetMaintenanceOpportunitySummaryUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
                 if (summaryResult.IsSuccess) maintenanceSummary = summaryResult.Value!;
             }
         }

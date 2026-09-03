@@ -8,13 +8,7 @@
 @using VoltaMarcada.Domain.Entities
 @using VoltaMarcada.Application.Abstractions.Storage
 @using VoltaMarcada.Application.Abstractions.Routing
-@inject GetOwnerCompanyOverviewUseCase GetOwnerCompanyOverviewUseCase
-@inject GetCompanyPublicSettingsUseCase GetCompanyPublicSettingsUseCase
-@inject UpdateCompanyPublicSettingsUseCase UpdateCompanyPublicSettingsUseCase
-@inject CreateEmployeeInvitationUseCase CreateEmployeeInvitationUseCase
-@inject RenewEmployeeInvitationUseCase RenewEmployeeInvitationUseCase
-@inject RevokeEmployeeInvitationUseCase RevokeEmployeeInvitationUseCase
-@inject UpdateCompanyMemberProfileUseCase UpdateCompanyMemberProfileUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject IJSRuntime JsRuntime
 @inject IDialogService DialogService
 @inject IApplicationUrlBuilder ApplicationUrlBuilder
@@ -228,7 +222,8 @@ else if (overview is not null)
     {
         try
         {
-            overview = await GetOwnerCompanyOverviewUseCase.ExecuteAsync();
+            overview = await OperationExecutor.ExecuteAsync(
+                (GetOwnerCompanyOverviewUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
             if (overview is null)
             {
                 loadError = "Não foi possível carregar as informações da empresa.";
@@ -236,7 +231,8 @@ else if (overview is not null)
             }
 
             await LoadCompanyLogoAsync();
-            var settings = await GetCompanyPublicSettingsUseCase.ExecuteAsync();
+            var settings = await OperationExecutor.ExecuteAsync(
+                (GetCompanyPublicSettingsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
             if (settings is not null)
             {
                 var ownerEmail = overview.Employees.FirstOrDefault(employee => employee.Role == CompanyUserRole.Owner)?.Email;
@@ -286,8 +282,10 @@ else if (overview is not null)
         isSaving = true;
         try
         {
-            var result = await CreateEmployeeInvitationUseCase.ExecuteAsync(new CreateEmployeeInvitationCommand(
-                employee.FullName, employee.Email, employee.Document, employee.Phone, employee.Address));
+            var result = await OperationExecutor.ExecuteAsync(
+                (CreateEmployeeInvitationUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    new CreateEmployeeInvitationCommand(employee.FullName, employee.Email, employee.Document, employee.Phone, employee.Address),
+                    cancellationToken));
             if (!result.IsSuccess || result.Value?.Token is not { } token)
             {
                 operationError = OperationErrorMessages.GetMessage(result.Error?.Code);
@@ -313,7 +311,8 @@ else if (overview is not null)
     private async Task RenewInvitationAsync(Guid invitationId)
     {
         await ExecuteInvitationActionAsync(
-            () => RenewEmployeeInvitationUseCase.ExecuteAsync(invitationId),
+            () => OperationExecutor.ExecuteAsync(
+                (RenewEmployeeInvitationUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(invitationId, cancellationToken)),
             "Não foi possível gerar um novo link.");
     }
 
@@ -326,7 +325,8 @@ else if (overview is not null)
         }
 
         await ExecuteInvitationActionAsync(
-            () => RevokeEmployeeInvitationUseCase.ExecuteAsync(invitationId),
+            () => OperationExecutor.ExecuteAsync(
+                (RevokeEmployeeInvitationUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(invitationId, cancellationToken)),
             "Não foi possível revogar o convite.");
     }
 
@@ -366,7 +366,8 @@ else if (overview is not null)
 
     private async Task ReloadOverviewAsync()
     {
-        overview = await GetOwnerCompanyOverviewUseCase.ExecuteAsync();
+        overview = await OperationExecutor.ExecuteAsync(
+            (GetOwnerCompanyOverviewUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
     }
 
     private void OpenProfileDialog(EmployeeDto employeeToEdit)
@@ -411,12 +412,15 @@ else if (overview is not null)
         profileError = null;
         try
         {
-            var result = await UpdateCompanyMemberProfileUseCase.ExecuteAsync(new UpdateCompanyMemberProfileCommand(
-                editingEmployee.MembershipId,
-                profile.FullName,
-                profile.Document,
-                profile.Phone,
-                profile.Address));
+            var result = await OperationExecutor.ExecuteAsync(
+                (UpdateCompanyMemberProfileUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    new UpdateCompanyMemberProfileCommand(
+                        editingEmployee.MembershipId,
+                        profile.FullName,
+                        profile.Document,
+                        profile.Phone,
+                        profile.Address),
+                    cancellationToken));
             if (!result.IsSuccess)
             {
                 profileError = OperationErrorMessages.GetMessage(result.Error?.Code);
@@ -457,7 +461,10 @@ else if (overview is not null)
         operationError = null;
         try
         {
-            var result = await UpdateCompanyPublicSettingsUseCase.ExecuteAsync(new UpdateCompanyPublicSettingsCommand(publicSettings.PublicDescription, NormalizePhone(publicSettings.PublicPhone), publicSettings.NotificationEmail, publicSettings.PublicRequestIntervalMinutes, publicSettings.BusinessHours.Select(item => new CompanyBusinessHoursInput(item.DayOfWeek, item.IsOpen, item.StartTime is { } startTime ? TimeOnly.FromTimeSpan(startTime) : null, item.EndTime is { } endTime ? TimeOnly.FromTimeSpan(endTime) : null)).ToArray()));
+            var result = await OperationExecutor.ExecuteAsync(
+                (UpdateCompanyPublicSettingsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    new UpdateCompanyPublicSettingsCommand(publicSettings.PublicDescription, NormalizePhone(publicSettings.PublicPhone), publicSettings.NotificationEmail, publicSettings.PublicRequestIntervalMinutes, publicSettings.BusinessHours.Select(item => new CompanyBusinessHoursInput(item.DayOfWeek, item.IsOpen, item.StartTime is { } startTime ? TimeOnly.FromTimeSpan(startTime) : null, item.EndTime is { } endTime ? TimeOnly.FromTimeSpan(endTime) : null)).ToArray()),
+                    cancellationToken));
             if (!result.IsSuccess) operationError = OperationErrorMessages.GetMessage(result.Error?.Code);
             else Snackbar.Add("Configurações públicas salvas.", Severity.Success);
         }

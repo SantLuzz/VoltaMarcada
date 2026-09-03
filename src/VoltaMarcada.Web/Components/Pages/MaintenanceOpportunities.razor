@@ -4,12 +4,7 @@
 @using VoltaMarcada.Application.MaintenanceOpportunities
 @using VoltaMarcada.Application.PublicBooking
 @using VoltaMarcada.Domain.Enums
-@inject GetMaintenanceOpportunitiesUseCase GetMaintenanceOpportunitiesUseCase
-@inject GetMaintenanceOpportunitySummaryUseCase GetMaintenanceOpportunitySummaryUseCase
-@inject PrepareMaintenanceOpportunityWhatsAppContactUseCase PrepareWhatsAppContactUseCase
-@inject ConfirmMaintenanceOpportunityContactSentUseCase ConfirmContactSentUseCase
-@inject DiscardMaintenanceOpportunityUseCase DiscardUseCase
-@inject RevokeMaintenanceBookingLinkUseCase RevokeMaintenanceBookingLinkUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
@@ -179,8 +174,10 @@ else
         isLoading = true;
         try
         {
-            var summaryResult = await GetMaintenanceOpportunitySummaryUseCase.ExecuteAsync();
-            var listResult = await GetMaintenanceOpportunitiesUseCase.ExecuteAsync(new GetMaintenanceOpportunitiesQuery(status, urgency));
+            var summaryResult = await OperationExecutor.ExecuteAsync(
+                (GetMaintenanceOpportunitySummaryUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
+            var listResult = await OperationExecutor.ExecuteAsync(
+                (GetMaintenanceOpportunitiesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new GetMaintenanceOpportunitiesQuery(status, urgency), cancellationToken));
             if (summaryResult.IsSuccess) summary = summaryResult.Value!;
             if (listResult.IsSuccess) items = listResult.Value!;
             else Snackbar.Add(OperationErrorMessages.GetMessage(listResult.Error?.Code), Severity.Warning);
@@ -193,7 +190,8 @@ else
         contactActionIds.Add(opportunityId);
         try
         {
-            var result = await PrepareWhatsAppContactUseCase.ExecuteAsync(opportunityId);
+            var result = await OperationExecutor.ExecuteAsync(
+                (PrepareMaintenanceOpportunityWhatsAppContactUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(opportunityId, cancellationToken));
             if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning); return; }
             await LoadAsync();
             await JsRuntime.InvokeVoidAsync("open", result.Value!.Link, "_blank");
@@ -206,7 +204,8 @@ else
         contactActionIds.Add(contactId);
         try
         {
-            var result = await ConfirmContactSentUseCase.ExecuteAsync(opportunityId, contactId);
+            var result = await OperationExecutor.ExecuteAsync(
+                (ConfirmMaintenanceOpportunityContactSentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(opportunityId, contactId, cancellationToken));
             if (result.IsSuccess) await LoadAsync();
             else Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
         }
@@ -225,7 +224,8 @@ else
         isDiscarding = true;
         try
         {
-            var result = await DiscardUseCase.ExecuteAsync(opportunityToDiscard.Id, new DiscardMaintenanceOpportunityCommand(discardReason));
+            var result = await OperationExecutor.ExecuteAsync(
+                (DiscardMaintenanceOpportunityUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(opportunityToDiscard.Id, new DiscardMaintenanceOpportunityCommand(discardReason), cancellationToken));
             if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning); return; }
             CloseDiscardDialog();
             await LoadAsync();
@@ -235,7 +235,8 @@ else
 
     private async Task RevokeBookingLinkAsync(Guid id)
     {
-        var result = await RevokeMaintenanceBookingLinkUseCase.ExecuteAsync(id);
+        var result = await OperationExecutor.ExecuteAsync(
+            (RevokeMaintenanceBookingLinkUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(id, cancellationToken));
         Snackbar.Add(result.IsSuccess ? "Link revogado." : OperationErrorMessages.GetMessage(result.Error?.Code), result.IsSuccess ? Severity.Success : Severity.Warning);
         if (result.IsSuccess) { CloseDetailsDialog(); await LoadAsync(); }
     }

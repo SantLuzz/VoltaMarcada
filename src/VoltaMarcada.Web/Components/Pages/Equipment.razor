@@ -1,8 +1,7 @@
 @page "/equipamentos"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
 @using VoltaMarcada.Application.Equipment
-@inject GetEquipmentUseCase GetEquipmentUseCase
-@inject DeleteEquipmentUseCase DeleteEquipmentUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject ISnackbar Snackbar
 @inject ILogger<Equipment> Logger
 
@@ -131,7 +130,8 @@
 
         try
         {
-            var result = await GetEquipmentUseCase.ExecuteAsync(new GetEquipmentQuery(searchFilter));
+            var result = await OperationExecutor.ExecuteAsync(
+                (GetEquipmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new GetEquipmentQuery(searchFilter), cancellationToken));
             if (currentLoadVersion == loadVersion)
             {
                 equipment = result;
@@ -180,7 +180,8 @@
 
         try
         {
-            var result = await DeleteEquipmentUseCase.ExecuteAsync(equipmentToDelete.Id);
+            var result = await OperationExecutor.ExecuteAsync(
+                (DeleteEquipmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(equipmentToDelete.Id, cancellationToken));
             if (result.IsSuccess)
             {
                 equipment = equipment.Where(item => item.Id != equipmentToDelete.Id).ToArray();

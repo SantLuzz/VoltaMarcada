@@ -3,10 +3,7 @@
 @using VoltaMarcada.Application.Abstractions.Tenancy
 @using VoltaMarcada.Application.Professionals
 @inject ICurrentCompany CurrentCompany
-@inject ProfessionalOwnerAuthorization ProfessionalOwnerAuthorization
-@inject GetProfessionalsUseCase GetProfessionalsUseCase
-@inject GetCurrentEmployeeProfessionalUseCase GetCurrentEmployeeProfessionalUseCase
-@inject ChangeProfessionalStatusUseCase ChangeProfessionalStatusUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject ISnackbar Snackbar
 @inject ILogger<Professionals> Logger
 
@@ -92,14 +89,17 @@ else
         try
         {
             var companyId = await CurrentCompany.GetCompanyIdAsync();
-            isOwner = await ProfessionalOwnerAuthorization.IsOwnerAsync(companyId);
+            isOwner = await OperationExecutor.ExecuteAsync(
+                (ProfessionalOwnerAuthorization authorization, CancellationToken cancellationToken) => authorization.IsOwnerAsync(companyId, cancellationToken));
             if (isOwner)
             {
-                professionals = await GetProfessionalsUseCase.ExecuteAsync();
+                professionals = await OperationExecutor.ExecuteAsync(
+                    (GetProfessionalsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken));
             }
             else
             {
-                currentProfessional = await GetCurrentEmployeeProfessionalUseCase.ExecuteAsync();
+                currentProfessional = await OperationExecutor.ExecuteAsync(
+                    (GetCurrentEmployeeProfessionalUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
             }
         }
         catch (Exception exception)
@@ -115,7 +115,8 @@ else
 
     private async Task ChangeStatusAsync(ProfessionalDto professional)
     {
-        var result = await ChangeProfessionalStatusUseCase.ExecuteAsync(professional.Id, !professional.IsActive);
+        var result = await OperationExecutor.ExecuteAsync(
+            (ChangeProfessionalStatusUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(professional.Id, !professional.IsActive, cancellationToken));
         if (!result.IsSuccess)
         {
             Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);

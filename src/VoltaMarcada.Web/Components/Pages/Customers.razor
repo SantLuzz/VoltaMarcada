@@ -1,8 +1,7 @@
 @page "/clientes"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
 @using VoltaMarcada.Application.Customers
-@inject GetCustomersUseCase GetCustomersUseCase
-@inject DeleteCustomerUseCase DeleteCustomerUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject ISnackbar Snackbar
 @inject ILogger<Customers> Logger
 
@@ -143,8 +142,10 @@
 
         try
         {
-            var result = await GetCustomersUseCase.ExecuteAsync(
-                new GetCustomersQuery(searchFilter));
+            var result = await OperationExecutor.ExecuteAsync(
+                (GetCustomersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    new GetCustomersQuery(searchFilter),
+                    cancellationToken));
 
             if (currentLoadVersion == loadVersion)
             {
@@ -194,7 +195,8 @@
 
         try
         {
-            var result = await DeleteCustomerUseCase.ExecuteAsync(customer.Id);
+            var result = await OperationExecutor.ExecuteAsync(
+                (DeleteCustomerUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(customer.Id, cancellationToken));
             if (result.IsSuccess)
             {
                 customers = customers.Where(item => item.Id != customer.Id).ToArray();

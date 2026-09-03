@@ -2,7 +2,7 @@
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
 @using VoltaMarcada.Application.WorkOrders
 @using VoltaMarcada.Domain.Enums
-@inject GetWorkOrdersUseCase GetWorkOrdersUseCase
+@inject IComponentOperationExecutor OperationExecutor
 
 <PageTitle>Ordens de serviço | VoltaMarcada</PageTitle>
 <PageHeader Title="Ordens de serviço" Description="Acompanhe os atendimentos e a execução dos serviços.">
@@ -65,7 +65,8 @@
     private async Task LoadAsync()
     {
         isLoading = true;
-        orders = await GetWorkOrdersUseCase.ExecuteAsync(new GetWorkOrdersQuery(searchFilter, statusFilter));
+        orders = await OperationExecutor.ExecuteAsync(
+            (GetWorkOrdersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new GetWorkOrdersQuery(searchFilter, statusFilter), cancellationToken));
         isLoading = false;
     }
 

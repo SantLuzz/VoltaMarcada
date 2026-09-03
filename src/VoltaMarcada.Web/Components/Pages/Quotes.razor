@@ -3,10 +3,7 @@
 @using Microsoft.JSInterop
 @using VoltaMarcada.Application.Quotes
 @using VoltaMarcada.Domain.Enums
-@inject GetQuotesUseCase GetQuotesUseCase
-@inject SendQuoteUseCase SendQuoteUseCase
-@inject ApproveQuoteUseCase ApproveQuoteUseCase
-@inject RejectQuoteUseCase RejectQuoteUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
 @inject ISnackbar Snackbar
@@ -40,10 +37,10 @@ else
     private IReadOnlyList<QuoteDto> quotes = [];
     private bool isLoading = true;
     protected override async Task OnInitializedAsync() => await LoadAsync();
-    private async Task LoadAsync() { isLoading = true; quotes = await GetQuotesUseCase.ExecuteAsync(); isLoading = false; }
-    private async Task SendAsync(Guid quoteId) { var result = await SendQuoteUseCase.ExecuteAsync(quoteId); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } if (!string.IsNullOrWhiteSpace(result.Value?.WhatsAppUrl)) { await JsRuntime.InvokeVoidAsync("open", result.Value.WhatsAppUrl, "_blank"); } else { Snackbar.Add("Link do orçamento preparado.", Severity.Success); } await LoadAsync(); }
-    private async Task ApproveAsync(Guid quoteId) { var result = await ApproveQuoteUseCase.ExecuteAsync(quoteId); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } Snackbar.Add("Orçamento aprovado e OS criada.", Severity.Success); await LoadAsync(); }
-    private async Task RejectAsync(Guid quoteId) { var result = await RejectQuoteUseCase.ExecuteAsync(quoteId); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } Snackbar.Add("Orçamento recusado.", Severity.Success); await LoadAsync(); }
+    private async Task LoadAsync() { isLoading = true; quotes = await OperationExecutor.ExecuteAsync((GetQuotesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken)); isLoading = false; }
+    private async Task SendAsync(Guid quoteId) { var result = await OperationExecutor.ExecuteAsync((SendQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quoteId, cancellationToken)); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } if (!string.IsNullOrWhiteSpace(result.Value?.WhatsAppUrl)) { await JsRuntime.InvokeVoidAsync("open", result.Value.WhatsAppUrl, "_blank"); } else { Snackbar.Add("Link do orçamento preparado.", Severity.Success); } await LoadAsync(); }
+    private async Task ApproveAsync(Guid quoteId) { var result = await OperationExecutor.ExecuteAsync((ApproveQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quoteId, cancellationToken)); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } Snackbar.Add("Orçamento aprovado e OS criada.", Severity.Success); await LoadAsync(); }
+    private async Task RejectAsync(Guid quoteId) { var result = await OperationExecutor.ExecuteAsync((RejectQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quoteId, cancellationToken)); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } Snackbar.Add("Orçamento recusado.", Severity.Success); await LoadAsync(); }
     private static Color GetStatusColor(QuoteStatus status) => status switch { QuoteStatus.Draft => Color.Default, QuoteStatus.Sent => Color.Warning, QuoteStatus.Approved => Color.Success, QuoteStatus.Rejected => Color.Error, _ => Color.Default };
     private static string GetStatusName(QuoteStatus status) => status switch { QuoteStatus.Draft => "Rascunho", QuoteStatus.Sent => "Enviado", QuoteStatus.Approved => "Aprovado", QuoteStatus.Rejected => "Recusado", QuoteStatus.Expired => "Expirado", _ => status.ToString() };
 }

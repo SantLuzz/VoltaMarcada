@@ -3,8 +3,7 @@
 @using System.Globalization
 @using VoltaMarcada.Application.Services
 @using VoltaMarcada.Domain.Enums
-@inject GetServicesUseCase GetServicesUseCase
-@inject DeleteServiceUseCase DeleteServiceUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject ISnackbar Snackbar
 @inject ILogger<Services> Logger
 
@@ -133,7 +132,8 @@
 
         try
         {
-            var result = await GetServicesUseCase.ExecuteAsync(new GetServicesQuery(searchFilter));
+            var result = await OperationExecutor.ExecuteAsync(
+                (GetServicesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new GetServicesQuery(searchFilter), cancellationToken));
             if (currentLoadVersion == loadVersion)
             {
                 services = result;
@@ -182,7 +182,8 @@
 
         try
         {
-            var result = await DeleteServiceUseCase.ExecuteAsync(service.Id);
+            var result = await OperationExecutor.ExecuteAsync(
+                (DeleteServiceUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(service.Id, cancellationToken));
             if (result.IsSuccess)
             {
                 services = services.Where(item => item.Id != service.Id).ToArray();
