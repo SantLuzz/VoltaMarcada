@@ -13,6 +13,7 @@ using VoltaMarcada.Application.CompanySettings;
 using VoltaMarcada.Application.PublicBooking;
 using VoltaMarcada.Application.Quotes;
 using VoltaMarcada.Application.ServiceRequests;
+using VoltaMarcada.Application.Dashboard;
 
 namespace VoltaMarcada.Application;
 
@@ -44,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<MaintenanceOpportunityOwnerAuthorization>();
         services.AddScoped<GetMaintenanceOpportunitiesUseCase>();
         services.AddScoped<GetMaintenanceOpportunitySummaryUseCase>();
+        services.AddScoped<GetOwnerDashboardUseCase>();
         services.AddScoped<GetMaintenanceOpportunityForSchedulingUseCase>();
         services.AddScoped<GetMaintenanceOpportunityForQuoteUseCase>();
         services.AddScoped<PrepareMaintenanceOpportunityWhatsAppContactUseCase>();
