@@ -12,6 +12,7 @@ using VoltaMarcada.Web.Authorization;
 using VoltaMarcada.Web.Endpoints;
 using VoltaMarcada.Web.Errors;
 using VoltaMarcada.Web.Identity;
+using VoltaMarcada.Web.Operations;
 using VoltaMarcada.Web.Configuration;
 using VoltaMarcada.Application.Scheduling;
 using VoltaMarcada.Application.PublicBooking;
@@ -50,6 +51,7 @@ builder.Services.AddOptions<ApplicationUrlOptions>()
 builder.Services.AddSingleton<IApplicationUrlBuilder, ApplicationUrlBuilder>();
 builder.Services.AddSingleton<IPublicBookingSubmissionLimiter, PublicBookingSubmissionLimiter>();
 builder.Services.AddSingleton<PublicQuoteActionLimiter>();
+builder.Services.AddSingleton<IComponentOperationExecutor, ComponentOperationExecutor>();
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("public-booking", context => RateLimitPartition.GetFixedWindowLimiter(
