@@ -1515,8 +1515,15 @@ ser encerrada se tiver uma cobrança criada ou uma justificativa válida de
 impedir que pagamentos pendentes sejam acompanhados posteriormente.
 
 ------------------------------------------------------------------------
+# Fase 13 --- Landpage e deploy
+Criar landpage
+Criar docker file para deploy do app e landpage
+app ficara com app.voltamarcada.com.br
+landpage voltamarcada.com.br
 
-# Fase 13 --- SaaS comercial e lançamento
+a landpage deve direcionar para o login se necessário
+
+# Fase 14 --- SaaS comercial e lançamento
 
 ## Cadastro autônomo
 
