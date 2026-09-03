@@ -13,9 +13,9 @@ namespace VoltaMarcada.IntegrationTests.Components;
 public sealed class CircuitIsolatedComponentBaseTests
 {
     [Fact]
-    public void Dashboard_ShouldOwnItsServiceScope()
+    public void Dashboard_ShouldUseTheCircuitServiceScope()
     {
-        Assert.True(typeof(Dashboard).IsSubclassOf(typeof(CircuitIsolatedComponentBase)));
+        Assert.False(typeof(Dashboard).IsSubclassOf(typeof(CircuitIsolatedComponentBase)));
     }
 
     [Fact]
