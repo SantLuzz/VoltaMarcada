@@ -40,6 +40,13 @@ public sealed class MobileCameraReliabilityTests
     {
         Assert.Contains("MudProgressCircular", ReadSource("Components/Routes.razor"), StringComparison.Ordinal);
     }
+    [Fact]
+    public void PhotoUploadEndpoint_ShouldBindPhotoTypeFromMultipartForm()
+    {
+        var endpointSource = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VoltaMarcada.Web", "Endpoints", "WorkOrderEndpoints.cs"));
+
+        Assert.Contains("[FromForm] WorkOrderPhotoType type", endpointSource, StringComparison.Ordinal);
+    }
     private static string ReadSource(string relativePath) => File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VoltaMarcada.Web", relativePath));
 
     private static string FindRepositoryRoot()

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using VoltaMarcada.Application.Abstractions.Operations;
 using VoltaMarcada.Application.WorkOrders;
 using VoltaMarcada.Domain.Enums;
@@ -23,7 +24,7 @@ public static class WorkOrderEndpoints
         group.MapPost("/{workOrderId:guid}/start", async (Guid workOrderId, StartWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, cancellationToken)));
         group.MapPut("/{workOrderId:guid}/checklist", async (Guid workOrderId, SaveWorkOrderChecklistProgressCommand command, SaveWorkOrderChecklistProgressUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, command, cancellationToken)));
         group.MapPost("/{workOrderId:guid}/complete", async (Guid workOrderId, CompleteWorkOrderCommand? command, CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, command ?? new CompleteWorkOrderCommand(), cancellationToken)));
-        group.MapPost("/{workOrderId:guid}/photos", async (Guid workOrderId, IFormFile file, WorkOrderPhotoType type, string? description, AddWorkOrderPhotoUseCase useCase, CancellationToken cancellationToken) =>
+        group.MapPost("/{workOrderId:guid}/photos", async (Guid workOrderId, IFormFile file, [FromForm] WorkOrderPhotoType type, string? description, AddWorkOrderPhotoUseCase useCase, CancellationToken cancellationToken) =>
         {
             if (file.Length > 10 * 1024 * 1024)
             {
