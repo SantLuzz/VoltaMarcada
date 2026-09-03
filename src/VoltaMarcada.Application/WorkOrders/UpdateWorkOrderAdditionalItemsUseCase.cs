@@ -1,4 +1,5 @@
 using FluentValidation;
+using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Application.Abstractions.Operations;
 using VoltaMarcada.Application.Abstractions.Persistence;
 using VoltaMarcada.Domain.Enums;
@@ -9,6 +10,7 @@ namespace VoltaMarcada.Application.WorkOrders;
 public sealed class UpdateWorkOrderAdditionalItemsUseCase(
     IWorkOrderRepository workOrderRepository,
     WorkOrderAuthorization authorization,
+    ICurrentUser currentUser,
     IValidator<UpdateWorkOrderAdditionalItemsCommand> validator,
     TimeProvider timeProvider)
 {
@@ -47,7 +49,9 @@ public sealed class UpdateWorkOrderAdditionalItemsUseCase(
                 WorkOrderItemType.Additional))
             .ToArray();
 
-        workOrder.UpdateAdditionalItems(additionalItems, timeProvider.GetUtcNow());
+        var now = timeProvider.GetUtcNow();
+        workOrder.UpdateAdditionalItems(additionalItems, now);
+        workOrder.RecordHistory(WorkOrderHistoryEventType.AdditionalItemsUpdated, currentUser.UserId == Guid.Empty ? null : currentUser.UserId, WorkOrderHistoryDescriptions.AdditionalItemsUpdated(), now);
         await workOrderRepository.SaveChangesAsync(cancellationToken);
         return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(workOrder.Id));
     }

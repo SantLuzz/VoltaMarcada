@@ -24,6 +24,22 @@ public sealed class MobileCameraReliabilityTests
         Assert.DoesNotContain("ReadPhotoAsync(file)", panelSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void CameraCapture_ShouldSendThePhotoTypeAndShowAClientPreview()
+    {
+        var stagingSource = ReadSource("wwwroot/js/work-order-photo-staging.js");
+        var panelSource = ReadSource("Components/Shared/WorkOrderExecutionPanel.razor");
+
+        Assert.Contains("?type=${encodeURIComponent(photoType)}", stagingSource, StringComparison.Ordinal);
+        Assert.Contains("showPreview(previewId, file)", stagingSource, StringComparison.Ordinal);
+        Assert.Contains("work-order-photo-preview", panelSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Routes_ShouldShowCircularAuthorizationLoadingIndicator()
+    {
+        Assert.Contains("MudProgressCircular", ReadSource("Components/Routes.razor"), StringComparison.Ordinal);
+    }
     private static string ReadSource(string relativePath) => File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VoltaMarcada.Web", relativePath));
 
     private static string FindRepositoryRoot()
