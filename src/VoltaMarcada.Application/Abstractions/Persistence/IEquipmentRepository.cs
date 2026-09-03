@@ -21,6 +21,13 @@ public interface IEquipmentRepository
         Guid companyId,
         CancellationToken cancellationToken = default);
 
+    Task<EquipmentHistoryPageProjection?> GetHistoryPageForCompanyAsync(
+        Guid equipmentId,
+        Guid companyId,
+        int offset,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     Task<global::VoltaMarcada.Domain.Entities.Equipment?> GetActiveForCustomerByTypeAndManufacturerAsync(
         Guid companyId,
         Guid customerId,

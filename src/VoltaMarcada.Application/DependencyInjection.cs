@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<DeleteCustomerUseCase>();
         services.AddScoped<CreateEquipmentUseCase>();
         services.AddScoped<GetEquipmentUseCase>();
+        services.AddScoped<GetEquipmentHistoryUseCase>();
         services.AddScoped<GetCustomerEquipmentUseCase>();
         services.AddScoped<GetEquipmentForEditUseCase>();
         services.AddScoped<UpdateEquipmentUseCase>();
