@@ -12,6 +12,18 @@ public sealed class MobileCameraReliabilityTests
         Assert.DoesNotContain("location.reload()", ReadSource("Components/Layout/ReconnectModal.razor.js"), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void CameraCapture_ShouldUseBrowserMultipartUploadInsteadOfCircuitPayload()
+    {
+        var stagingSource = ReadSource("wwwroot/js/work-order-photo-staging.js");
+        var panelSource = ReadSource("Components/Shared/WorkOrderExecutionPanel.razor");
+
+        Assert.Contains("FormData", stagingSource, StringComparison.Ordinal);
+        Assert.Contains("credentials: \"same-origin\"", stagingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Convert.ToBase64String", panelSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ReadPhotoAsync(file)", panelSource, StringComparison.Ordinal);
+    }
+
     private static string ReadSource(string relativePath) => File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VoltaMarcada.Web", relativePath));
 
     private static string FindRepositoryRoot()

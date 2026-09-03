@@ -23,7 +23,9 @@ public sealed class AddWorkOrderAttachmentUseCase(IWorkOrderRepository repositor
         var stored = await fileStorage.UploadAsync(new FileStorageUploadRequest(new FileUpload(upload.Content, upload.FileName, upload.ContentType, upload.Length), $"companies/{scope.CompanyId:N}/work-orders/{workOrderId:N}/attachments"), cancellationToken);
         try
         {
-            var attachment = order.AddAttachment(stored.Key, upload.FileName, upload.ContentType, upload.Length, upload.Description, currentUser.UserId, timeProvider.GetUtcNow());
+            var now = timeProvider.GetUtcNow();
+            var attachment = order.AddAttachment(stored.Key, upload.FileName, upload.ContentType, upload.Length, upload.Description, currentUser.UserId, now);
+            order.RecordHistory(WorkOrderHistoryEventType.AttachmentAdded, currentUser.UserId == Guid.Empty ? null : currentUser.UserId, WorkOrderHistoryDescriptions.AttachmentAdded(attachment.OriginalFileName), now);
             await repository.SaveChangesAsync(cancellationToken);
             return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(order.Id, attachment.Id));
         }

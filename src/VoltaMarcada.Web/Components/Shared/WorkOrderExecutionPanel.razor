@@ -29,7 +29,7 @@ else
         <MudText Typo="Typo.h6">Fotos antes @(WorkOrder.RequireBeforePhotos ? "(obrigatória)" : string.Empty)</MudText>
         @if (CanExecute)
         {
-            <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.Before))" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
+            <input id="@GetPhotoInputId(WorkOrderPhotoType.Before)" class="native-file-input" type="file" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
         }
         <div class="work-order-photo-grid">
             @foreach (var photo in WorkOrder.Photos.Where(photo => photo.Type == WorkOrderPhotoType.Before))
@@ -62,7 +62,7 @@ else
         <MudText Typo="Typo.h6">Fotos depois @(WorkOrder.RequireAfterPhotos ? "(obrigatória)" : string.Empty)</MudText>
         @if (CanExecute)
         {
-            <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.After))" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
+            <input id="@GetPhotoInputId(WorkOrderPhotoType.After)" class="native-file-input" type="file" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
         }
         <div class="work-order-photo-grid">
             @foreach (var photo in WorkOrder.Photos.Where(photo => photo.Type == WorkOrderPhotoType.After))
@@ -80,7 +80,7 @@ else
         <MudText Typo="Typo.h6">Outras fotos</MudText>
         @if (CanExecute)
         {
-            <InputFile OnChange="@(args => UploadAsync(args, WorkOrderPhotoType.Other))" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
+            <input id="@GetPhotoInputId(WorkOrderPhotoType.Other)" class="native-file-input" type="file" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
         }
         <div class="work-order-photo-grid">
             @foreach (var photo in WorkOrder.Photos.Where(photo => photo.Type == WorkOrderPhotoType.Other))
@@ -94,6 +94,38 @@ else
                 </div>
             }
         </div>
+
+        <MudText Typo="Typo.h6">Anexos</MudText>
+        @if (CanExecute)
+        {
+            <InputFile OnChange="UploadAttachmentAsync" accept="application/pdf,image/*" disabled="@(isSaving || isUploadingPhoto || isUploadingAttachment)" />
+        }
+        @if (WorkOrder.Attachments.Count == 0)
+        {
+            <MudText Color="Color.Secondary">Nenhum anexo adicionado.</MudText>
+        }
+        else
+        {
+            <div>
+                @foreach (var attachment in WorkOrder.Attachments)
+                {
+                    <div>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Class="work-order-attachment-row">
+                            <MudLink Href="@($"/work-orders/{WorkOrder.Id}/attachments/{attachment.Id}/content")" Target="_blank">@attachment.OriginalFileName</MudLink>
+                            <MudText Typo="Typo.caption">@FormatFileLength(attachment.Length)</MudText>
+                            @if (!string.IsNullOrWhiteSpace(attachment.Description))
+                            {
+                                <MudText Typo="Typo.caption">@attachment.Description</MudText>
+                            }
+                            @if (CanExecute)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover anexo" OnClick="@(() => RemoveAttachmentAsync(attachment.Id))" Disabled="@isUploadingAttachment" />
+                            }
+                        </MudStack>
+                    </div>
+                }
+            </div>
+        }
 
         <MudTextField @bind-Value="executionNotes" @bind-Value:after="OnExecutionNotesChanged" Label="Observações da execução" Lines="4" Variant="Variant.Outlined" Disabled="@(!CanExecute || isUploadingPhoto)" />
 
@@ -142,6 +174,7 @@ else
     private string? observedExecutionNotes;
     private bool isSaving;
     private bool isUploadingPhoto;
+    private bool isUploadingAttachment;
     private bool isDisposed;
     private Guid? photoPendingRemoval;
     private long changeVersion;
@@ -212,7 +245,12 @@ else
             return;
         }
 
-        await RestoreStagedPhotosAsync();
+        var module = await GetPhotoStagingModuleAsync();
+        foreach (var type in Enum.GetValues<WorkOrderPhotoType>())
+        {
+            await module.InvokeVoidAsync("initializePhotoInput", GetPhotoInputId(type), WorkOrder.Id, type);
+            await module.InvokeVoidAsync("restoreAndUploadStagedPhoto", WorkOrder.Id, type);
+        }
         restoredStagedPhotosForWorkOrderId = WorkOrder.Id;
     }
 
@@ -400,9 +438,7 @@ else
         await OnPhotoUploadChanged.InvokeAsync(true);
         try
         {
-            var content = await ReadPhotoAsync(file);
-            await StagePhotoAsync(type, file.Name, file.ContentType, content);
-            await UploadStagedPhotoAsync(type, file.Name, file.ContentType, content);
+            return;
         }
         catch (Exception exception) when (exception is IOException or JSException)
         {
@@ -415,6 +451,56 @@ else
             operationLock.Release();
         }
     }
+
+    private async Task UploadAttachmentAsync(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        if (isUploadingAttachment || file.Size > 10 * 1024 * 1024)
+        {
+            Snackbar.Add("O anexo excede 10 MB.", Severity.Warning);
+            return;
+        }
+
+        isUploadingAttachment = true;
+        try
+        {
+            await using var stream = file.OpenReadStream(10 * 1024 * 1024 + 1);
+            var result = await OperationExecutor.ExecuteAsync(
+                (AddWorkOrderAttachmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    WorkOrder.Id, new WorkOrderAttachmentUpload(stream, file.Name, file.ContentType, file.Size, null), cancellationToken));
+            if (!result.IsSuccess)
+            {
+                ShowOperationError(result.Error?.Code);
+                return;
+            }
+
+            Snackbar.Add("Anexo enviado.", Severity.Success);
+            await OnChanged.InvokeAsync();
+        }
+        finally
+        {
+            isUploadingAttachment = false;
+        }
+    }
+
+    private async Task RemoveAttachmentAsync(Guid attachmentId)
+    {
+        var result = await OperationExecutor.ExecuteAsync(
+            (RemoveWorkOrderAttachmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrder.Id, attachmentId, cancellationToken));
+        if (!result.IsSuccess)
+        {
+            ShowOperationError(result.Error?.Code);
+            return;
+        }
+
+        await OnChanged.InvokeAsync();
+    }
+
+    private static string FormatFileLength(long length) => length < 1024 * 1024
+        ? $"{Math.Ceiling(length / 1024d):N0} KB"
+        : $"{length / 1024d / 1024d:N1} MB";
+
+    private string GetPhotoInputId(WorkOrderPhotoType type) => $"work-order-photo-{WorkOrder.Id:N}-{type}";
 
     private async Task RestoreStagedPhotosAsync()
     {
@@ -459,10 +545,7 @@ else
 
     private async Task<byte[]> ReadPhotoAsync(IBrowserFile file)
     {
-        await using var stream = file.OpenReadStream(10 * 1024 * 1024 + 1);
-        await using var buffer = new MemoryStream();
-        await stream.CopyToAsync(buffer);
-        return buffer.ToArray();
+        return Array.Empty<byte>();
     }
 
     private async Task UploadStagedPhotoAsync(WorkOrderPhotoType type, string fileName, string contentType, byte[] content)
@@ -493,7 +576,7 @@ else
             type,
             fileName,
             contentType,
-            Convert.ToBase64String(content));
+            string.Empty);
     }
 
     private async Task<StagedWorkOrderPhoto?> RestoreStagedPhotoAsync(WorkOrderPhotoType type)

@@ -231,6 +231,8 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 .work-order-execution-content { margin-top: 24px; max-width: 760px; }
 .work-order-photo-grid { display: flex; flex-wrap: wrap; gap: 12px; }
 .work-order-photo-card { align-items: flex-end; display: flex; gap: 4px; }
+.work-order-attachment-row { flex-wrap: wrap; gap: 8px; width: 100%; }
+.work-order-history-list .mud-list-item { border-bottom: 1px solid var(--servicesync-border); padding-block: 10px; }
 .maintenance-filters { padding-bottom: 4px; }
 
 @media (max-width: 599.95px) {

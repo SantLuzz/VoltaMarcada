@@ -1,3 +1,4 @@
+using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Application.Abstractions.Operations;
 using VoltaMarcada.Application.Abstractions.Persistence;
 using VoltaMarcada.Application.Scheduling;
@@ -5,7 +6,7 @@ using VoltaMarcada.Domain.Entities;
 
 namespace VoltaMarcada.Application.WorkOrders;
 
-public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IAppointmentRepository appointmentRepository, IServiceRepository serviceRepository, IProfessionalRepository professionalRepository, IMaintenanceOpportunityRepository maintenanceOpportunityRepository, WorkOrderAuthorization authorization, ISchedulingConfiguration schedulingConfiguration, TimeProvider timeProvider)
+public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IAppointmentRepository appointmentRepository, IServiceRepository serviceRepository, IProfessionalRepository professionalRepository, IMaintenanceOpportunityRepository maintenanceOpportunityRepository, WorkOrderAuthorization authorization, ICurrentUser currentUser, ISchedulingConfiguration schedulingConfiguration, TimeProvider timeProvider)
 {
     public async Task<OperationResult<WorkOrderOperationValue>> ExecuteAsync(Guid workOrderId, CompleteWorkOrderCommand command, CancellationToken cancellationToken = default)
     {
@@ -28,6 +29,7 @@ public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IA
         if (recommendation is null)
         {
             order.Complete(service.RequireBeforePhotos, service.RequireAfterPhotos, now);
+            order.RecordHistory(global::VoltaMarcada.Domain.Enums.WorkOrderHistoryEventType.Completed, currentUser.UserId == Guid.Empty ? null : currentUser.UserId, WorkOrderHistoryDescriptions.Completed(), now);
             await repository.SaveChangesAsync(cancellationToken);
             return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(order.Id));
         }
@@ -45,6 +47,7 @@ public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IA
 
         await using var transaction = await maintenanceOpportunityRepository.BeginTransactionAsync(cancellationToken);
         order.Complete(service.RequireBeforePhotos, service.RequireAfterPhotos, now);
+        order.RecordHistory(global::VoltaMarcada.Domain.Enums.WorkOrderHistoryEventType.Completed, currentUser.UserId == Guid.Empty ? null : currentUser.UserId, WorkOrderHistoryDescriptions.Completed(), now);
         await maintenanceOpportunityRepository.AddAsync(
             MaintenanceOpportunity.Create(
                 scope.CompanyId,
