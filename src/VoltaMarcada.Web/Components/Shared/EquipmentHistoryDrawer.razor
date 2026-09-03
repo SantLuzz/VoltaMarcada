@@ -7,9 +7,9 @@
 <MudDrawer Open="@Open" OpenChanged="SetOpenAsync" Anchor="Anchor.End" Variant="DrawerVariant.Temporary" Elevation="8" Width="520px" Class="equipment-history-drawer">
     <MudStack Spacing="2" Class="pa-4">
         <MudStack Row="true" AlignItems="AlignItems.Center">
-            <MudText Typo="Typo.h6">Hist?rico do equipamento</MudText>
+            <MudText Typo="Typo.h6">@HistoryTitle</MudText>
             <MudSpacer />
-            <MudIconButton Icon="@Icons.Material.Filled.Close" AriaLabel="Fechar hist?rico" OnClick="CloseAsync" />
+            <MudIconButton Icon="@Icons.Material.Filled.Close" AriaLabel="@CloseHistoryLabel" OnClick="CloseAsync" />
         </MudStack>
 
         @if (isInitialLoading)
@@ -33,7 +33,7 @@
 
             @if (historyRecords.Count == 0)
             {
-                <EmptyState Icon="@Icons.Material.Filled.History" Title="Sem hist?rico t?cnico" Description="Ainda n?o h? servi?os conclu?dos para este equipamento." />
+                <EmptyState Icon="@Icons.Material.Filled.History" Title="@EmptyHistoryTitle" Description="@EmptyHistoryDescription" />
             }
             else
             {
@@ -42,16 +42,16 @@
                     {
                         <MudPaper Outlined="true" Class="pa-3 equipment-history-record">
                             <MudText Typo="Typo.subtitle2">@record.ServiceName</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@record.WorkOrderDisplayNumber ? @record.CompletedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@record.WorkOrderDisplayNumber &#183; @record.CompletedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")</MudText>
                             @if (!string.IsNullOrWhiteSpace(record.ProfessionalName))
                             {
-                                <MudText Typo="Typo.body2">T?cnico: @record.ProfessionalName</MudText>
+                                <MudText Typo="Typo.body2">@TechnicianLabel: @record.ProfessionalName</MudText>
                             }
-                            <MudText Typo="Typo.body2">Checklist: @record.CompletedChecklistCount/@record.RequiredChecklistCount ? Evid?ncias: @record.BeforePhotoCount antes, @record.AfterPhotoCount depois</MudText>
-                            <MudText Typo="Typo.body2">Anexos: @record.AttachmentCount ? Valor: @record.TotalAmount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))</MudText>
+                            <MudText Typo="Typo.body2">Checklist: @record.CompletedChecklistCount/@record.RequiredChecklistCount &#183; @EvidenceLabel: @record.BeforePhotoCount antes, @record.AfterPhotoCount depois</MudText>
+                            <MudText Typo="Typo.body2">Anexos: @record.AttachmentCount &#183; Valor: @record.TotalAmount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))</MudText>
                             @if (record.NextMaintenanceDueDate is { } dueDate)
                             {
-                                <MudText Typo="Typo.body2" Color="Color.Primary">Pr?xima manuten??o: @dueDate.ToString("dd/MM/yyyy")</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Primary">@NextMaintenanceLabel: @dueDate.ToString("dd/MM/yyyy")</MudText>
                             }
                         </MudPaper>
                     }
@@ -78,6 +78,14 @@
     private bool isInitialLoading;
     private bool isLoadingMore;
     private string? loadError;
+    private const string HistoryTitle = "Hist\u00F3rico do equipamento";
+    private const string CloseHistoryLabel = "Fechar hist\u00F3rico";
+    private const string EmptyHistoryTitle = "Sem hist\u00F3rico t\u00E9cnico";
+    private const string EmptyHistoryDescription = "Ainda n\u00E3o h\u00E1 servi\u00E7os conclu\u00EDdos para este equipamento.";
+    private const string TechnicianLabel = "T\u00E9cnico";
+    private const string EvidenceLabel = "Evid\u00EAncias";
+    private const string NextMaintenanceLabel = "Pr\u00F3xima manuten\u00E7\u00E3o";
+    private const string LoadErrorMessage = "N\u00E3o foi poss\u00EDvel carregar o hist\u00F3rico deste equipamento.";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -129,7 +137,7 @@
 
             if (!result.IsSuccess || result.Value is null)
             {
-                loadError = "N?o foi poss?vel carregar o hist?rico deste equipamento.";
+                loadError = LoadErrorMessage;
                 return;
             }
 
@@ -140,7 +148,7 @@
         }
         catch
         {
-            loadError = "N?o foi poss?vel carregar o hist?rico deste equipamento.";
+            loadError = LoadErrorMessage;
         }
         finally
         {

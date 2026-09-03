@@ -63,8 +63,8 @@
                 <MudTd DataLabel="Equipamento">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                         <GridTextCell Value="@GetEquipmentDescription(context)" />
-                        <MudTooltip Text="Ver hist?rico t?cnico">
-                            <MudIconButton Icon="@Icons.Material.Filled.History" Color="Color.Primary" aria-label="Ver hist?rico t?cnico" OnClick="@(() => OpenHistory(context.Id))" />
+                        <MudTooltip Text="@HistoryTooltipText">
+                            <MudIconButton Icon="@Icons.Material.Filled.History" Color="Color.Primary" aria-label="@HistoryTooltipText" OnClick="@(() => OpenHistory(context.Id))" />
                         </MudTooltip>
                     </MudStack>
                 </MudTd>
@@ -120,6 +120,7 @@
         FullWidth = true
     };
 
+    private const string HistoryTooltipText = "Ver hist\u00F3rico t\u00E9cnico";
     private IReadOnlyList<EquipmentDto> equipment = [];
     private EquipmentDto? equipmentPendingDeletion;
     private Guid? selectedEquipmentId;
