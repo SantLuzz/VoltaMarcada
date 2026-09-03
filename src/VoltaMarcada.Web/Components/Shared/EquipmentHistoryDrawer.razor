@@ -1,0 +1,176 @@
+@using Microsoft.JSInterop
+@using VoltaMarcada.Application.Equipment
+@inject IComponentOperationExecutor OperationExecutor
+@inject IJSRuntime JsRuntime
+@implements IAsyncDisposable
+
+<MudDrawer Open="@Open" OpenChanged="SetOpenAsync" Anchor="Anchor.End" Variant="DrawerVariant.Temporary" Elevation="8" Width="520px" Class="equipment-history-drawer">
+    <MudStack Spacing="2" Class="pa-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">Hist?rico do equipamento</MudText>
+            <MudSpacer />
+            <MudIconButton Icon="@Icons.Material.Filled.Close" AriaLabel="Fechar hist?rico" OnClick="CloseAsync" />
+        </MudStack>
+
+        @if (isInitialLoading)
+        {
+            <div class="equipment-history-loading">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            </div>
+        }
+        else if (loadError is not null)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                @loadError
+                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="RetryAsync">Tentar novamente</MudButton>
+            </MudAlert>
+        }
+        else if (historyPage is not null)
+        {
+            <MudText Typo="Typo.subtitle2">@historyPage.Equipment.Description</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@historyPage.Equipment.CustomerName</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@historyRecords.Count de @historyPage.TotalRecordCount registros</MudText>
+
+            @if (historyRecords.Count == 0)
+            {
+                <EmptyState Icon="@Icons.Material.Filled.History" Title="Sem hist?rico t?cnico" Description="Ainda n?o h? servi?os conclu?dos para este equipamento." />
+            }
+            else
+            {
+                <div class="equipment-history-timeline" @ref="timelineElement" @onscroll="HandleTimelineScrollAsync">
+                    @foreach (var record in historyRecords)
+                    {
+                        <MudPaper Outlined="true" Class="pa-3 equipment-history-record">
+                            <MudText Typo="Typo.subtitle2">@record.ServiceName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@record.WorkOrderDisplayNumber ? @record.CompletedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")</MudText>
+                            @if (!string.IsNullOrWhiteSpace(record.ProfessionalName))
+                            {
+                                <MudText Typo="Typo.body2">T?cnico: @record.ProfessionalName</MudText>
+                            }
+                            <MudText Typo="Typo.body2">Checklist: @record.CompletedChecklistCount/@record.RequiredChecklistCount ? Evid?ncias: @record.BeforePhotoCount antes, @record.AfterPhotoCount depois</MudText>
+                            <MudText Typo="Typo.body2">Anexos: @record.AttachmentCount ? Valor: @record.TotalAmount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))</MudText>
+                            @if (record.NextMaintenanceDueDate is { } dueDate)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Primary">Pr?xima manuten??o: @dueDate.ToString("dd/MM/yyyy")</MudText>
+                            }
+                        </MudPaper>
+                    }
+                    @if (isLoadingMore)
+                    {
+                        <div class="equipment-history-loading-more"><MudProgressCircular Indeterminate="true" Size="Size.Small" /></div>
+                    }
+                </div>
+            }
+        }
+    </MudStack>
+</MudDrawer>
+
+@code {
+    [Parameter] public Guid? EquipmentId { get; set; }
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+
+    private EquipmentHistoryPageDto? historyPage;
+    private IReadOnlyList<EquipmentHistoryRecordDto> historyRecords = [];
+    private ElementReference timelineElement;
+    private IJSObjectReference? scrollModule;
+    private Guid? loadedEquipmentId;
+    private bool isInitialLoading;
+    private bool isLoadingMore;
+    private string? loadError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Open && EquipmentId is { } equipmentId && loadedEquipmentId != equipmentId)
+        {
+            loadedEquipmentId = equipmentId;
+            await LoadAsync(reset: true);
+        }
+    }
+
+    private async Task HandleTimelineScrollAsync()
+    {
+        if (historyPage is not { HasMore: true } || isLoadingMore || isInitialLoading)
+        {
+            return;
+        }
+
+        scrollModule ??= await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/equipment-history-scroll.js");
+        if (await scrollModule.InvokeAsync<bool>("isNearBottom", timelineElement, 160))
+        {
+            await LoadAsync(reset: false);
+        }
+    }
+
+    private async Task LoadAsync(bool reset)
+    {
+        if (EquipmentId is not { } equipmentId)
+        {
+            return;
+        }
+
+        if (reset)
+        {
+            isInitialLoading = true;
+            loadError = null;
+            historyPage = null;
+            historyRecords = [];
+        }
+        else
+        {
+            isLoadingMore = true;
+        }
+
+        try
+        {
+            var offset = reset ? 0 : historyRecords.Count;
+            var result = await OperationExecutor.ExecuteAsync(
+                (GetEquipmentHistoryUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(equipmentId, offset, cancellationToken));
+
+            if (!result.IsSuccess || result.Value is null)
+            {
+                loadError = "N?o foi poss?vel carregar o hist?rico deste equipamento.";
+                return;
+            }
+
+            historyPage = result.Value;
+            historyRecords = reset
+                ? result.Value.Records
+                : historyRecords.Concat(result.Value.Records).ToArray();
+        }
+        catch
+        {
+            loadError = "N?o foi poss?vel carregar o hist?rico deste equipamento.";
+        }
+        finally
+        {
+            isInitialLoading = false;
+            isLoadingMore = false;
+        }
+    }
+
+    private Task RetryAsync() => LoadAsync(reset: true);
+
+    private async Task SetOpenAsync(bool value)
+    {
+        if (!value)
+        {
+            loadedEquipmentId = null;
+            historyPage = null;
+            historyRecords = [];
+            loadError = null;
+        }
+
+        await OpenChanged.InvokeAsync(value);
+    }
+
+    private Task CloseAsync() => SetOpenAsync(false);
+
+    public async ValueTask DisposeAsync()
+    {
+        if (scrollModule is not null)
+        {
+            await scrollModule.DisposeAsync();
+        }
+    }
+}

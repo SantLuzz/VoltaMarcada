@@ -257,3 +257,33 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 }
 
 .work-order-photo-preview-pending { height: 120px; object-fit: cover; width: 160px; }
+
+.equipment-history-drawer {
+    max-width: 100vw;
+}
+
+.equipment-history-loading,
+.equipment-history-loading-more {
+    display: flex;
+    justify-content: center;
+    padding: 32px 0;
+}
+
+.equipment-history-timeline {
+    display: grid;
+    gap: 12px;
+    max-height: calc(100vh - 210px);
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.equipment-history-record {
+    display: grid;
+    gap: 6px;
+}
+
+@media (max-width: 600px) {
+    .equipment-history-drawer {
+        width: 100vw !important;
+    }
+}
