@@ -119,6 +119,11 @@ public static class AccountEndpoints
             isPersistent: false,
             lockoutOnFailure: true);
 
+        if (signInResult.IsLockedOut)
+        {
+            return RedirectWithError("/account/login", "Conta bloqueada por excesso de tentativas. Tente novamente mais tarde.", request.ReturnUrl);
+        }
+
         if (!signInResult.Succeeded)
         {
             return RedirectWithError("/account/login", "E-mail ou senha inválidos.", request.ReturnUrl);

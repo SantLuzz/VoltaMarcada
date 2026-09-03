@@ -1,3 +1,4 @@
+-- Active: 1787061991244@@127.0.0.1@5432@voltamarcada_dev
 # VoltaMarcada
 
 ## Plano de Negócio e Desenvolvimento --- Estrutura Atualizada
@@ -328,9 +329,7 @@ ambiente isolado da empresa com autenticação e autorização adequadas.
 
 ------------------------------------------------------------------------
 
-# Fase 2 --- Base operacional (Concluída)
-
-> Decisão de escopo: o vínculo entre profissional e usuário do sistema permanece obrigatório nesta fase. O suporte a profissionais sem acesso será tratado como melhoria posterior.
+# Fase 2 --- Base operacional
 
 ## Clientes
 
@@ -375,7 +374,11 @@ Dados possíveis:
 -   nome;
 -   descrição;
 -   duração aproximada;
--   tipo de preço;
+-   tipo de preço:
+   - preço fixo;
+   - a partir de;
+   - sob orçamento;
+   - não exibir preço.
 -   valor;
 -   permitir solicitação online;
 -   regras operacionais.
@@ -428,7 +431,7 @@ começar a trabalhar.
 
 ------------------------------------------------------------------------
 
-# Fase 3 --- Ordem de Serviço e execução (Concluída)
+# Fase 3 --- Ordem de Serviço e execução
 
 A OS deve nascer preparada para representar a execução real do serviço.
 
@@ -1323,11 +1326,244 @@ comerciais.
 
 ------------------------------------------------------------------------
 
-# Fase 11 --- SaaS comercial e lançamento
+# Fase 11 --- Licença, PIX e baixa manual
+
+## Licença da empresa
+
+Cada empresa possui uma licença própria, independente dos usuários.
+
+Fluxo inicial:
+
+``` text
+Criar empresa
+↓
+Trial de 14 dias
+↓
+Opção de aderir nos últimos 3 dias
+↓
+Tolerância de 3 dias após o trial
+↓
+Pagamento PIX
+↓
+Envio obrigatório do comprovante
+↓
+Análise manual pelo administrador VoltaMarcada
+↓
+Renovação da licença por um mês
+```
+
+O plano inicial é único:
+
+``` text
+R$ 49,90/mês
+```
+
+O owner deve visualizar no dashboard quantos dias faltam para o vencimento.
+Quando faltarem até 7 dias, o sistema apresenta a ação **Renovar licença**.
+Nos três últimos dias do trial, apresenta a ação **Aderir**.
+
+## PIX e comprovante
+
+A tela de renovação deve apresentar:
+
+- QR Code PIX;
+- PIX copia e cola;
+- valor mensal;
+- envio obrigatório do comprovante;
+- status do comprovante enviado.
+
+O recebimento utiliza a chave PIX configurada pelo VoltaMarcada. Os comprovantes podem ser imagens ou PDF e devem ser armazenados na nuvem com a estrutura:
+
+``` text
+pagamentos/{guidEmpresa}/{dataPagamento}.{formato}
+```
+
+## Bloqueio e acesso
+
+Após o trial de 14 dias, a empresa possui 3 dias de tolerância.
+Depois desse período, o owner continua com visualização e acesso à renovação, mas não pode executar ações de escrita. Funcionários veem uma tela de conta bloqueada com a orientação para contatar o administrador da própria empresa.
+
+No décimo dia após o encerramento do trial, o acesso operacional é encerrado: o owner é direcionado à regularização e o funcionário permanece na tela bloqueada.
+
+Para licenças pagas vencidas, o sistema mostra aviso no produto e envia e-mail diário ao owner. Após 7 dias de inadimplência, o owner entra em modo somente visualização; após 20 dias, o acesso operacional é encerrado.
+
+## Administração VoltaMarcada
+
+O administrador da plataforma possui um dashboard próprio para licenças e pagamentos. O painel mensal deve permitir acompanhar:
+
+- empresa;
+- owner e e-mail;
+- vencimento atual;
+- data e valor do pagamento;
+- status do comprovante;
+- visualização segura do comprovante;
+- aprovação ou rejeição manual;
+- responsável e data da análise.
+
+Somente a aprovação manual renova a licença. A renovação antecipada preserva os dias já contratados e estende o vencimento até o mesmo dia do mês seguinte.
+
+## Objetivo
+
+Permitir a comercialização inicial do VoltaMarcada sem gateway de pagamento, mantendo cobrança simples, auditável e segura até que a base de clientes justifique automação.
+
+------------------------------------------------------------------------
+
+# Fase 12 --- Regra de cobrança no encerramento da OS
+
+## Objetivo
+
+Quando a empresa habilitar o **Controle de pagamentos**, toda Ordem de
+Serviço com valor deve passar pelo fluxo de cobrança antes de ser
+encerrada. A regra evita que uma OS seja concluída sem o respectivo
+registro financeiro e mantém os valores de **Recebido** e **A Receber**
+confiáveis.
+
+Esta fase registra a situação financeira da OS. Não introduz um gateway
+de pagamento nem substitui a confirmação manual de recebimentos.
+
+## Configuração da empresa
+
+Cada empresa terá a configuração:
+
+``` text
+Controle de pagamentos
+Habilitado / Desabilitado
+```
+
+Com o controle desabilitado, o encerramento da OS continua normalmente,
+sem interferência do módulo financeiro.
+
+Com o controle habilitado, toda OS com valor deve gerar uma cobrança ou
+registrar uma justificativa de **Sem cobrança** antes de poder ser
+encerrada. Toda OS encerrada passa, assim, a ter uma situação financeira
+conhecida.
+
+## Fluxo de encerramento
+
+``` text
+Encerrar serviço
+↓
+Recomendar próxima manutenção
+↓
+Cobrança
+↓
+Encerrar OS
+```
+
+Após a recomendação de manutenção, quando aplicável, o sistema abre o
+modal de cobrança com:
+
+- valor total da OS;
+- forma de pagamento;
+- ações correspondentes à forma selecionada;
+- opção **Sem cobrança**.
+
+Gerar ou compartilhar uma cobrança não confirma o pagamento. A cobrança
+permanece com status `Pending` até que um Owner confirme o recebimento.
+
+## Cobrança via Pix
+
+Ao selecionar Pix, a cobrança deve ser gerada obrigatoriamente com o
+valor total da OS e disponibilizar:
+
+- QR Code Pix para pagamento presencial;
+- Pix Copia e Cola;
+- botão para copiar o código;
+- botão para compartilhar a cobrança pelo WhatsApp.
+
+O Pix compartilhado ou exibido permanece `Pending` enquanto não houver
+confirmação manual do recebimento.
+
+## Papéis e confirmação de recebimento
+
+O **Employee** pode gerar a cobrança, selecionar a forma de pagamento,
+exibir o QR Code, copiar o Pix, compartilhar a cobrança pelo WhatsApp e
+concluir o fluxo com a cobrança em `Pending`. Ele não pode confirmar o
+recebimento nem acessar o Financeiro/Caixa geral.
+
+O **Owner** possui as mesmas ações e pode confirmar manualmente o
+recebimento. Ao confirmar:
+
+``` text
+Status = Paid
+ConfirmationType = Manual
+PaidAt = data/hora atual
+ConfirmedBy = IdUser
+```
+
+Se o cliente informar que pagará posteriormente, a cobrança ainda deve
+ser criada no encerramento da OS e permanecer `Pending`. Não existe a
+opção **Cobrar depois**.
+
+## Exceção: Sem cobrança
+
+A opção **Sem cobrança** atende situações legítimas, como:
+
+- garantia;
+- cortesia;
+- serviço previamente pago;
+- outro motivo justificável.
+
+Ao utilizá-la, o usuário deve informar o motivo. A justificativa deve
+ficar registrada na OS para auditoria e para identificar que o
+encerramento não deixou uma pendência financeira esquecida.
+
+## Resultado esperado
+
+Com o Controle de pagamentos habilitado, uma OS com valor somente pode
+ser encerrada se tiver uma cobrança criada ou uma justificativa válida de
+**Sem cobrança**. Isso mantém o Caixa do VoltaMarcada consistente sem
+impedir que pagamentos pendentes sejam acompanhados posteriormente.
+
+------------------------------------------------------------------------
+# Fase 13 --- Landing page e publicação em VPS
+
+Esta fase prepara a publicação em produção em uma VPS. O Dockerfile
+existente atende o desenvolvimento atual e não é a definição final de
+produção.
+
+## Landing page
+
+Criar a landing page em:
+
+``` text
+voltamarcada.com.br
+```
+
+Ela deve apresentar a proposta de valor do produto e direcionar quem já
+possui conta para o login da aplicação.
+
+## Aplicação e infraestrutura
+
+A aplicação autenticada ficará em:
+
+``` text
+app.voltamarcada.com.br
+```
+
+Nesta fase, criar e validar a infraestrutura de produção específica da
+VPS, incluindo:
+
+- imagens Docker de produção para a aplicação e a landing page;
+- orquestração dos serviços necessários na VPS;
+- proxy reverso e HTTPS para os dois domínios;
+- configuração por variáveis de ambiente e secrets, sem segredos no repositório;
+- PostgreSQL, persistência de volumes e rotina de backup verificável;
+- integração com o armazenamento de arquivos já configurado;
+- health checks, logs operacionais, atualização e rollback documentados.
+
+## Objetivo
+
+Disponibilizar uma primeira operação de produção segura e reproduzível na
+VPS, sem antecipar infraestrutura mais complexa do que a necessária para o
+lançamento.
+# Fase 14 --- SaaS comercial e lançamento
 
 ## Cadastro autônomo
 
 Manter o modelo self-service.
+
+Ajustar todo o layout e validar espaçamentos.
 
 ``` text
 Site

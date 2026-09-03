@@ -1,8 +1,8 @@
-# License Payments and Manual PIX Renewal Design
+# Phase 11 License Payments and Manual PIX Renewal Design
 
 ## Objective
 
-Phase 10 introduces one monthly VoltaMarcada license plan, manual PIX payment submission, manual payment approval, and license-aware access control. It lets a company owner renew through a PIX QR code and copy-and-paste payload, upload a mandatory proof of payment, and wait for a platform administrator to approve the renewal.
+Phase 11 introduces one monthly VoltaMarcada license plan, manual PIX payment submission, manual payment approval, and license-aware access control. It lets a company owner renew through a PIX QR code and copy-and-paste payload, upload a mandatory proof of payment, and wait for a platform administrator to approve the renewal.
 
 The feature must preserve tenant isolation and use explicit operation results for expected business conditions. It must not use exceptions to represent expired trials, overdue licenses, pending payment submissions, or denied write access.
 
@@ -20,7 +20,7 @@ The configuration contains:
 - `OverdueAccessTerminationDays`: `20` days after a paid license expires.
 - `MonthlyAmount`: `49.90`.
 - `PixKey`: the random PIX key supplied through configuration or a secret provider.
-- `PixRecipientName`: `Service Sync app`.
+- `PixRecipientName`: `VoltaMarcada`.
 - `PixRecipientCity`: `Chapadão do Sul`.
 - `OverdueEmailHour`: `09:00` in `America/Sao_Paulo`.
 - SMTP host, port, credentials, sender address, and sender display name.

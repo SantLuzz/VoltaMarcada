@@ -378,7 +378,7 @@ Dados possíveis:
    - preço fixo;
    - a partir de;
    - sob orçamento;
-   - não exibir preço.     
+   - não exibir preço.
 -   valor;
 -   permitir solicitação online;
 -   regras operacionais.
@@ -1516,14 +1516,47 @@ ser encerrada se tiver uma cobrança criada ou uma justificativa válida de
 impedir que pagamentos pendentes sejam acompanhados posteriormente.
 
 ------------------------------------------------------------------------
-# Fase 13 --- Landpage e deploy
-Criar landpage
-Criar docker file para deploy do app e landpage
-app ficara com app.voltamarcada.com.br
-landpage voltamarcada.com.br
+# Fase 13 --- Landing page e publicação em VPS
 
-a landpage deve direcionar para o login se necessário
+Esta fase prepara a publicação em produção em uma VPS. O Dockerfile
+existente atende o desenvolvimento atual e não é a definição final de
+produção.
 
+## Landing page
+
+Criar a landing page em:
+
+``` text
+voltamarcada.com.br
+```
+
+Ela deve apresentar a proposta de valor do produto e direcionar quem já
+possui conta para o login da aplicação.
+
+## Aplicação e infraestrutura
+
+A aplicação autenticada ficará em:
+
+``` text
+app.voltamarcada.com.br
+```
+
+Nesta fase, criar e validar a infraestrutura de produção específica da
+VPS, incluindo:
+
+- imagens Docker de produção para a aplicação e a landing page;
+- orquestração dos serviços necessários na VPS;
+- proxy reverso e HTTPS para os dois domínios;
+- configuração por variáveis de ambiente e secrets, sem segredos no repositório;
+- PostgreSQL, persistência de volumes e rotina de backup verificável;
+- integração com o armazenamento de arquivos já configurado;
+- health checks, logs operacionais, atualização e rollback documentados.
+
+## Objetivo
+
+Disponibilizar uma primeira operação de produção segura e reproduzível na
+VPS, sem antecipar infraestrutura mais complexa do que a necessária para o
+lançamento.
 # Fase 14 --- SaaS comercial e lançamento
 
 ## Cadastro autônomo
