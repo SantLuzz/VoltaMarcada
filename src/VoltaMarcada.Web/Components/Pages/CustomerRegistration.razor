@@ -6,10 +6,7 @@
 @using VoltaMarcada.Domain.Enums
 @using VoltaMarcada.Infrastructure.Persistence
 @inject IDbContextFactory<AppDbContext> DbContextFactory
-@inject CreateCustomerUseCase CreateCustomerUseCase
-@inject UpdateCustomerUseCase UpdateCustomerUseCase
-@inject GetCustomerForEditUseCase GetCustomerForEditUseCase
-@inject GetCustomerEquipmentUseCase GetCustomerEquipmentUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject ILogger<CustomerRegistration> Logger
@@ -372,7 +369,8 @@ else
 
     private async Task LoadCustomerAsync(Guid customerId)
     {
-        var existingCustomer = await GetCustomerForEditUseCase.ExecuteAsync(customerId);
+        var existingCustomer = await OperationExecutor.ExecuteAsync(
+            (GetCustomerForEditUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(customerId, cancellationToken));
         if (existingCustomer is null)
         {
             loadError = "Cliente não encontrado.";
@@ -390,7 +388,8 @@ else
         addresses = existingCustomer.Addresses
             .Select(CustomerAddressDraft.FromDto)
             .ToList();
-        equipment = await GetCustomerEquipmentUseCase.ExecuteAsync(customerId);
+        equipment = await OperationExecutor.ExecuteAsync(
+            (GetCustomerEquipmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(customerId, cancellationToken));
         address = CustomerAddressDraft.CreateEmpty(isPrimary: addresses.Count == 0);
     }
 
@@ -535,20 +534,22 @@ else
                 item.CityId)).ToArray();
 
             var result = CustomerId is { } customerId
-                ? await UpdateCustomerUseCase.ExecuteAsync(customerId, new UpdateCustomerCommand(
+                ? await OperationExecutor.ExecuteAsync(
+                    (UpdateCustomerUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(customerId, new UpdateCustomerCommand(
                     customer.Name,
                     customer.Document,
                     customer.WhatsApp,
                     customer.Email,
                     customer.Notes,
-                    addressInputs))
-                : await CreateCustomerUseCase.ExecuteAsync(new CreateCustomerCommand(
+                    addressInputs), cancellationToken))
+                : await OperationExecutor.ExecuteAsync(
+                    (CreateCustomerUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateCustomerCommand(
                     customer.Name,
                     customer.Document,
                     customer.WhatsApp,
                     customer.Email,
                     customer.Notes,
-                    addressInputs));
+                    addressInputs), cancellationToken));
 
             if (result.IsSuccess)
             {

@@ -1,10 +1,7 @@
 @using System.Globalization
 @using VoltaMarcada.Application.Professionals
 @using VoltaMarcada.Domain.Enums
-@inject GetProfessionalAvailabilityUseCase GetProfessionalAvailabilityUseCase
-@inject SaveProfessionalAvailabilityUseCase SaveProfessionalAvailabilityUseCase
-@inject CreateScheduleBlockUseCase CreateScheduleBlockUseCase
-@inject DeleteScheduleBlockUseCase DeleteScheduleBlockUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject ILogger<ProfessionalAvailabilityPanel> Logger
@@ -262,7 +259,8 @@ else
         loadError = null;
         try
         {
-            availability = await GetProfessionalAvailabilityUseCase.ExecuteAsync(ProfessionalId);
+            availability = await OperationExecutor.ExecuteAsync(
+                (GetProfessionalAvailabilityUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(ProfessionalId, cancellationToken));
             if (availability is null)
             {
                 loadError = "Não foi possível localizar a disponibilidade deste profissional.";
@@ -293,9 +291,10 @@ else
         isSavingSchedule = true;
         try
         {
-            var result = await SaveProfessionalAvailabilityUseCase.ExecuteAsync(
-                ProfessionalId,
-                new SaveProfessionalAvailabilityCommand(
+            var result = await OperationExecutor.ExecuteAsync(
+                (SaveProfessionalAvailabilityUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    ProfessionalId,
+                    new SaveProfessionalAvailabilityCommand(
                     scheduleRows
                         .Where(schedule => schedule.IsEnabled)
                         .Select(schedule => new SaveProfessionalDailyScheduleCommand(
@@ -304,7 +303,8 @@ else
                             TimeOnly.FromTimeSpan(schedule.ExitTime!.Value),
                             schedule.HasLunchBreak ? TimeOnly.FromTimeSpan(schedule.LunchStartTime!.Value) : null,
                             schedule.HasLunchBreak ? TimeOnly.FromTimeSpan(schedule.LunchEndTime!.Value) : null))
-                        .ToArray()));
+                        .ToArray()),
+                    cancellationToken));
             if (!result.IsSuccess)
             {
                 scheduleError = OperationErrorMessages.GetMessage(result.Error?.Code);
@@ -409,16 +409,18 @@ else
         {
             var startDate = DateOnly.FromDateTime(blockForm.StartDate!.Value);
             var endDate = DateOnly.FromDateTime(blockForm.EndDate!.Value);
-            var result = await CreateScheduleBlockUseCase.ExecuteAsync(
-                ProfessionalId,
-                new CreateScheduleBlockCommand(
+            var result = await OperationExecutor.ExecuteAsync(
+                (CreateScheduleBlockUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    ProfessionalId,
+                    new CreateScheduleBlockCommand(
                     blockForm.Type,
                     startDate,
                     endDate,
                     blockForm.IsFullDay,
                     blockForm.IsFullDay ? null : TimeOnly.FromTimeSpan(blockForm.StartTime!.Value),
                     blockForm.IsFullDay ? null : TimeOnly.FromTimeSpan(blockForm.EndTime!.Value),
-                    blockForm.Notes));
+                    blockForm.Notes),
+                    cancellationToken));
             if (!result.IsSuccess)
             {
                 blockError = OperationErrorMessages.GetMessage(result.Error?.Code);
@@ -492,7 +494,8 @@ else
         deletingBlockId = block.Id;
         try
         {
-            var result = await DeleteScheduleBlockUseCase.ExecuteAsync(ProfessionalId, block.Id);
+            var result = await OperationExecutor.ExecuteAsync(
+                (DeleteScheduleBlockUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(ProfessionalId, block.Id, cancellationToken));
             if (!result.IsSuccess)
             {
                 Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
@@ -524,7 +527,8 @@ else
 
     private async Task<bool> ReloadAvailabilityAsync()
     {
-        availability = await GetProfessionalAvailabilityUseCase.ExecuteAsync(ProfessionalId);
+        availability = await OperationExecutor.ExecuteAsync(
+            (GetProfessionalAvailabilityUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(ProfessionalId, cancellationToken));
         if (availability is null)
         {
             return false;

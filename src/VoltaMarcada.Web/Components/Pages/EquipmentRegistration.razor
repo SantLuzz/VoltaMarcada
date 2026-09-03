@@ -2,10 +2,7 @@
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
 @using VoltaMarcada.Application.Customers
 @using VoltaMarcada.Application.Equipment
-@inject GetCustomersUseCase GetCustomersUseCase
-@inject CreateEquipmentUseCase CreateEquipmentUseCase
-@inject UpdateEquipmentUseCase UpdateEquipmentUseCase
-@inject GetEquipmentForEditUseCase GetEquipmentForEditUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject ILogger<EquipmentRegistration> Logger
@@ -120,7 +117,8 @@ else
     {
         try
         {
-            customers = (await GetCustomersUseCase.ExecuteAsync())
+            customers = (await OperationExecutor.ExecuteAsync(
+                (GetCustomersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken)))
                 .Select(customer => new CustomerOption(customer.Id, customer.Name, customer.Document))
                 .ToArray();
 
@@ -142,7 +140,8 @@ else
 
     private async Task LoadEquipmentAsync(Guid equipmentId)
     {
-        var existingEquipment = await GetEquipmentForEditUseCase.ExecuteAsync(equipmentId);
+        var existingEquipment = await OperationExecutor.ExecuteAsync(
+            (GetEquipmentForEditUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(equipmentId, cancellationToken));
         if (existingEquipment is null)
         {
             loadError = "Equipamento não encontrado.";
@@ -190,8 +189,10 @@ else
         try
         {
             var result = EquipmentId is { } equipmentId
-                ? await UpdateEquipmentUseCase.ExecuteAsync(equipmentId, ToUpdateCommand(equipment))
-                : await CreateEquipmentUseCase.ExecuteAsync(ToCreateCommand(equipment));
+                ? await OperationExecutor.ExecuteAsync(
+                    (UpdateEquipmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(equipmentId, ToUpdateCommand(equipment), cancellationToken))
+                : await OperationExecutor.ExecuteAsync(
+                    (CreateEquipmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(ToCreateCommand(equipment), cancellationToken));
 
             if (result.IsSuccess)
             {

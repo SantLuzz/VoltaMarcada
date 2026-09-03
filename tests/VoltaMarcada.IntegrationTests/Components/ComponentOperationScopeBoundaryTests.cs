@@ -5,16 +5,29 @@ namespace VoltaMarcada.IntegrationTests.Components;
 public sealed class ComponentOperationScopeBoundaryTests
 {
     [Theory]
-    [InlineData("Dashboard.razor")]
-    [InlineData("Customers.razor")]
-    [InlineData("Equipment.razor")]
-    [InlineData("Services.razor")]
-    [InlineData("Professionals.razor")]
-    [InlineData("WorkOrders.razor")]
-    [InlineData("MaintenanceOpportunities.razor")]
-    [InlineData("Quotes.razor")]
-    [InlineData("Company.razor")]
-    public void InternalReadPage_ShouldResolveApplicationServicesThroughOperationExecutor(string fileName)
+    [InlineData("Pages/Dashboard.razor")]
+    [InlineData("Pages/Customers.razor")]
+    [InlineData("Pages/Equipment.razor")]
+    [InlineData("Pages/Services.razor")]
+    [InlineData("Pages/Professionals.razor")]
+    [InlineData("Pages/WorkOrders.razor")]
+    [InlineData("Pages/MaintenanceOpportunities.razor")]
+    [InlineData("Pages/Quotes.razor")]
+    [InlineData("Pages/Company.razor")]
+    [InlineData("Pages/CustomerRegistration.razor")]
+    [InlineData("Pages/EquipmentRegistration.razor")]
+    [InlineData("Pages/ServiceRegistration.razor")]
+    [InlineData("Pages/ProfessionalRegistration.razor")]
+    [InlineData("Pages/WorkOrderRegistration.razor")]
+    [InlineData("Pages/QuoteRegistration.razor")]
+    [InlineData("Pages/Schedule.razor")]
+    [InlineData("Shared/AppointmentDetailsDialog.razor")]
+    [InlineData("Shared/AppointmentEditor.razor")]
+    [InlineData("Shared/ProfessionalAvailabilityPanel.razor")]
+    [InlineData("Shared/ScheduleBlockRequestPanel.razor")]
+    [InlineData("Shared/WorkOrderAppointmentsPanel.razor")]
+    [InlineData("Shared/WorkOrderExecutionPanel.razor")]
+    public void Component_ShouldResolveApplicationServicesThroughOperationExecutor(string fileName)
     {
         var source = File.ReadAllText(GetPagePath(fileName));
 
@@ -27,5 +40,5 @@ public sealed class ComponentOperationScopeBoundaryTests
         Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
             "..", "..", "..", "..", "..",
-            "src", "VoltaMarcada.Web", "Components", "Pages", fileName));
+            "src", "VoltaMarcada.Web", "Components", fileName));
 }

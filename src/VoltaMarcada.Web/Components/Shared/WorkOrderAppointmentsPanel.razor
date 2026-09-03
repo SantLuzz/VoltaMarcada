@@ -1,14 +1,7 @@
 @using VoltaMarcada.Application.Scheduling
 @using VoltaMarcada.Application.Professionals
 @using VoltaMarcada.Domain.Enums
-@inject GetWorkOrderAppointmentsUseCase GetWorkOrderAppointmentsUseCase
-@inject StartAppointmentUseCase StartAppointmentUseCase
-@inject CompleteAppointmentUseCase CompleteAppointmentUseCase
-@inject CancelAppointmentUseCase CancelAppointmentUseCase
-@inject UpdateAppointmentNotesUseCase UpdateAppointmentNotesUseCase
-@inject AdjustAppointmentUseCase AdjustAppointmentUseCase
-@inject GetAvailableAppointmentSlotsUseCase GetAvailableAppointmentSlotsUseCase
-@inject GetProfessionalsUseCase GetProfessionalsUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject ISnackbar Snackbar
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3">
@@ -159,20 +152,21 @@ else
     protected override async Task OnParametersSetAsync()
     {
         isLoading = true;
-        appointments = await GetWorkOrderAppointmentsUseCase.ExecuteAsync(WorkOrderId);
+        appointments = await LoadAppointmentsAsync();
         isLoading = false;
     }
 
     private async Task CompleteAsync(Guid appointmentId)
     {
-        var result = await CompleteAppointmentUseCase.ExecuteAsync(appointmentId);
+        var result = await OperationExecutor.ExecuteAsync(
+            (CompleteAppointmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(appointmentId, cancellationToken));
         if (!result.IsSuccess)
         {
             Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
             return;
         }
 
-        appointments = await GetWorkOrderAppointmentsUseCase.ExecuteAsync(WorkOrderId);
+        appointments = await LoadAppointmentsAsync();
         Snackbar.Add("Atendimento concluído.", Severity.Success);
     }
 
@@ -180,7 +174,7 @@ else
 
     private async Task OnAppointmentCreatedAsync(Guid _)
     {
-        appointments = await GetWorkOrderAppointmentsUseCase.ExecuteAsync(WorkOrderId);
+        appointments = await LoadAppointmentsAsync();
     }
 
     private void OpenAppointmentDetails(Guid appointmentId)
@@ -215,9 +209,11 @@ else
         isSavingNotes = true;
         try
         {
-            var result = await UpdateAppointmentNotesUseCase.ExecuteAsync(
-                appointmentToEdit.Id,
-                new UpdateAppointmentNotesCommand(editedNotes));
+            var result = await OperationExecutor.ExecuteAsync(
+                (UpdateAppointmentNotesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    appointmentToEdit.Id,
+                    new UpdateAppointmentNotesCommand(editedNotes),
+                    cancellationToken));
             if (!result.IsSuccess)
             {
                 Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
@@ -226,7 +222,7 @@ else
 
             isNotesDialogOpen = false;
             appointmentToEdit = null;
-            appointments = await GetWorkOrderAppointmentsUseCase.ExecuteAsync(WorkOrderId);
+            appointments = await LoadAppointmentsAsync();
             Snackbar.Add("Agendamento atualizado.", Severity.Success);
         }
         finally
@@ -249,7 +245,8 @@ else
 
         try
         {
-            adjustmentProfessionals = (await GetProfessionalsUseCase.ExecuteAsync())
+            adjustmentProfessionals = (await OperationExecutor.ExecuteAsync(
+                (GetProfessionalsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken)))
                 .Where(professional => professional.IsActive)
                 .ToArray();
             await LoadAdjustmentSlotsAsync();
@@ -283,11 +280,13 @@ else
             return;
         }
 
-        adjustmentSlots = await GetAvailableAppointmentSlotsUseCase.ExecuteAsync(
-            professionalId,
-            DateOnly.FromDateTime(adjustmentDate.Value),
-            adjustmentDurationMinutes,
-            appointmentToAdjust.Id);
+        adjustmentSlots = await OperationExecutor.ExecuteAsync(
+            (GetAvailableAppointmentSlotsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                professionalId,
+                DateOnly.FromDateTime(adjustmentDate.Value),
+                adjustmentDurationMinutes,
+                appointmentToAdjust.Id,
+                cancellationToken));
     }
 
     private async Task SaveAdjustmentAsync()
@@ -305,14 +304,16 @@ else
         isAdjusting = true;
         try
         {
-            var result = await AdjustAppointmentUseCase.ExecuteAsync(
-                appointmentToAdjust.Id,
-                new AdjustAppointmentCommand(
+            var result = await OperationExecutor.ExecuteAsync(
+                (AdjustAppointmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    appointmentToAdjust.Id,
+                    new AdjustAppointmentCommand(
                     professionalId,
                     DateOnly.FromDateTime(adjustmentDate.Value),
                     adjustmentStartTime.Value,
                     adjustmentReason,
-                    WorkOrderId));
+                    WorkOrderId),
+                    cancellationToken));
             if (!result.IsSuccess)
             {
                 Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
@@ -322,7 +323,7 @@ else
 
             isAdjustmentDialogOpen = false;
             appointmentToAdjust = null;
-            appointments = await GetWorkOrderAppointmentsUseCase.ExecuteAsync(WorkOrderId);
+            appointments = await LoadAppointmentsAsync();
             Snackbar.Add("Agendamento ajustado.", Severity.Success);
         }
         finally
@@ -333,29 +334,35 @@ else
 
     private async Task StartAsync(Guid appointmentId)
     {
-        var result = await StartAppointmentUseCase.ExecuteAsync(appointmentId);
+        var result = await OperationExecutor.ExecuteAsync(
+            (StartAppointmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(appointmentId, cancellationToken));
         if (!result.IsSuccess)
         {
             Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
             return;
         }
 
-        appointments = await GetWorkOrderAppointmentsUseCase.ExecuteAsync(WorkOrderId);
+        appointments = await LoadAppointmentsAsync();
         Snackbar.Add("Atendimento iniciado.", Severity.Success);
     }
 
     private async Task CancelAsync(Guid appointmentId)
     {
-        var result = await CancelAppointmentUseCase.ExecuteAsync(appointmentId);
+        var result = await OperationExecutor.ExecuteAsync(
+            (CancelAppointmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(appointmentId, cancellationToken));
         if (!result.IsSuccess)
         {
             Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error);
             return;
         }
 
-        appointments = await GetWorkOrderAppointmentsUseCase.ExecuteAsync(WorkOrderId);
+        appointments = await LoadAppointmentsAsync();
         Snackbar.Add("Agendamento cancelado.", Severity.Success);
     }
+
+    private Task<IReadOnlyList<AppointmentDto>> LoadAppointmentsAsync() =>
+        OperationExecutor.ExecuteAsync(
+            (GetWorkOrderAppointmentsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrderId, cancellationToken));
 
     private static string GetStatusName(AppointmentStatus status) => status switch
     {

@@ -2,9 +2,7 @@
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
 @using VoltaMarcada.Application.Services
 @using VoltaMarcada.Domain.Enums
-@inject CreateServiceUseCase CreateServiceUseCase
-@inject UpdateServiceUseCase UpdateServiceUseCase
-@inject GetServiceForEditUseCase GetServiceForEditUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject ILogger<ServiceRegistration> Logger
@@ -234,7 +232,8 @@ else
 
     private async Task LoadServiceAsync(Guid serviceId)
     {
-        var existingService = await GetServiceForEditUseCase.ExecuteAsync(serviceId);
+        var existingService = await OperationExecutor.ExecuteAsync(
+            (GetServiceForEditUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(serviceId, cancellationToken));
         if (existingService is null)
         {
             loadError = "Serviço não encontrado.";
@@ -295,8 +294,10 @@ else
         try
         {
             var result = ServiceId is { } serviceId
-                ? await UpdateServiceUseCase.ExecuteAsync(serviceId, ToUpdateCommand(service))
-                : await CreateServiceUseCase.ExecuteAsync(ToCreateCommand(service));
+                ? await OperationExecutor.ExecuteAsync(
+                    (UpdateServiceUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(serviceId, ToUpdateCommand(service), cancellationToken))
+                : await OperationExecutor.ExecuteAsync(
+                    (CreateServiceUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(ToCreateCommand(service), cancellationToken));
 
             if (result.IsSuccess)
             {

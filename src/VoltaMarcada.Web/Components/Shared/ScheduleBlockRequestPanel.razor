@@ -2,7 +2,7 @@
 @using VoltaMarcada.Application.Scheduling
 @using VoltaMarcada.Domain.Enums
 @using VoltaMarcada.Application.WorkOrders
-@inherits CircuitIsolatedComponentBase
+@inject IComponentOperationExecutor OperationExecutor
 @inject ISnackbar Snackbar
 @inject TimeProvider TimeProvider
 
@@ -67,11 +67,6 @@
     private DateTime? endDate;
     private string? notes;
 
-    private CreateScheduleBlockRequestUseCase CreateScheduleBlockRequestUseCase => GetScopedService<CreateScheduleBlockRequestUseCase>();
-    private GetScheduleBlockRequestsUseCase GetScheduleBlockRequestsUseCase => GetScopedService<GetScheduleBlockRequestsUseCase>();
-    private ApproveScheduleBlockRequestUseCase ApproveScheduleBlockRequestUseCase => GetScopedService<ApproveScheduleBlockRequestUseCase>();
-    private RejectScheduleBlockRequestUseCase RejectScheduleBlockRequestUseCase => GetScopedService<RejectScheduleBlockRequestUseCase>();
-
     protected override async Task OnInitializedAsync()
     {
         isOwner = AccessScope.IsOwner;
@@ -84,7 +79,8 @@
     private async Task CreateAsync()
     {
         if (startDate is null || endDate is null) return;
-        var result = await CreateScheduleBlockRequestUseCase.ExecuteAsync(new CreateScheduleBlockRequestCommand(ScheduleBlockType.TimeOff, DateOnly.FromDateTime(startDate.Value), DateOnly.FromDateTime(endDate.Value), true, null, null, notes));
+        var result = await OperationExecutor.ExecuteAsync(
+            (CreateScheduleBlockRequestUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateScheduleBlockRequestCommand(ScheduleBlockType.TimeOff, DateOnly.FromDateTime(startDate.Value), DateOnly.FromDateTime(endDate.Value), true, null, null, notes), cancellationToken));
         if (result.IsSuccess)
         {
             Snackbar.Add("Solicitação enviada para aprovação.", Severity.Success);
@@ -97,7 +93,8 @@
 
     private async Task ApproveAsync(Guid id)
     {
-        var result = await ApproveScheduleBlockRequestUseCase.ExecuteAsync(id);
+        var result = await OperationExecutor.ExecuteAsync(
+            (ApproveScheduleBlockRequestUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(id, cancellationToken));
         Snackbar.Add(
             result.IsSuccess
                 ? "Bloqueio aprovado."
@@ -108,7 +105,8 @@
 
     private async Task RejectAsync(Guid id)
     {
-        var result = await RejectScheduleBlockRequestUseCase.ExecuteAsync(id, null);
+        var result = await OperationExecutor.ExecuteAsync(
+            (RejectScheduleBlockRequestUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(id, null, cancellationToken));
         Snackbar.Add(
             result.IsSuccess
                 ? "Solicitação recusada."
@@ -119,7 +117,8 @@
 
     private async Task LoadAsync()
     {
-        requests = await GetScheduleBlockRequestsUseCase.ExecuteAsync(AccessScope);
+        requests = await OperationExecutor.ExecuteAsync(
+            (GetScheduleBlockRequestsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(AccessScope, cancellationToken));
     }
 
     private static string GetStatusName(ScheduleBlockRequestStatus status) => status switch

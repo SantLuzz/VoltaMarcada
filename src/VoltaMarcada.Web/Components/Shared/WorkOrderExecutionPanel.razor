@@ -3,12 +3,7 @@
 @using VoltaMarcada.Application.WorkOrders
 @using VoltaMarcada.Application.Services
 @using VoltaMarcada.Domain.Enums
-@inject StartWorkOrderUseCase StartWorkOrderUseCase
-@inject SaveWorkOrderChecklistProgressUseCase SaveWorkOrderChecklistProgressUseCase
-@inject CompleteWorkOrderUseCase CompleteWorkOrderUseCase
-@inject AddWorkOrderPhotoUseCase AddWorkOrderPhotoUseCase
-@inject RemoveWorkOrderPhotoUseCase RemoveWorkOrderPhotoUseCase
-@inject GetServicesUseCase GetServicesUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject ISnackbar Snackbar
 
 @if (WorkOrder.Status == WorkOrderStatus.Pending)
@@ -203,11 +198,13 @@ else
         recommendedServiceId = WorkOrder.ServiceId;
     }
 
-    protected override async Task OnInitializedAsync() => services = (await GetServicesUseCase.ExecuteAsync()).Where(service => service.IsActive).ToArray();
+    protected override async Task OnInitializedAsync() => services = (await OperationExecutor.ExecuteAsync(
+        (GetServicesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken))).Where(service => service.IsActive).ToArray();
 
     private async Task StartAsync()
     {
-        var result = await StartWorkOrderUseCase.ExecuteAsync(WorkOrder.Id);
+        var result = await OperationExecutor.ExecuteAsync(
+            (StartWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrder.Id, cancellationToken));
         if (result.IsSuccess)
         {
             await OnChanged.InvokeAsync();
@@ -269,7 +266,7 @@ else
                 return;
             }
 
-            await FlushProgressAsync(false);
+            await FlushProgressAsync(false, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -284,14 +281,14 @@ else
         return await FlushProgressAsync(false);
     }
 
-    private async Task<bool> FlushProgressAsync(bool showSuccess)
+    private async Task<bool> FlushProgressAsync(bool showSuccess, CancellationToken cancellationToken = default)
     {
         if (!CanExecute || changeVersion == savedChangeVersion)
         {
             return true;
         }
 
-        await operationLock.WaitAsync();
+        await operationLock.WaitAsync(cancellationToken);
         try
         {
             if (!CanExecute || changeVersion == savedChangeVersion)
@@ -306,7 +303,9 @@ else
             var command = new SaveWorkOrderChecklistProgressCommand(
                 progress.Select(item => new ChecklistProgressInput(item.Key, item.Value)).ToArray(),
                 executionNotes);
-            var result = await SaveWorkOrderChecklistProgressUseCase.ExecuteAsync(WorkOrder.Id, command);
+            var result = await OperationExecutor.ExecuteAsync(
+                (SaveWorkOrderChecklistProgressUseCase useCase, CancellationToken token) => useCase.ExecuteAsync(WorkOrder.Id, command, token),
+                cancellationToken);
             if (!result.IsSuccess)
             {
                 ShowOperationError(result.Error?.Code);
@@ -344,7 +343,8 @@ else
             return;
         }
 
-        var result = await CompleteWorkOrderUseCase.ExecuteAsync(WorkOrder.Id, new CompleteWorkOrderCommand(recommendation));
+        var result = await OperationExecutor.ExecuteAsync(
+            (CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrder.Id, new CompleteWorkOrderCommand(recommendation), cancellationToken));
         if (result.IsSuccess)
         {
             Snackbar.Add("Serviço concluído.", Severity.Success);
@@ -386,9 +386,11 @@ else
         try
         {
             await using var stream = file.OpenReadStream(10 * 1024 * 1024 + 1);
-            var result = await AddWorkOrderPhotoUseCase.ExecuteAsync(
-                WorkOrder.Id,
-                new WorkOrderPhotoUpload(stream, file.Name, file.ContentType, file.Size, type, null));
+            var result = await OperationExecutor.ExecuteAsync(
+                (AddWorkOrderPhotoUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    WorkOrder.Id,
+                    new WorkOrderPhotoUpload(stream, file.Name, file.ContentType, file.Size, type, null),
+                    cancellationToken));
             if (result.IsSuccess)
             {
                 Snackbar.Add("Foto enviada.", Severity.Success);
@@ -418,7 +420,8 @@ else
 
         try
         {
-            var result = await RemoveWorkOrderPhotoUseCase.ExecuteAsync(WorkOrder.Id, photoId);
+            var result = await OperationExecutor.ExecuteAsync(
+                (RemoveWorkOrderPhotoUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrder.Id, photoId, cancellationToken));
             if (result.IsSuccess)
             {
                 await OnChanged.InvokeAsync();

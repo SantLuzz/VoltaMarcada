@@ -9,20 +9,7 @@
 @using VoltaMarcada.Application.WorkOrders
 @using VoltaMarcada.Domain.Enums
 @using VoltaMarcada.Infrastructure.Persistence
-@inject GetWorkOrderDetailsUseCase GetWorkOrderDetailsUseCase
-@inject WorkOrderAuthorization WorkOrderAuthorization
-@inject GetCustomersUseCase GetCustomersUseCase
-@inject GetCustomerEquipmentUseCase GetCustomerEquipmentUseCase
-@inject GetServicesUseCase GetServicesUseCase
-@inject GetProfessionalsUseCase GetProfessionalsUseCase
-@inject CreateWorkOrderUseCase CreateWorkOrderUseCase
-@inject UpdateWorkOrderUseCase UpdateWorkOrderUseCase
-@inject UpdateWorkOrderAdditionalItemsUseCase UpdateWorkOrderAdditionalItemsUseCase
-@inject CancelWorkOrderUseCase CancelWorkOrderUseCase
-@inject CreateCustomerUseCase CreateCustomerUseCase
-@inject CreateEquipmentUseCase CreateEquipmentUseCase
-@inject GetAvailableAppointmentSlotsUseCase GetAvailableAppointmentSlotsUseCase
-@inject GetAppointmentDetailsUseCase GetAppointmentDetailsUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject IDbContextFactory<AppDbContext> DbContextFactory
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -276,11 +263,14 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var scope = await WorkOrderAuthorization.GetAccessScopeAsync();
+        var scope = await OperationExecutor.ExecuteAsync(
+            (WorkOrderAuthorization authorization, CancellationToken cancellationToken) => authorization.GetAccessScopeAsync(cancellationToken));
         isOwner = scope.IsOwner;
         currentProfessionalId = scope.ProfessionalId;
-        customers = await GetCustomersUseCase.ExecuteAsync();
-        services = (await GetServicesUseCase.ExecuteAsync()).Where(x => x.IsActive).ToArray();
+        customers = await OperationExecutor.ExecuteAsync(
+            (GetCustomersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken));
+        services = (await OperationExecutor.ExecuteAsync(
+            (GetServicesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken))).Where(x => x.IsActive).ToArray();
         await using (var dbContext = await DbContextFactory.CreateDbContextAsync())
         {
             states = await dbContext.States.AsNoTracking()
@@ -291,7 +281,8 @@ else
         await LoadAsync();
         if (WorkOrderId is null && SourceAppointmentId is { } sourceAppointmentId)
         {
-            var source = await GetAppointmentDetailsUseCase.ExecuteAsync(sourceAppointmentId);
+            var source = await OperationExecutor.ExecuteAsync(
+                (GetAppointmentDetailsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(sourceAppointmentId, cancellationToken));
             if (source is not null)
             {
                 customerId = source.CustomerId;
@@ -306,7 +297,8 @@ else
 
     private async Task LoadAsync()
     {
-        detail = WorkOrderId is { } id ? await GetWorkOrderDetailsUseCase.ExecuteAsync(id) : null;
+        detail = WorkOrderId is { } id ? await OperationExecutor.ExecuteAsync(
+            (GetWorkOrderDetailsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(id, cancellationToken)) : null;
         if (detail is null)
         {
             return;
@@ -335,7 +327,8 @@ else
             equipmentId = null;
         }
 
-        equipment = customerId is null ? [] : await GetCustomerEquipmentUseCase.ExecuteAsync(customerId.Value);
+        equipment = customerId is null ? [] : await OperationExecutor.ExecuteAsync(
+            (GetCustomerEquipmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(customerId.Value, cancellationToken));
     }
 
     private async Task LoadProfessionalOptions()
@@ -346,7 +339,8 @@ else
             return;
         }
 
-        professionals = (await GetProfessionalsUseCase.ExecuteAsync())
+        professionals = (await OperationExecutor.ExecuteAsync(
+            (GetProfessionalsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken)))
             .Where(professional => professional.IsActive && professional.ServiceIds.Contains(serviceId.Value))
             .ToArray();
 
@@ -375,10 +369,13 @@ else
             return;
         }
 
-        newAppointmentSlots = await GetAvailableAppointmentSlotsUseCase.ExecuteAsync(
-            appointmentProfessionalId,
-            DateOnly.FromDateTime(newAppointmentDate.Value),
-            service.DurationMinutes);
+        newAppointmentSlots = await OperationExecutor.ExecuteAsync(
+            (GetAvailableAppointmentSlotsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                appointmentProfessionalId,
+                DateOnly.FromDateTime(newAppointmentDate.Value),
+                service.DurationMinutes,
+                null,
+                cancellationToken));
     }
 
     private async Task ReturnToListAsync()
@@ -427,14 +424,16 @@ else
             null,
             newCustomerStateId,
             newCustomerCityId);
-        var result = await CreateCustomerUseCase.ExecuteAsync(new CreateCustomerCommand(newCustomerName, newCustomerDocument, newCustomerWhatsApp, null, null, [address]));
+        var result = await OperationExecutor.ExecuteAsync(
+            (CreateCustomerUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateCustomerCommand(newCustomerName, newCustomerDocument, newCustomerWhatsApp, null, null, [address]), cancellationToken));
         if (!result.IsSuccess || result.Value is not { } id)
         {
             Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
             return;
         }
 
-        customers = await GetCustomersUseCase.ExecuteAsync();
+        customers = await OperationExecutor.ExecuteAsync(
+            (GetCustomersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken));
         customerId = id;
         customerDialogOpen = false;
         await LoadEquipmentAsync();
@@ -464,7 +463,8 @@ else
             return;
         }
 
-        var result = await CreateEquipmentUseCase.ExecuteAsync(new CreateEquipmentCommand(customerId.Value, newEquipmentType, newEquipmentManufacturer, newEquipmentModel, null, null, null, null, null));
+        var result = await OperationExecutor.ExecuteAsync(
+            (CreateEquipmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateEquipmentCommand(customerId.Value, newEquipmentType, newEquipmentManufacturer, newEquipmentModel, null, null, null, null, null), cancellationToken));
         if (!result.IsSuccess || result.Value is not { } id)
         {
             Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning);
@@ -491,9 +491,11 @@ else
                 return;
             }
 
-            var additionalItemsResult = await UpdateWorkOrderAdditionalItemsUseCase.ExecuteAsync(
-                workOrderId,
-                new UpdateWorkOrderAdditionalItemsCommand(items));
+            var additionalItemsResult = await OperationExecutor.ExecuteAsync(
+                (UpdateWorkOrderAdditionalItemsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    workOrderId,
+                    new UpdateWorkOrderAdditionalItemsCommand(items),
+                    cancellationToken));
             if (additionalItemsResult.IsSuccess)
             {
                 Snackbar.Add("Itens da OS atualizados.", Severity.Success);
@@ -534,7 +536,8 @@ else
             var appointment = createAppointment
                 ? new WorkOrderAppointmentInput(DateOnly.FromDateTime(newAppointmentDate!.Value), newAppointmentStartTime!.Value)
                 : null;
-            var result = await CreateWorkOrderUseCase.ExecuteAsync(new CreateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items, appointment, SourceAppointmentId));
+            var result = await OperationExecutor.ExecuteAsync(
+                (CreateWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items, appointment, SourceAppointmentId), cancellationToken));
             if (result.IsSuccess && result.Value?.WorkOrderId is { } createdId)
             {
                 NavigationManager.NavigateTo($"/ordens-servico/registro?id={createdId}");
@@ -545,7 +548,8 @@ else
             return;
         }
 
-        var updateResult = await UpdateWorkOrderUseCase.ExecuteAsync(WorkOrderId.Value, new UpdateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items));
+        var updateResult = await OperationExecutor.ExecuteAsync(
+            (UpdateWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrderId.Value, new UpdateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items), cancellationToken));
         if (updateResult.IsSuccess)
         {
             Snackbar.Add("OS atualizada.", Severity.Success);
@@ -563,7 +567,8 @@ else
             return;
         }
 
-        var result = await CancelWorkOrderUseCase.ExecuteAsync(id);
+        var result = await OperationExecutor.ExecuteAsync(
+            (CancelWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(id, cancellationToken));
         if (result.IsSuccess)
         {
             Snackbar.Add("OS cancelada.", Severity.Success);

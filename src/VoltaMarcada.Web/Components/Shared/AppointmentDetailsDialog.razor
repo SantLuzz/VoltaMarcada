@@ -1,5 +1,5 @@
 @using VoltaMarcada.Application.Scheduling
-@inject GetAppointmentDetailsUseCase GetAppointmentDetailsUseCase
+@inject IComponentOperationExecutor OperationExecutor
 
 <MudDialog Visible="Visible" VisibleChanged="SetVisibleAsync">
     <TitleContent><MudText Typo="Typo.h6">Detalhes do atendimento</MudText></TitleContent>
@@ -100,7 +100,8 @@
         appointmentDetails = null;
         try
         {
-            appointmentDetails = await GetAppointmentDetailsUseCase.ExecuteAsync(AppointmentId.Value);
+            appointmentDetails = await OperationExecutor.ExecuteAsync(
+                (GetAppointmentDetailsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(AppointmentId.Value, cancellationToken));
             loadedAppointmentId = AppointmentId;
         }
         finally

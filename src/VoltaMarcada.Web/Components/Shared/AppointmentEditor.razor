@@ -5,7 +5,7 @@
 @using VoltaMarcada.Application.Services
 @using VoltaMarcada.Application.WorkOrders
 @using VoltaMarcada.Domain.Enums
-@inherits CircuitIsolatedComponentBase
+@inject IComponentOperationExecutor OperationExecutor
 @inject ISchedulingConfiguration SchedulingConfiguration
 @inject ISnackbar Snackbar
 @inject TimeProvider TimeProvider
@@ -156,16 +156,6 @@
     private string? notes;
     private AppointmentType? appointmentType;
 
-    private WorkOrderAuthorization WorkOrderAuthorization => GetScopedService<WorkOrderAuthorization>();
-    private GetAvailableAppointmentSlotsUseCase GetAvailableAppointmentSlotsUseCase => GetScopedService<GetAvailableAppointmentSlotsUseCase>();
-    private CreateAppointmentUseCase CreateAppointmentUseCase => GetScopedService<CreateAppointmentUseCase>();
-    private GetCustomersUseCase GetCustomersUseCase => GetScopedService<GetCustomersUseCase>();
-    private GetCustomerEquipmentUseCase GetCustomerEquipmentUseCase => GetScopedService<GetCustomerEquipmentUseCase>();
-    private GetServicesUseCase GetServicesUseCase => GetScopedService<GetServicesUseCase>();
-    private GetProfessionalsUseCase GetProfessionalsUseCase => GetScopedService<GetProfessionalsUseCase>();
-    private GetWorkOrdersUseCase GetWorkOrdersUseCase => GetScopedService<GetWorkOrdersUseCase>();
-    private GetWorkOrderDetailsUseCase GetWorkOrderDetailsUseCase => GetScopedService<GetWorkOrderDetailsUseCase>();
-
     private IReadOnlyList<ProfessionalDto> AvailableProfessionals => serviceId is { } selectedServiceId
         ? professionals.Where(professional => professional.ServiceIds.Contains(selectedServiceId)).ToArray()
         : professionals;
@@ -200,17 +190,22 @@
 
         try
         {
-            accessScope = await WorkOrderAuthorization.GetAccessScopeAsync();
+            accessScope = await OperationExecutor.ExecuteAsync(
+                (WorkOrderAuthorization authorization, CancellationToken cancellationToken) => authorization.GetAccessScopeAsync(cancellationToken));
             isOwner = accessScope.IsOwner;
-            services = (await GetServicesUseCase.ExecuteAsync()).Where(service => service.IsActive).ToArray();
-            workOrders = (await GetWorkOrdersUseCase.ExecuteAsync(new GetWorkOrdersQuery(null, null)))
+            services = (await OperationExecutor.ExecuteAsync(
+                (GetServicesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken))).Where(service => service.IsActive).ToArray();
+            workOrders = (await OperationExecutor.ExecuteAsync(
+                (GetWorkOrdersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new GetWorkOrdersQuery(null, null), cancellationToken)))
                 .Where(workOrder => workOrder.Status is VoltaMarcada.Domain.Enums.WorkOrderStatus.Pending or VoltaMarcada.Domain.Enums.WorkOrderStatus.InProgress)
                 .ToArray();
 
             if (isOwner)
             {
-                customers = (await GetCustomersUseCase.ExecuteAsync()).Where(customer => customer.IsActive).ToArray();
-                professionals = (await GetProfessionalsUseCase.ExecuteAsync()).Where(professional => professional.IsActive).ToArray();
+                customers = (await OperationExecutor.ExecuteAsync(
+                    (GetCustomersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken))).Where(customer => customer.IsActive).ToArray();
+                professionals = (await OperationExecutor.ExecuteAsync(
+                    (GetProfessionalsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken))).Where(professional => professional.IsActive).ToArray();
             }
 
             if (workOrderId is not null)
@@ -228,7 +223,8 @@
     {
         equipmentId = null;
         equipment = customerId is { } selectedCustomerId
-            ? (await GetCustomerEquipmentUseCase.ExecuteAsync(selectedCustomerId)).Where(item => item.IsActive).ToArray()
+            ? (await OperationExecutor.ExecuteAsync(
+                (GetCustomerEquipmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(selectedCustomerId, cancellationToken))).Where(item => item.IsActive).ToArray()
             : [];
     }
 
@@ -268,7 +264,8 @@
             return;
         }
 
-        var workOrder = await GetWorkOrderDetailsUseCase.ExecuteAsync(selectedWorkOrderId);
+        var workOrder = await OperationExecutor.ExecuteAsync(
+            (GetWorkOrderDetailsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(selectedWorkOrderId, cancellationToken));
         if (workOrder is null || workOrder.ProfessionalId is null || !isOwner && workOrder.ProfessionalId != professionalId)
         {
             workOrderId = FixedWorkOrderId;
@@ -294,10 +291,13 @@
             return;
         }
 
-        slots = await GetAvailableAppointmentSlotsUseCase.ExecuteAsync(
-            selectedProfessionalId,
-            DateOnly.FromDateTime(date.Value),
-            durationMinutes.Value);
+        slots = await OperationExecutor.ExecuteAsync(
+            (GetAvailableAppointmentSlotsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                selectedProfessionalId,
+                DateOnly.FromDateTime(date.Value),
+                durationMinutes.Value,
+                null,
+                cancellationToken));
     }
 
     private async Task CreateAsync()
@@ -317,7 +317,8 @@
         isCreating = true;
         try
         {
-            var result = await CreateAppointmentUseCase.ExecuteAsync(new CreateAppointmentCommand(
+            var result = await OperationExecutor.ExecuteAsync(
+                (CreateAppointmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateAppointmentCommand(
                 selectedProfessionalId,
                 DateOnly.FromDateTime(date.Value),
                 startTime.Value,
@@ -327,7 +328,7 @@
                 serviceId,
                 workOrderId,
                 notes,
-                Type: appointmentType.Value));
+                Type: appointmentType.Value), cancellationToken));
 
             if (result.IsSuccess && result.Value is { } appointmentId)
             {

@@ -7,14 +7,7 @@
 @using VoltaMarcada.Application.Services
 @using VoltaMarcada.Application.Scheduling
 @using VoltaMarcada.Domain.Enums
-@inject GetQuotesUseCase GetQuotesUseCase
-@inject CreateQuoteUseCase CreateQuoteUseCase
-@inject UpdateQuoteUseCase UpdateQuoteUseCase
-@inject GetCustomersUseCase GetCustomersUseCase
-@inject GetCustomerEquipmentUseCase GetCustomerEquipmentUseCase
-@inject GetServicesUseCase GetServicesUseCase
-@inject GetAppointmentDetailsUseCase GetAppointmentDetailsUseCase
-@inject GetMaintenanceOpportunityForQuoteUseCase GetMaintenanceOpportunityForQuoteUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -33,10 +26,7 @@ else
         }
         else
         {
-            <MudGrid>
-                <MudItem xs="12" sm="6"><MudTextField Label="Cliente" Value="@quote.CustomerName" ReadOnly="true" /></MudItem>
-                <MudItem xs="12" sm="6"><MudTextField Label="Equipamento" Value="@quote.EquipmentDescription" ReadOnly="true" /></MudItem>
-            </MudGrid>
+            <MudGrid><MudItem xs="12" sm="6"><MudTextField Label="Cliente" Value="@quote.CustomerName" ReadOnly="true" /></MudItem><MudItem xs="12" sm="6"><MudTextField Label="Equipamento" Value="@quote.EquipmentDescription" ReadOnly="true" /></MudItem></MudGrid>
         }
         <MudTextField @bind-Value="notes" Label="Observações para o cliente" Lines="4" Disabled="@IsReadOnly" />
         <MudDatePicker @bind-Date="validUntil" Label="Válido até" Disabled="@IsReadOnly" />
@@ -60,20 +50,65 @@ else
     private Guid? customerId; private Guid? equipmentId; private Guid? primaryServiceId;
     private string? notes; private DateTime? validUntil = DateTime.Today.AddDays(30); private decimal discountAmount; private bool isLoading = true;
     private bool IsReadOnly => quote is not null && quote.Status != QuoteStatus.Draft;
-    protected override async Task OnParametersSetAsync() { isLoading = true; quote = QuoteId is { } id ? await GetQuotesUseCase.ExecuteAsync(id) : null; if (quote is null && QuoteId is null) { customers = await GetCustomersUseCase.ExecuteAsync(); services = (await GetServicesUseCase.ExecuteAsync()).Where(item => item.IsActive).ToArray(); if (MaintenanceOpportunityId is { } opportunityId) { var source = await GetMaintenanceOpportunityForQuoteUseCase.ExecuteAsync(opportunityId); if (!source.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(source.Error?.Code), Severity.Warning); NavigationManager.NavigateTo("/manutencoes"); return; } customerId = source.Value!.CustomerId; primaryServiceId = source.Value.RecommendedServiceId; await LoadEquipmentAsync(); equipmentId = source.Value.EquipmentId; await SetServiceItemAsync(); } else if (SourceAppointmentId is { } sourceAppointmentId) { var source = await GetAppointmentDetailsUseCase.ExecuteAsync(sourceAppointmentId); if (source is not null) { customerId = source.CustomerId; primaryServiceId = source.ServiceId; await LoadEquipmentAsync(); equipmentId = source.EquipmentId; await SetServiceItemAsync(); } } } else if (quote is not null) { items = quote.Items.Select(item => new QuoteItemForm { Description = item.Description, Quantity = item.Quantity, UnitPrice = item.UnitPrice, Type = item.Type }).ToList(); notes = quote.Notes; validUntil = quote.ValidUntil.ToDateTime(TimeOnly.MinValue); discountAmount = quote.DiscountAmount; } isLoading = false; }
-    private async Task LoadEquipmentAsync() { equipment = customerId is { } id ? await GetCustomerEquipmentUseCase.ExecuteAsync(id) : []; equipmentId = null; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        try
+        {
+            quote = QuoteId is { } id ? await OperationExecutor.ExecuteAsync((GetQuotesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(id, cancellationToken)) : null;
+            if (quote is null && QuoteId is null)
+            {
+                customers = await OperationExecutor.ExecuteAsync((GetCustomersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken));
+                services = (await OperationExecutor.ExecuteAsync((GetServicesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken))).Where(item => item.IsActive).ToArray();
+                await LoadSourceAsync();
+            }
+            else if (quote is not null)
+            {
+                items = quote.Items.Select(item => new QuoteItemForm { Description = item.Description, Quantity = item.Quantity, UnitPrice = item.UnitPrice, Type = item.Type }).ToList();
+                notes = quote.Notes; validUntil = quote.ValidUntil.ToDateTime(TimeOnly.MinValue); discountAmount = quote.DiscountAmount;
+            }
+        }
+        finally { isLoading = false; }
+    }
+
+    private async Task LoadSourceAsync()
+    {
+        if (MaintenanceOpportunityId is { } opportunityId)
+        {
+            var source = await OperationExecutor.ExecuteAsync((GetMaintenanceOpportunityForQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(opportunityId, cancellationToken));
+            if (!source.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(source.Error?.Code), Severity.Warning); NavigationManager.NavigateTo("/manutencoes"); return; }
+            customerId = source.Value!.CustomerId; primaryServiceId = source.Value.RecommendedServiceId; await LoadEquipmentAsync(); equipmentId = source.Value.EquipmentId; await SetServiceItemAsync();
+        }
+        else if (SourceAppointmentId is { } sourceAppointmentId)
+        {
+            var source = await OperationExecutor.ExecuteAsync((GetAppointmentDetailsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(sourceAppointmentId, cancellationToken));
+            if (source is not null) { customerId = source.CustomerId; primaryServiceId = source.ServiceId; await LoadEquipmentAsync(); equipmentId = source.EquipmentId; await SetServiceItemAsync(); }
+        }
+    }
+
+    private async Task LoadEquipmentAsync() { equipment = customerId is { } id ? await OperationExecutor.ExecuteAsync((GetCustomerEquipmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(id, cancellationToken)) : []; equipmentId = null; }
     private Task SetServiceItemAsync() { var service = services.SingleOrDefault(item => item.Id == primaryServiceId); items = service is null ? [] : [new QuoteItemForm { Description = service.Name, Quantity = 1, UnitPrice = service.BasePrice ?? 0, Type = QuoteItemType.Service }]; return Task.CompletedTask; }
     private decimal GetTotal() => items.Sum(item => item.Quantity * item.UnitPrice) - discountAmount;
-    private static string GetQuoteItemTypeName(QuoteItemType type) => type switch
-    {
-        QuoteItemType.Service => "Serviço",
-        QuoteItemType.Part => "Peça",
-        QuoteItemType.Material => "Material",
-        QuoteItemType.Travel => "Deslocamento",
-        _ => "Outro"
-    };
+    private static string GetQuoteItemTypeName(QuoteItemType type) => type switch { QuoteItemType.Service => "Serviço", QuoteItemType.Part => "Peça", QuoteItemType.Material => "Material", QuoteItemType.Travel => "Deslocamento", _ => "Outro" };
     private void AddItem() => items.Add(new QuoteItemForm { Type = QuoteItemType.Custom });
     private void RemoveItem(QuoteItemForm item) => items.Remove(item);
-    private async Task SaveAsync() { if (validUntil is null) return; var quoteItems = items.Select(item => new QuoteItemInput(item.Description, item.Quantity, item.UnitPrice, item.Type)).ToArray(); if (quote is null) { if (customerId is null || equipmentId is null || primaryServiceId is null) { Snackbar.Add("Selecione cliente, equipamento e serviço.", Severity.Warning); return; } var create = await CreateQuoteUseCase.ExecuteAsync(new CreateQuoteCommand(customerId.Value, equipmentId.Value, primaryServiceId.Value, quoteItems, discountAmount, notes, DateOnly.FromDateTime(validUntil.Value), SourceAppointmentId, MaintenanceOpportunityId)); if (!create.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(create.Error?.Code), Severity.Error); return; } NavigationManager.NavigateTo($"/orcamentos/registro?id={create.Value}"); return; } var update = await UpdateQuoteUseCase.ExecuteAsync(quote.Id, new UpdateQuoteCommand(quoteItems, discountAmount, notes, DateOnly.FromDateTime(validUntil.Value))); if (!update.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(update.Error?.Code), Severity.Error); return; } Snackbar.Add("Orçamento atualizado.", Severity.Success); }
+
+    private async Task SaveAsync()
+    {
+        if (validUntil is null) return;
+        var quoteItems = items.Select(item => new QuoteItemInput(item.Description, item.Quantity, item.UnitPrice, item.Type)).ToArray();
+        if (quote is null)
+        {
+            if (customerId is null || equipmentId is null || primaryServiceId is null) { Snackbar.Add("Selecione cliente, equipamento e serviço.", Severity.Warning); return; }
+            var create = await OperationExecutor.ExecuteAsync((CreateQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateQuoteCommand(customerId.Value, equipmentId.Value, primaryServiceId.Value, quoteItems, discountAmount, notes, DateOnly.FromDateTime(validUntil.Value), SourceAppointmentId, MaintenanceOpportunityId), cancellationToken));
+            if (!create.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(create.Error?.Code), Severity.Error); return; }
+            NavigationManager.NavigateTo($"/orcamentos/registro?id={create.Value}"); return;
+        }
+        var update = await OperationExecutor.ExecuteAsync((UpdateQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quote.Id, new UpdateQuoteCommand(quoteItems, discountAmount, notes, DateOnly.FromDateTime(validUntil.Value)), cancellationToken));
+        if (!update.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(update.Error?.Code), Severity.Error); return; }
+        Snackbar.Add("Orçamento atualizado.", Severity.Success);
+    }
+
     private sealed class QuoteItemForm { public string Description { get; set; } = string.Empty; public decimal Quantity { get; set; } = 1; public decimal UnitPrice { get; set; } public QuoteItemType Type { get; set; } }
 }

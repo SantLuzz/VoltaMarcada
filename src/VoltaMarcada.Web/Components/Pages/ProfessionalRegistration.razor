@@ -1,10 +1,7 @@
 @page "/profissionais/registro"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
 @using VoltaMarcada.Application.Professionals
-@inject GetProfessionalForEditUseCase GetProfessionalForEditUseCase
-@inject GetProfessionalRegistrationOptionsUseCase GetProfessionalRegistrationOptionsUseCase
-@inject CreateProfessionalUseCase CreateProfessionalUseCase
-@inject UpdateProfessionalUseCase UpdateProfessionalUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject ILogger<ProfessionalRegistration> Logger
@@ -87,7 +84,8 @@ else
         {
             if (ProfessionalId is { } professionalId)
             {
-                var professional = await GetProfessionalForEditUseCase.ExecuteAsync(professionalId);
+                var professional = await OperationExecutor.ExecuteAsync(
+                    (GetProfessionalForEditUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(professionalId, cancellationToken));
                 if (professional is null)
                 {
                     NavigationManager.NavigateTo("/profissionais");
@@ -99,7 +97,8 @@ else
                 model.TimeZoneId = professional.TimeZoneId;
             }
 
-            options = await GetProfessionalRegistrationOptionsUseCase.ExecuteAsync(ProfessionalId);
+            options = await OperationExecutor.ExecuteAsync(
+                (GetProfessionalRegistrationOptionsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(ProfessionalId, cancellationToken));
             if (string.IsNullOrWhiteSpace(model.TimeZoneId))
             {
                 model.TimeZoneId = options.DefaultTimeZoneId;
@@ -130,8 +129,10 @@ else
             }
 
             var result = ProfessionalId is { } professionalId
-                ? await UpdateProfessionalUseCase.ExecuteAsync(professionalId, new UpdateProfessionalCommand(companyUserId, model.ServiceIds.ToArray(), model.TimeZoneId))
-                : await CreateProfessionalUseCase.ExecuteAsync(new CreateProfessionalCommand(companyUserId, model.ServiceIds.ToArray(), model.TimeZoneId));
+                ? await OperationExecutor.ExecuteAsync(
+                    (UpdateProfessionalUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(professionalId, new UpdateProfessionalCommand(companyUserId, model.ServiceIds.ToArray(), model.TimeZoneId), cancellationToken))
+                : await OperationExecutor.ExecuteAsync(
+                    (CreateProfessionalUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateProfessionalCommand(companyUserId, model.ServiceIds.ToArray(), model.TimeZoneId), cancellationToken));
             if (!result.IsSuccess)
             {
                 submitError = OperationErrorMessages.GetMessage(result.Error?.Code);
