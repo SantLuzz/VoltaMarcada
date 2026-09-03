@@ -17,18 +17,21 @@ public sealed class AcceptAppointmentRequestUseCase(
     AppointmentAvailability availability,
     TimeProvider timeProvider)
 {
-    public async Task<OperationResult<Guid>> ExecuteAsync(Guid requestId, bool applyCustomerProfileProposal = false, CancellationToken cancellationToken = default)
+    public async Task<OperationResult<Guid>> ExecuteAsync(
+        Guid requestId,
+        Guid selectedProfessionalId,
+        bool applyCustomerProfileProposal = false,
+        CancellationToken cancellationToken = default)
     {
         var scope = await authorization.GetAccessScopeAsync(cancellationToken);
+        if (!scope.IsOwner || selectedProfessionalId == Guid.Empty) return OperationResult<Guid>.Failure(SchedulingErrors.Forbidden);
         var request = await requestRepository.GetForCompanyAsync(requestId, scope.CompanyId, cancellationToken);
         if (request is null) return OperationResult<Guid>.Failure(SchedulingErrors.NotFound);
-        if (request.ProfessionalId is not { } professionalId) return OperationResult<Guid>.Failure(SchedulingErrors.InvalidStatus);
-        if (!scope.IsOwner && scope.ProfessionalId != professionalId) return OperationResult<Guid>.Failure(SchedulingErrors.Forbidden);
         if (request.Status != AppointmentRequestStatus.Pending) return OperationResult<Guid>.Failure(SchedulingErrors.InvalidStatus);
         var service = await serviceRepository.GetForCompanyAsync(request.ServiceId, scope.CompanyId, cancellationToken);
         if (service is null || !service.IsActive || service.DurationMinutes != request.DurationMinutes) return OperationResult<Guid>.Failure(SchedulingErrors.InvalidInput);
-        var professional = await professionalRepository.GetForCompanyAsync(professionalId, scope.CompanyId, cancellationToken);
-        if (professional is null || professional.ProfessionalServices.All(link => link.ServiceId != request.ServiceId)) return OperationResult<Guid>.Failure(SchedulingErrors.ProfessionalNotQualified);
+        var professional = await professionalRepository.GetForCompanyAsync(selectedProfessionalId, scope.CompanyId, cancellationToken);
+        if (professional is null || !professional.IsActive || professional.ProfessionalServices.All(link => link.ServiceId != request.ServiceId)) return OperationResult<Guid>.Failure(SchedulingErrors.ProfessionalNotQualified);
         MaintenanceOpportunity? maintenanceOpportunity = null;
         if (request.MaintenanceOpportunityId is { } opportunityId)
         {
@@ -44,6 +47,7 @@ public sealed class AcceptAppointmentRequestUseCase(
         if (start <= timeProvider.GetUtcNow()) return OperationResult<Guid>.Failure(SchedulingErrors.ProfessionalUnavailable);
         var appointment = Appointment.Create(scope.CompanyId, professional.Id, request.CustomerId, request.EquipmentId, request.ServiceId, null, start, end, null, timeProvider.GetUtcNow(), AppointmentOrigin.External, AppointmentType.Visit);
         await appointmentRepository.AddAsync(appointment, cancellationToken);
+        request.AssignProfessional(professional.Id, timeProvider.GetUtcNow());
         request.Accept(appointment.Id, timeProvider.GetUtcNow());
         maintenanceOpportunity?.Convert(MaintenanceOpportunityConversionType.Appointment, appointment.Id, timeProvider.GetUtcNow());
         if (applyCustomerProfileProposal && scope.IsOwner && request.ProposedCustomerName is not null &&

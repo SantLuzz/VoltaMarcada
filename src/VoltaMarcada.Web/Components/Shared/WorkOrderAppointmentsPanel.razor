@@ -4,7 +4,7 @@
 @inject IComponentOperationExecutor OperationExecutor
 @inject ISnackbar Snackbar
 
-<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-3">
+<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="@HeaderClass">
     <MudText Typo="Typo.h6">Agendamentos vinculados</MudText>
     @if (CanCreateAppointments)
     {
@@ -124,6 +124,11 @@ else
 </MudDialog>
 
 @code {
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string HeaderClass => $"mb-3 {Class}";
+
     [Parameter, EditorRequired] public Guid WorkOrderId { get; set; }
     [Parameter, EditorRequired] public bool IsOwner { get; set; }
     [Parameter, EditorRequired] public bool CanCreateAppointments { get; set; }

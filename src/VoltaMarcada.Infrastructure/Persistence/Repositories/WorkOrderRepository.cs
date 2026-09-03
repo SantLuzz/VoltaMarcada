@@ -21,7 +21,19 @@ public sealed class WorkOrderRepository(AppDbContext dbContext) : IWorkOrderRepo
             var term = query.SearchFilter.Trim().ToLower();
             orders = orders.Where(x => dbContext.Customers.Any(c => c.Id == x.CustomerId && c.CompanyId == companyId && c.Name.ToLower().Contains(term)) || dbContext.Services.Any(s => s.Id == x.ServiceId && s.CompanyId == companyId && s.Name.ToLower().Contains(term)));
         }
-        return await orders.OrderByDescending(x => x.CreatedAtUtc).Join(dbContext.Customers.Where(x => x.CompanyId == companyId), x => x.CustomerId, x => x.Id, (order, customer) => new { order, customer }).Join(dbContext.Equipment.Where(x => x.CompanyId == companyId), x => x.order.EquipmentId, x => x.Id, (entry, equipment) => new { entry.order, entry.customer, equipment }).Join(dbContext.Services.Where(x => x.CompanyId == companyId), x => x.order.ServiceId, x => x.Id, (entry, service) => new WorkOrderListItem(entry.order.Id, entry.customer.Name, string.IsNullOrWhiteSpace(entry.equipment.Model) ? entry.equipment.Type : $"{entry.equipment.Type} - {entry.equipment.Model}", service.Name, entry.order.Status, entry.order.Priority, entry.order.CreatedAtUtc, entry.order.ProfessionalId)).ToArrayAsync(cancellationToken);
+        return await orders
+            .GroupJoin(
+                dbContext.Appointments.AsNoTracking().Where(appointment => appointment.CompanyId == companyId && appointment.WorkOrderId != null),
+                order => order.Id,
+                appointment => appointment.WorkOrderId!.Value,
+                (order, appointments) => new { Order = order, ScheduledAtUtc = appointments.Select(appointment => (DateTimeOffset?)appointment.StartAtUtc).Min() })
+            .OrderBy(item => item.Order.Status == VoltaMarcada.Domain.Enums.WorkOrderStatus.Completed)
+            .ThenBy(item => item.ScheduledAtUtc ?? item.Order.CreatedAtUtc)
+            .ThenBy(item => item.Order.CreatedAtUtc)
+            .Join(dbContext.Customers.Where(customer => customer.CompanyId == companyId), item => item.Order.CustomerId, customer => customer.Id, (item, customer) => new { item.Order, item.ScheduledAtUtc, Customer = customer })
+            .Join(dbContext.Equipment.Where(equipment => equipment.CompanyId == companyId), item => item.Order.EquipmentId, equipment => equipment.Id, (item, equipment) => new { item.Order, item.ScheduledAtUtc, item.Customer, Equipment = equipment })
+            .Join(dbContext.Services.Where(service => service.CompanyId == companyId), item => item.Order.ServiceId, service => service.Id, (item, service) => new WorkOrderListItem(item.Order.Id, item.Customer.Name, string.IsNullOrWhiteSpace(item.Equipment.Model) ? item.Equipment.Type : $"{item.Equipment.Type} - {item.Equipment.Model}", service.Name, item.Order.Status, item.Order.Priority, item.Order.CreatedAtUtc, item.Order.ProfessionalId, item.ScheduledAtUtc))
+            .ToArrayAsync(cancellationToken);
     }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);

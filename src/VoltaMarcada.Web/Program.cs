@@ -14,6 +14,7 @@ using VoltaMarcada.Web.Errors;
 using VoltaMarcada.Web.Identity;
 using VoltaMarcada.Web.Operations;
 using VoltaMarcada.Web.Configuration;
+using VoltaMarcada.Web.Formatting;
 using VoltaMarcada.Application.Scheduling;
 using VoltaMarcada.Application.PublicBooking;
 using Microsoft.AspNetCore.RateLimiting;
@@ -43,6 +44,10 @@ builder.Services.AddOptions<PublicBookingOptions>()
     .Validate(options => options.MaintenanceLinkLifetimeDays is > 0 and <= 365, "Maintenance link lifetime must be between 1 and 365 days.")
     .ValidateOnStart();
 builder.Services.AddSingleton<IPublicBookingConfiguration, PublicBookingConfiguration>();
+builder.Services.AddOptions<LoginRateLimitOptions>()
+    .Bind(builder.Configuration.GetSection(LoginRateLimitOptions.SectionName))
+    .Validate(options => options.PermitLimit > 0 && options.WindowSeconds > 0 && options.QueueLimit >= 0 && options.LockoutMinutes > 0 && options.MaxFailedAccessAttempts > 0, "Login rate limit settings must be positive.")
+    .ValidateOnStart();
 builder.Services.AddOptions<ApplicationUrlOptions>()
     .Bind(builder.Configuration.GetSection(ApplicationUrlOptions.SectionName))
     .Validate(options => IsValidApplicationUrl(options.ApplicationBaseUrl), "Application base URL must be an absolute HTTP or HTTPS URL.")
@@ -54,6 +59,19 @@ builder.Services.AddSingleton<PublicQuoteActionLimiter>();
 builder.Services.AddSingleton<IComponentOperationExecutor, ComponentOperationExecutor>();
 builder.Services.AddRateLimiter(options =>
 {
+    options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ =>
+        {
+            var loginOptions = builder.Configuration.GetSection(LoginRateLimitOptions.SectionName).Get<LoginRateLimitOptions>() ?? new LoginRateLimitOptions();
+            return new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = loginOptions.PermitLimit,
+                Window = TimeSpan.FromSeconds(loginOptions.WindowSeconds),
+                QueueLimit = loginOptions.QueueLimit
+            };
+        }));
     options.AddPolicy("public-booking", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
@@ -66,10 +84,19 @@ builder.Services.AddRateLimiter(options =>
 });
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.Configure<Microsoft.AspNetCore.Identity.IdentityOptions>(options =>
+{
+    var loginOptions = builder.Configuration.GetSection(LoginRateLimitOptions.SectionName).Get<LoginRateLimitOptions>() ?? new LoginRateLimitOptions();
+    options.Lockout.AllowedForNewUsers = true;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(loginOptions.LockoutMinutes);
+    options.Lockout.MaxFailedAccessAttempts = loginOptions.MaxFailedAccessAttempts;
+});
 builder.Services.AddMudServices();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ICurrentCompany, CurrentCompany>();
+builder.Services.AddScoped<ICurrentDisplayTimeZone, CurrentDisplayTimeZone>();
+builder.Services.AddScoped<IBrazilianDisplayFormatter, BrazilianDisplayFormatter>();
 builder.Services.AddScoped<IAuthorizationHandler, CompanyMemberAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, CompanyOwnerAuthorizationHandler>();
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, CompanyMemberAuthorizationResultHandler>();

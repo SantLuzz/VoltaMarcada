@@ -4,10 +4,13 @@
 @using VoltaMarcada.Application.MaintenanceOpportunities
 @using VoltaMarcada.Application.PublicBooking
 @using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Web.Formatting
 @inject IComponentOperationExecutor OperationExecutor
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
+@inject ICurrentDisplayTimeZone CurrentDisplayTimeZone
+@inject IBrazilianDisplayFormatter DisplayFormatter
 
 <PageTitle>Manutenções | VoltaMarcada</PageTitle>
 <PageHeader Title="Oportunidades de retorno" Description="Acompanhe o momento recomendado para trazer cada cliente de volta." />
@@ -26,7 +29,7 @@ else
     </MudGrid>
 
     <MudPaper Outlined="true" Class="pa-4 mt-4">
-        <MudGrid>
+        <MudGrid Class="maintenance-filters">
             <MudItem xs="12" sm="6">
                 <MudSelect T="MaintenanceOpportunityStatus?" Label="Status da oportunidade" Clearable="true" @bind-Value="status" @bind-Value:after="LoadAsync">
                     <MudSelectItem Value="@((MaintenanceOpportunityStatus?)MaintenanceOpportunityStatus.Pending)">Pendente</MudSelectItem>
@@ -46,6 +49,8 @@ else
             </MudItem>
         </MudGrid>
 
+        <MudDivider Class="my-5" />
+
         @if (items.Count == 0)
         {
             <EmptyState Icon="@Icons.Material.Filled.BuildCircle" Title="Nenhuma oportunidade encontrada" Description="As recomendações criadas ao concluir uma OS aparecerão aqui." />
@@ -62,7 +67,7 @@ else
                                 <MudChip T="string" Size="Size.Small" Color="@GetUrgencyColor(item.Urgency)">@GetUrgencyName(item.Urgency)</MudChip>
                             </MudStack>
                             <MudText Typo="Typo.body2">@item.EquipmentDescription · @item.RecommendedServiceName</MudText>
-                            <MudText Typo="Typo.caption">Última manutenção: @item.PreviousWorkOrderCompletedAtUtc.LocalDateTime.ToString("dd/MM/yyyy") · Recomendada: @item.DueDate.ToString("dd/MM/yyyy")</MudText>
+                            <MudText Typo="Typo.caption">Última manutenção: @FormatDate(item.PreviousWorkOrderCompletedAtUtc) · Recomendada: @item.DueDate.ToString("dd/MM/yyyy")</MudText>
                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                 <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(item.Status)">@GetStatusName(item.Status)</MudChip>
                                 <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => selectedOpportunity = item)">Detalhes</MudButton>
@@ -70,7 +75,7 @@ else
 
                             @if (IsOpen(item.Status))
                             {
-                                <MudStack Row="true" Wrap="Wrap.Wrap">
+                                <MudStack Row="true" Wrap="Wrap.Wrap" Class="maintenance-actions">
                                     <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Send" Disabled="@IsContactActionPending(item.Id)" OnClick="@(() => PrepareWhatsAppAsync(item.Id))">Preparar contato</MudButton>
                                     <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CalendarMonth" OnClick="@(() => ScheduleAsync(item.Id))">Agendar atendimento</MudButton>
                                     <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.RequestQuote" OnClick="@(() => CreateQuote(item.Id))">Gerar orçamento</MudButton>
@@ -83,7 +88,7 @@ else
                             }
                             else
                             {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">Encerrada sem conversão em @item.ClosedAtUtc?.LocalDateTime.ToString("dd/MM/yyyy HH:mm"). Motivo: @item.ClosureReason</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Encerrada sem conversão em @(item.ClosedAtUtc is { } closedAtUtc ? FormatDateTime(closedAtUtc) : "-"). Motivo: @item.ClosureReason</MudText>
                             }
                         </MudStack>
                     </MudPaper>
@@ -101,7 +106,7 @@ else
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1">@item.CustomerName</MudText>
                 <MudText>@item.EquipmentDescription · @item.RecommendedServiceName</MudText>
-                <MudText Typo="Typo.body2">Última manutenção: @item.PreviousWorkOrderCompletedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")</MudText>
+                <MudText Typo="Typo.body2">Última manutenção: @FormatDate(item.PreviousWorkOrderCompletedAtUtc)</MudText>
                 <MudText Typo="Typo.body2">Próxima recomendada: @item.DueDate.ToString("dd/MM/yyyy")</MudText>
                 @if (!string.IsNullOrWhiteSpace(item.Notes))
                 {
@@ -119,10 +124,10 @@ else
                     {
                         <MudPaper Outlined="true" Class="pa-2">
                             <MudText Typo="Typo.body2">WhatsApp · @GetContactStatusName(contact.Status)</MudText>
-                            <MudText Typo="Typo.caption">Preparado em @contact.CreatedAtUtc.LocalDateTime.ToString("dd/MM/yyyy HH:mm")</MudText>
+                            <MudText Typo="Typo.caption">Preparado em @FormatDateTime(contact.CreatedAtUtc)</MudText>
                             @if (contact.SentAtUtc is { } sentAtUtc)
                             {
-                                <MudText Typo="Typo.caption">Enviado em @sentAtUtc.LocalDateTime.ToString("dd/MM/yyyy HH:mm")</MudText>
+                                <MudText Typo="Typo.caption">Enviado em @FormatDateTime(sentAtUtc)</MudText>
                             }
                             else
                             {
@@ -164,10 +169,15 @@ else
     private string? discardReason;
     private bool isLoading = true;
     private bool isDiscarding;
+    private TimeZoneInfo displayTimeZone = TimeZoneInfo.Utc;
     private bool isDetailsDialogOpen { get => selectedOpportunity is not null; set { if (!value) selectedOpportunity = null; } }
     private bool isDiscardDialogOpen { get => opportunityToDiscard is not null; set { if (!value) CloseDiscardDialog(); } }
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        displayTimeZone = await CurrentDisplayTimeZone.GetTimeZoneAsync();
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
@@ -248,10 +258,12 @@ else
     private static Color GetStatusColor(MaintenanceOpportunityStatus value) => value switch { MaintenanceOpportunityStatus.Converted => Color.Success, MaintenanceOpportunityStatus.ClosedWithoutConversion => Color.Default, MaintenanceOpportunityStatus.AwaitingCustomer => Color.Info, MaintenanceOpportunityStatus.Contacted => Color.Warning, _ => Color.Primary };
     private static string GetStatusName(MaintenanceOpportunityStatus value) => value switch { MaintenanceOpportunityStatus.Contacted => "Contato realizado", MaintenanceOpportunityStatus.AwaitingCustomer => "Aguardando cliente", MaintenanceOpportunityStatus.Converted => "Convertida", MaintenanceOpportunityStatus.ClosedWithoutConversion => "Encerrada sem conversão", _ => "Pendente" };
     private static string GetContactStatusName(CustomerContactStatus value) => value == CustomerContactStatus.Prepared ? "Preparado" : "Enviado";
-    private static string GetConversionText(MaintenanceOpportunityListItem item)
+    private string FormatDateTime(DateTimeOffset value) => DisplayFormatter.FormatDateTime(value, displayTimeZone);
+    private string FormatDate(DateTimeOffset value) => FormatDateTime(value)[..10];
+    private string GetConversionText(MaintenanceOpportunityListItem item)
     {
         if (item.ConversionReference is { } reference && item.ConversionType == MaintenanceOpportunityConversionType.Appointment)
-            return $"Convertida em agendamento → Agendamento #{reference.EntityId.ToString()[..8]} → {reference.AppointmentStartAtUtc?.LocalDateTime:dd/MM/yyyy HH:mm}";
+            return $"Convertida em agendamento → Agendamento #{reference.EntityId.ToString()[..8]} → {(reference.AppointmentStartAtUtc is { } startAtUtc ? FormatDateTime(startAtUtc) : "-")}";
         if (item.ConversionReference is { } quoteReference && item.ConversionType == MaintenanceOpportunityConversionType.Quote)
             return $"Convertida em orçamento → Orçamento #{quoteReference.EntityId.ToString()[..8]} → {GetQuoteStatusName(quoteReference.QuoteStatus)}";
         return "Convertida em fluxo externo.";

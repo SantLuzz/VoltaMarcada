@@ -1,4 +1,6 @@
 @using VoltaMarcada.Application.WorkOrders
+@using VoltaMarcada.Web.Formatting
+@inject IBrazilianDisplayFormatter DisplayFormatter
 
 <MudStack Spacing="2">
     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
@@ -30,7 +32,7 @@
                                         Disabled="@(IsServicePriceReadOnly || ReadOnly || IsServicePriceFixed)" />
             </MudItem>
             <MudItem xs="12" sm="3">
-                <MudText>Subtotal: @ServiceSubtotal.ToString("C")</MudText>
+                <MudText>Subtotal: @DisplayFormatter.FormatCurrency(ServiceSubtotal)</MudText>
             </MudItem>
         </MudGrid>
     }
@@ -60,7 +62,7 @@
                                             Disabled="ReadOnly" />
                 </MudItem>
                 <MudItem xs="8" sm="2">
-                    <MudText>Subtotal: @((item.value.Quantity * item.value.UnitPrice).ToString("C"))</MudText>
+                    <MudText>Subtotal: @DisplayFormatter.FormatCurrency(item.value.Quantity * item.value.UnitPrice)</MudText>
                 </MudItem>
                 @if (!ReadOnly)
                 {
@@ -72,7 +74,7 @@
         }
     }
 
-    <MudText Typo="Typo.subtitle1">Total da OS: @((ServiceSubtotal + Items.Sum(item => item.Quantity * item.UnitPrice)).ToString("C"))</MudText>
+    <MudText Typo="Typo.subtitle1">Total da OS: @DisplayFormatter.FormatCurrency(ServiceSubtotal + Items.Sum(item => item.Quantity * item.UnitPrice))</MudText>
 </MudStack>
 
 @code {

@@ -29,6 +29,11 @@
         <div class="drawer-content">
             <header class="drawer-brand">
                 <img src="/logos/icone.png" alt="VoltaMarcada" class="drawer-logo" />
+                <MudIconButton Icon="@Icons.Material.Filled.Close"
+                               Color="Color.Inherit"
+                               Class="drawer-close-button"
+                               aria-label="Fechar menu"
+                               OnClick="ToggleDrawer" />
             </header>
 <div class="drawer-navigation-scroll">
 
@@ -149,15 +154,10 @@ else
         var userIdValue = authenticationState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (Guid.TryParse(userIdValue, out var userId))
         {
-            var user = await dbContext.Users.AsNoTracking()
+            accountSummary = await dbContext.Users.AsNoTracking()
                 .Where(item => item.Id == userId)
-                .Select(item => new { item.Email, item.FullName })
-                .SingleOrDefaultAsync();
-            accountSummary = user is null
-                ? string.Empty
-                : string.IsNullOrWhiteSpace(user.FullName)
-                    ? user.Email ?? string.Empty
-                    : $"{user.Email} · {user.FullName}";
+                .Select(item => item.FullName)
+                .SingleOrDefaultAsync() ?? string.Empty;
             isOwner = await dbContext.CompanyUsers.AsNoTracking()
                 .AnyAsync(companyUser =>
                     companyUser.UserId == userId &&

@@ -107,21 +107,23 @@ else
         </MudPaper>
 
         <MudPaper Elevation="0" Outlined="true" Class="service-form-section">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudStack Spacing="1">
                 <div>
                     <MudText Typo="Typo.h6">Indisponibilidades</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
                         Férias, folgas, compromissos, treinamentos, ausências e bloqueios manuais.
                     </MudText>
                 </div>
-                @if (!ReadOnly && !showBlockForm)
-                {
+            </MudStack>
+            @if (!ReadOnly && !showBlockForm)
+            {
+                <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-3 professional-block-action">
                     <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
                                OnClick="ShowBlockForm">
                         Adicionar indisponibilidade
                     </MudButton>
-                }
-            </MudStack>
+                </MudStack>
+            }
 
             @if (!ReadOnly && showBlockForm)
             {

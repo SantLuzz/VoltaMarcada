@@ -12,4 +12,6 @@ public sealed record SubmitPublicAppointmentRequestCommand(
     string CustomerWhatsApp,
     string? CustomerEmail,
     IReadOnlyCollection<CustomerAddressInput> Addresses,
-    string? ProblemDescription = null);
+    string? ProblemDescription = null,
+    string? EquipmentType = null,
+    string? EquipmentManufacturer = null);

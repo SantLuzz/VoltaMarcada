@@ -21,6 +21,13 @@ public interface IEquipmentRepository
         Guid companyId,
         CancellationToken cancellationToken = default);
 
+    Task<global::VoltaMarcada.Domain.Entities.Equipment?> GetActiveForCustomerByTypeAndManufacturerAsync(
+        Guid companyId,
+        Guid customerId,
+        string type,
+        string? manufacturer,
+        CancellationToken cancellationToken = default);
+
     Task<bool> ExistsForCustomerAsync(
         Guid customerId,
         Guid companyId,
