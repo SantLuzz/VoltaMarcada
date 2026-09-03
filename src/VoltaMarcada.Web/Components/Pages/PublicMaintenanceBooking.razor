@@ -1,9 +1,7 @@
 @page "/agendar/manutencao/{Token}"
 @layout PublicLayout
 @using VoltaMarcada.Application.PublicBooking
-@inject GetContextualMaintenanceBookingUseCase GetContextualMaintenanceBookingUseCase
-@inject GetPublicAvailableSlotsUseCase GetPublicAvailableSlotsUseCase
-@inject SubmitContextualAppointmentRequestUseCase SubmitContextualAppointmentRequestUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject TimeProvider TimeProvider
 @inject ILogger<PublicMaintenanceBooking> Logger
 
@@ -66,7 +64,8 @@ else
     {
         minimumDate = TimeProvider.GetLocalNow().Date;
         date = minimumDate;
-        context = await GetContextualMaintenanceBookingUseCase.ExecuteAsync(Token);
+        context = await OperationExecutor.ExecuteAsync(
+            (GetContextualMaintenanceBookingUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(Token, cancellationToken));
         isLoading = false;
         if (context is not null) await LoadSlotsAsync();
     }
@@ -78,7 +77,8 @@ else
         isLoadingSlots = true;
         try
         {
-            slots = await GetPublicAvailableSlotsUseCase.ExecuteContextualAsync(Token, DateOnly.FromDateTime(date.Value));
+            slots = await OperationExecutor.ExecuteAsync(
+                (GetPublicAvailableSlotsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteContextualAsync(Token, DateOnly.FromDateTime(date.Value), cancellationToken));
         }
         finally { isLoadingSlots = false; }
     }
@@ -90,7 +90,8 @@ else
         isSubmitting = true; error = null;
         try
         {
-            var result = await SubmitContextualAppointmentRequestUseCase.ExecuteAsync(new(Token, DateOnly.FromDateTime(date.Value), slot.StartTime));
+            var result = await OperationExecutor.ExecuteAsync(
+                (SubmitContextualAppointmentRequestUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new(Token, DateOnly.FromDateTime(date.Value), slot.StartTime), cancellationToken));
             if (result.IsSuccess) { isSubmitted = true; return; }
             error = "O horário não está mais disponível. Escolha outro horário.";
             await LoadSlotsAsync();

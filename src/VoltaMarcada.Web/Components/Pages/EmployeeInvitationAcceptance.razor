@@ -2,7 +2,7 @@
 @attribute [AllowAnonymous]
 @layout AuthLayout
 @using VoltaMarcada.Application.EmployeeInvitations
-@inject GetEmployeeInvitationForAcceptanceUseCase GetEmployeeInvitationForAcceptanceUseCase
+@inject IComponentOperationExecutor OperationExecutor
 
 <PageTitle>Cadastro de funcionário | VoltaMarcada</PageTitle>
 
@@ -51,6 +51,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        invitation = await GetEmployeeInvitationForAcceptanceUseCase.ExecuteAsync(Token);
+        invitation = await OperationExecutor.ExecuteAsync(
+            (GetEmployeeInvitationForAcceptanceUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(Token, cancellationToken));
     }
 }

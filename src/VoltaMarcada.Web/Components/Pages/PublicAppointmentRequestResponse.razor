@@ -1,8 +1,7 @@
 @page "/solicitacoes/{Token}"
 @layout PublicLayout
 @using VoltaMarcada.Application.PublicBooking
-@inject GetAppointmentRequestResponseUseCase GetAppointmentRequestResponseUseCase
-@inject RespondToAppointmentRequestUseCase RespondToAppointmentRequestUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject TimeProvider TimeProvider
 @inject ILogger<PublicAppointmentRequestResponse> Logger
 
@@ -42,7 +41,8 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        context = await GetAppointmentRequestResponseUseCase.ExecuteAsync(Token);
+        context = await OperationExecutor.ExecuteAsync(
+            (GetAppointmentRequestResponseUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(Token, cancellationToken));
         isLoading = false;
     }
 
@@ -54,7 +54,8 @@ else
         isSubmitting = true; error = null;
         try
         {
-            var result = await RespondToAppointmentRequestUseCase.ExecuteAsync(new(Token, acceptProposal));
+            var result = await OperationExecutor.ExecuteAsync(
+                (RespondToAppointmentRequestUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new(Token, acceptProposal), cancellationToken));
             if (result.IsSuccess) { isSubmitted = true; return; }
             error = "Não foi possível confirmar a proposta. A empresa entrará em contato.";
         }

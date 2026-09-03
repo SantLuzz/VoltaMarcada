@@ -6,9 +6,7 @@
 @using VoltaMarcada.Application.PublicBooking
 @using VoltaMarcada.Domain.Enums
 @using VoltaMarcada.Infrastructure.Persistence
-@inject GetPublicCompanyPageUseCase GetPublicCompanyPageUseCase
-@inject GetPublicAvailableSlotsUseCase GetPublicAvailableSlotsUseCase
-@inject SubmitPublicAppointmentRequestUseCase SubmitPublicAppointmentRequestUseCase
+@inject IComponentOperationExecutor OperationExecutor
 @inject IDbContextFactory<AppDbContext> DbContextFactory
 @inject IServiceProvider ServiceProvider
 @inject TimeProvider TimeProvider
@@ -166,7 +164,8 @@ else
         isLoading = true;
         minimumDate = TimeProvider.GetLocalNow().Date;
         bookingDate = minimumDate;
-        company = await GetPublicCompanyPageUseCase.ExecuteAsync(CompanySlug);
+        company = await OperationExecutor.ExecuteAsync(
+            (GetPublicCompanyPageUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(CompanySlug, cancellationToken));
         await LoadStatesAsync();
         await LoadLogoAsync();
         isLoading = false;
@@ -191,7 +190,8 @@ else
         isLoadingSlots = true;
         try
         {
-            slots = await GetPublicAvailableSlotsUseCase.ExecuteAsync(CompanySlug, serviceId, DateOnly.FromDateTime(bookingDate.Value));
+            slots = await OperationExecutor.ExecuteAsync(
+                (GetPublicAvailableSlotsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(CompanySlug, serviceId, DateOnly.FromDateTime(bookingDate.Value), cancellationToken));
         }
         finally { isLoadingSlots = false; }
     }
@@ -206,7 +206,8 @@ else
         try
         {
             var address = new CustomerAddressInput(CustomerAddressType.Residence, true, street, number, postalCode, complement, stateId, cityId);
-            var result = await SubmitPublicAppointmentRequestUseCase.ExecuteAsync(new SubmitPublicAppointmentRequestCommand(CompanySlug ?? string.Empty, serviceId, DateOnly.FromDateTime(bookingDate.Value), selectedSlot.StartTime, customerName, customerDocument, customerWhatsApp, customerEmail, [address], problemDescription));
+            var result = await OperationExecutor.ExecuteAsync(
+                (SubmitPublicAppointmentRequestUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new SubmitPublicAppointmentRequestCommand(CompanySlug ?? string.Empty, serviceId, DateOnly.FromDateTime(bookingDate.Value), selectedSlot.StartTime, customerName, customerDocument, customerWhatsApp, customerEmail, [address], problemDescription), cancellationToken));
             if (result.IsSuccess) { isSubmitted = true; return; }
             submitError = result.Error?.Code == "PublicBooking.RateLimited"
                 ? "Muitas tentativas foram realizadas. Aguarde alguns minutos antes de tentar novamente."
