@@ -10,6 +10,8 @@ public sealed class WorkOrder : ICompanyScopedEntity
     private readonly List<WorkOrderItem> _items = [];
     private readonly List<WorkOrderChecklistItem> _checklistItems = [];
     private readonly List<WorkOrderPhoto> _photos = [];
+    private readonly List<WorkOrderAttachment> _attachments = [];
+    private readonly List<WorkOrderHistoryEntry> _historyEntries = [];
 
     private WorkOrder() { }
 
@@ -34,6 +36,8 @@ public sealed class WorkOrder : ICompanyScopedEntity
     public IReadOnlyCollection<WorkOrderItem> Items => _items;
     public IReadOnlyCollection<WorkOrderChecklistItem> ChecklistItems => _checklistItems;
     public IReadOnlyCollection<WorkOrderPhoto> Photos => _photos;
+    public IReadOnlyCollection<WorkOrderAttachment> Attachments => _attachments;
+    public IReadOnlyCollection<WorkOrderHistoryEntry> HistoryEntries => _historyEntries;
     public decimal TotalAmount => _items.Sum(item => item.TotalAmount) - DiscountAmount;
 
     public static WorkOrder Create(Guid companyId, Guid customerId, Guid equipmentId, Guid serviceId, Guid? professionalId, Guid createdByUserId, WorkOrderPriority priority, string? reportedProblem, IReadOnlyCollection<WorkOrderItemDefinition> items, IReadOnlyCollection<WorkOrderChecklistItemDefinition> checklistItems, DateTimeOffset now, Guid? sourceQuoteId = null, decimal discountAmount = 0, Guid? sourceAppointmentId = null)
@@ -123,6 +127,25 @@ public sealed class WorkOrder : ICompanyScopedEntity
         var photo = _photos.SingleOrDefault(item => item.Id == photoId) ?? throw new DomainException("Photo was not found.");
         _photos.Remove(photo); UpdatedAtUtc = now.ToUniversalTime(); return photo;
     }
+
+    public WorkOrderAttachment AddAttachment(string fileKey, string originalFileName, string contentType, long length, string? description, Guid uploadedByUserId, DateTimeOffset now)
+    {
+        EnsureInProgress();
+        var attachment = WorkOrderAttachment.Create(CompanyId, Id, fileKey, originalFileName, contentType, length, description, uploadedByUserId, now);
+        _attachments.Add(attachment); UpdatedAtUtc = now.ToUniversalTime();
+        return attachment;
+    }
+
+    public WorkOrderAttachment RemoveAttachment(Guid attachmentId, DateTimeOffset now)
+    {
+        EnsureInProgress();
+        var attachment = _attachments.SingleOrDefault(item => item.Id == attachmentId) ?? throw new DomainException("Attachment was not found.");
+        _attachments.Remove(attachment); UpdatedAtUtc = now.ToUniversalTime();
+        return attachment;
+    }
+
+    public void RecordHistory(WorkOrderHistoryEventType eventType, Guid? actorUserId, string description, DateTimeOffset now) =>
+        _historyEntries.Add(WorkOrderHistoryEntry.Create(CompanyId, Id, eventType, actorUserId, description, now));
 
     public void Complete(bool requireBeforePhotos, bool requireAfterPhotos, DateTimeOffset now)
     {
