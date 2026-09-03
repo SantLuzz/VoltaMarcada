@@ -68,6 +68,7 @@ public static class OperationErrorMessages
             ["WorkOrder.ChecklistIncomplete"] = "Conclua os itens obrigatórios do checklist.",
             ["WorkOrder.BeforePhotoRequired"] = "Inclua ao menos uma foto antes.",
             ["WorkOrder.AfterPhotoRequired"] = "Inclua ao menos uma foto depois.",
+            ["WorkOrder.InvalidAttachment"] = "O anexo informado não é válido.",
             ["WorkOrder.OpenAppointments"] = "Conclua ou cancele os agendamentos abertos antes de concluir a ordem de serviço.",
             ["WorkOrder.PhotoLimitReached"] = "O limite de fotos da ordem de serviço foi atingido.",
             ["WorkOrder.InvalidPhoto"] = "Envie uma imagem JPEG, PNG, WebP ou HEIC de até 10 MB.",

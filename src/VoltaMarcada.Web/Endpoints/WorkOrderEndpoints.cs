@@ -41,6 +41,18 @@ public static class WorkOrderEndpoints
             return content is null ? Results.NotFound() : Results.File(content.Content, content.ContentType);
         });
         group.MapDelete("/{workOrderId:guid}/photos/{photoId:guid}", async (Guid workOrderId, Guid photoId, RemoveWorkOrderPhotoUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, photoId, cancellationToken)));
+        group.MapPost("/{workOrderId:guid}/attachments", async (Guid workOrderId, IFormFile file, string? description, AddWorkOrderAttachmentUseCase useCase, CancellationToken cancellationToken) =>
+        {
+            if (file.Length > 10 * 1024 * 1024) return OperationResultHttpExtensions.ValidationProblem(WorkOrderErrors.InvalidAttachment.Code, OperationErrorMessages.GetMessage(WorkOrderErrors.InvalidAttachment.Code));
+            await using var stream = file.OpenReadStream();
+            return ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, new WorkOrderAttachmentUpload(stream, file.FileName, file.ContentType, file.Length, description), cancellationToken));
+        });
+        group.MapGet("/{workOrderId:guid}/attachments/{attachmentId:guid}/content", async (Guid workOrderId, Guid attachmentId, GetWorkOrderAttachmentContentUseCase useCase, CancellationToken cancellationToken) =>
+        {
+            var content = await useCase.ExecuteAsync(workOrderId, attachmentId, cancellationToken);
+            return content is null ? Results.NotFound() : Results.File(content.Content, content.ContentType);
+        });
+        group.MapDelete("/{workOrderId:guid}/attachments/{attachmentId:guid}", async (Guid workOrderId, Guid attachmentId, RemoveWorkOrderAttachmentUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, attachmentId, cancellationToken)));
         return endpoints;
     }
 

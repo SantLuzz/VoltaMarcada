@@ -36,7 +36,7 @@ else
         </Actions>
     </PageHeader>
 
-    <MudTabs>
+    <MudTabs ActivePanelIndex="@activePanelIndex" ActivePanelIndexChanged="OnActivePanelIndexChanged">
         <MudTabPanel Text="Dados e itens">
             <MudPaper Class="pa-4 work-order-tab-content">
                 <MudGrid>
@@ -203,6 +203,10 @@ else
 </MudDialog>
 
 @code {
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? Tab { get; set; }
+
+    private int activePanelIndex;
     [SupplyParameterFromQuery(Name = "id")]
     public Guid? WorkOrderId { get; set; }
 
@@ -261,6 +265,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        activePanelIndex = string.Equals(Tab, "execution", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         var scope = await OperationExecutor.ExecuteAsync(
             (WorkOrderAuthorization authorization, CancellationToken cancellationToken) => authorization.GetAccessScopeAsync(cancellationToken));
         isOwner = scope.IsOwner;
@@ -291,6 +296,14 @@ else
             }
         }
         isLoading = false;
+    }
+
+    private Task OnActivePanelIndexChanged(int value)
+    {
+        activePanelIndex = value;
+        var tab = value == 1 ? "execution" : value == 2 ? "appointments" : "details";
+        NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameter("tab", tab), forceLoad: false, replace: true);
+        return Task.CompletedTask;
     }
 
     private async Task LoadAsync()
