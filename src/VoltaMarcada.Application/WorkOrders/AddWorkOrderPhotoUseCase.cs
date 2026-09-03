@@ -20,7 +20,7 @@ public sealed class AddWorkOrderPhotoUseCase(IWorkOrderRepository repository, IF
         if (order.Status != WorkOrderStatus.InProgress) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidStatus);
         if (order.Photos.Count >= 30 || order.Photos.Count(x => x.Type == upload.Type) >= 10) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.PhotoLimitReached);
         var stored = await fileStorage.UploadAsync(new FileStorageUploadRequest(new FileUpload(upload.Content, upload.FileName, upload.ContentType, upload.Length), $"companies/{scope.CompanyId:N}/work-orders/{workOrderId:N}"), cancellationToken);
-        try { var photo = order.AddPhoto(upload.Type, stored.Key, upload.Description, currentUser.UserId, timeProvider.GetUtcNow()); await repository.SaveChangesAsync(cancellationToken); return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(order.Id, photo.Id)); }
+        try { var now = timeProvider.GetUtcNow(); var photo = order.AddPhoto(upload.Type, stored.Key, upload.Description, currentUser.UserId, now); order.RecordHistory(WorkOrderHistoryEventType.PhotoAdded, currentUser.UserId == Guid.Empty ? null : currentUser.UserId, WorkOrderHistoryDescriptions.PhotoAdded(), now); await repository.SaveChangesAsync(cancellationToken); return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(order.Id, photo.Id)); }
         catch { await fileStorage.DeleteAsync(stored.Key, cancellationToken); throw; }
     }
 }

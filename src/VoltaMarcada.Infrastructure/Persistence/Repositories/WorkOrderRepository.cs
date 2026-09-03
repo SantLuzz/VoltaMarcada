@@ -10,7 +10,18 @@ public sealed class WorkOrderRepository(AppDbContext dbContext) : IWorkOrderRepo
     public async Task AddAsync(WorkOrder workOrder, CancellationToken cancellationToken = default) => await dbContext.WorkOrders.AddAsync(workOrder, cancellationToken);
 
     public Task<WorkOrder?> GetForAccessAsync(Guid workOrderId, Guid companyId, Guid? professionalId, CancellationToken cancellationToken = default) =>
-        dbContext.WorkOrders.Include(x => x.Items).Include(x => x.ChecklistItems).Include(x => x.Photos).SingleOrDefaultAsync(x => x.Id == workOrderId && x.CompanyId == companyId && (professionalId == null || x.ProfessionalId == professionalId), cancellationToken);
+        dbContext.WorkOrders.Include(x => x.Items).Include(x => x.ChecklistItems).Include(x => x.Photos).Include(x => x.Attachments).Include(x => x.HistoryEntries).SingleOrDefaultAsync(x => x.Id == workOrderId && x.CompanyId == companyId && (professionalId == null || x.ProfessionalId == professionalId), cancellationToken);
+
+    public async Task<IReadOnlyDictionary<Guid, string>> GetHistoryActorNamesAsync(Guid companyId, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0) return new Dictionary<Guid, string>();
+        return await (
+            from member in dbContext.CompanyUsers.AsNoTracking()
+            join user in dbContext.Users.AsNoTracking() on member.UserId equals user.Id
+            where member.CompanyId == companyId && userIds.Contains(member.UserId)
+            select new { member.UserId, Name = string.IsNullOrWhiteSpace(user.FullName) ? user.Email! : user.FullName })
+            .ToDictionaryAsync(item => item.UserId, item => item.Name, cancellationToken);
+    }
 
     public async Task<IReadOnlyList<WorkOrderListItem>> GetAllForAccessAsync(Guid companyId, Guid? professionalId, GetWorkOrdersQuery query, CancellationToken cancellationToken = default)
     {

@@ -42,5 +42,7 @@ public static class WorkOrderErrors
         new("WorkOrder.PhotoLimitReached", OperationErrorType.Conflict, "Work order photo limit was reached.");
     public static readonly OperationError InvalidPhoto =
         new("WorkOrder.InvalidPhoto", OperationErrorType.Validation, "Work order photo is invalid.");
+    public static readonly OperationError InvalidAttachment =
+        new("WorkOrder.InvalidAttachment", OperationErrorType.Validation, "Work order attachment is invalid.");
     public static readonly OperationError InvalidMaintenanceRecommendation = InvalidInput;
 }

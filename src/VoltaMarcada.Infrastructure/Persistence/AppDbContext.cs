@@ -59,6 +59,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<WorkOrderChecklistItem> WorkOrderChecklistItems => Set<WorkOrderChecklistItem>();
 
     public DbSet<WorkOrderPhoto> WorkOrderPhotos => Set<WorkOrderPhoto>();
+    public DbSet<WorkOrderAttachment> WorkOrderAttachments => Set<WorkOrderAttachment>();
+    public DbSet<WorkOrderHistoryEntry> WorkOrderHistoryEntries => Set<WorkOrderHistoryEntry>();
 
     public DbSet<MaintenanceOpportunity> MaintenanceOpportunities => Set<MaintenanceOpportunity>();
 

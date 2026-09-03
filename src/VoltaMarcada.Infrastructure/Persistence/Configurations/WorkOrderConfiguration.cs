@@ -25,8 +25,12 @@ public sealed class WorkOrderConfiguration : IEntityTypeConfiguration<WorkOrder>
         builder.HasMany(x => x.Items).WithOne().HasForeignKey(x => new { x.CompanyId, x.WorkOrderId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany(x => x.ChecklistItems).WithOne().HasForeignKey(x => new { x.CompanyId, x.WorkOrderId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany(x => x.Photos).WithOne().HasForeignKey(x => new { x.CompanyId, x.WorkOrderId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(x => x.Attachments).WithOne().HasForeignKey(x => new { x.CompanyId, x.WorkOrderId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(x => x.HistoryEntries).WithOne().HasForeignKey(x => new { x.CompanyId, x.WorkOrderId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(x => x.Items).UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.Navigation(x => x.ChecklistItems).UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.Navigation(x => x.Photos).UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Navigation(x => x.Attachments).UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Navigation(x => x.HistoryEntries).UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

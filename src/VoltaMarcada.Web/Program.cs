@@ -19,6 +19,7 @@ using VoltaMarcada.Application.Scheduling;
 using VoltaMarcada.Application.PublicBooking;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Components.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,10 @@ builder.Services.AddRazorComponents()
     {
         options.DetailedErrors = builder.Environment.IsDevelopment();
     });
+builder.Services.Configure<CircuitOptions>(options =>
+{
+    options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(5);
+});
 builder.Services.AddExceptionHandler<UnexpectedExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddCascadingAuthenticationState();

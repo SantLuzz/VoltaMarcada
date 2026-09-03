@@ -1,3 +1,4 @@
+using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Application.Abstractions.Operations;
 using FluentValidation;
 using VoltaMarcada.Application.Abstractions.Persistence;
@@ -13,6 +14,7 @@ public sealed class UpdateWorkOrderUseCase(
     IServiceRepository serviceRepository,
     IProfessionalRepository professionalRepository,
     WorkOrderAuthorization authorization,
+    ICurrentUser currentUser,
     IValidator<UpdateWorkOrderCommand> validator,
     TimeProvider timeProvider)
 {
@@ -95,6 +97,8 @@ public sealed class UpdateWorkOrderUseCase(
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
         }
 
+        var now = timeProvider.GetUtcNow();
+        var professionalChanged = workOrder.ProfessionalId != professionalId;
         workOrder.UpdatePendingDetails(
             customer.Id,
             equipment.Id,
@@ -104,7 +108,14 @@ public sealed class UpdateWorkOrderUseCase(
             command.ReportedProblem,
             items,
             checklistItems,
-            timeProvider.GetUtcNow());
+            now);
+
+        var actorUserId = currentUser.UserId == Guid.Empty ? (Guid?)null : currentUser.UserId;
+        workOrder.RecordHistory(WorkOrderHistoryEventType.DetailsUpdated, actorUserId, WorkOrderHistoryDescriptions.DetailsUpdated(), now);
+        if (professionalChanged)
+        {
+            workOrder.RecordHistory(WorkOrderHistoryEventType.ProfessionalAssigned, actorUserId, WorkOrderHistoryDescriptions.ProfessionalAssigned(), now);
+        }
 
         await workOrderRepository.SaveChangesAsync(cancellationToken);
         return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(workOrder.Id));

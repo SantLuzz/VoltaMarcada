@@ -50,6 +50,7 @@ public sealed class CreateWorkOrderUseCase(IWorkOrderRepository workOrderReposit
         if (!WorkOrderFinancialItems.TryCreate(service, command.ServiceUnitPrice, command.AdditionalItems, out var items)) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
         var now = timeProvider.GetUtcNow();
         var workOrder = global::VoltaMarcada.Domain.Entities.WorkOrder.Create(scope.CompanyId, customer.Id, equipment.Id, service.Id, professionalId, currentUser.UserId, command.Priority, command.ReportedProblem, items, service.ChecklistItems.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderChecklistItemDefinition(x.Description, x.IsRequired, x.DisplayOrder)).ToArray(), now, sourceAppointmentId: command.SourceAppointmentId);
+        workOrder.RecordHistory(WorkOrderHistoryEventType.Created, currentUser.UserId == Guid.Empty ? null : currentUser.UserId, WorkOrderHistoryDescriptions.Created(), now);
         await workOrderRepository.AddAsync(workOrder, cancellationToken);
         if (command.Appointment is not null)
         {

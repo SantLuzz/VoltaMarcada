@@ -1,3 +1,4 @@
+using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Application.Abstractions.Operations;
 using VoltaMarcada.Application.Abstractions.Persistence;
 using VoltaMarcada.Domain.Enums;
@@ -7,6 +8,7 @@ namespace VoltaMarcada.Application.WorkOrders;
 public sealed class CancelWorkOrderUseCase(
     IWorkOrderRepository repository,
     WorkOrderAuthorization authorization,
+    ICurrentUser currentUser,
     TimeProvider timeProvider)
 {
     public async Task<OperationResult<WorkOrderOperationValue>> ExecuteAsync(
@@ -30,7 +32,9 @@ public sealed class CancelWorkOrderUseCase(
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidStatus);
         }
 
-        workOrder.Cancel(timeProvider.GetUtcNow());
+        var now = timeProvider.GetUtcNow();
+        workOrder.Cancel(now);
+        workOrder.RecordHistory(WorkOrderHistoryEventType.Cancelled, currentUser.UserId == Guid.Empty ? null : currentUser.UserId, WorkOrderHistoryDescriptions.Cancelled(), now);
         await repository.SaveChangesAsync(cancellationToken);
         return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(workOrder.Id));
     }

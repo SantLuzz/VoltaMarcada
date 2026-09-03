@@ -1,6 +1,11 @@
 <Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <Authorizing>
+                <section class="status-page" aria-live="polite" aria-label="Carregando autorização">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                </section>
+            </Authorizing>
             <NotAuthorized>
                 <RedirectToLogin />
             </NotAuthorized>

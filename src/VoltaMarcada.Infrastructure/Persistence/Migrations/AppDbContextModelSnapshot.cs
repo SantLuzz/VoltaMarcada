@@ -1599,6 +1599,53 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.ToTable("WorkOrders", (string)null);
                 });
 
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrderAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("FileKey")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<long>("Length")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("UploadedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WorkOrderId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "WorkOrderId", "CreatedAtUtc")
+                        .HasDatabaseName("IX_WorkOrderAttachments_CompanyId_WorkOrderId_CreatedAtUtc");
+
+                    b.ToTable("WorkOrderAttachments", (string)null);
+                });
+
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrderChecklistItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1632,6 +1679,39 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.HasIndex("CompanyId", "WorkOrderId", "DisplayOrder");
 
                     b.ToTable("WorkOrderChecklistItems", (string)null);
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrderHistoryEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("EventType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("WorkOrderId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "WorkOrderId", "CreatedAtUtc")
+                        .HasDatabaseName("IX_WorkOrderHistoryEntries_CompanyId_WorkOrderId_CreatedAtUtc");
+
+                    b.ToTable("WorkOrderHistoryEntries", (string)null);
                 });
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrderItem", b =>
@@ -2328,10 +2408,30 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrderAttachment", b =>
+                {
+                    b.HasOne("VoltaMarcada.Domain.Entities.WorkOrder", null)
+                        .WithMany("Attachments")
+                        .HasForeignKey("CompanyId", "WorkOrderId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrderChecklistItem", b =>
                 {
                     b.HasOne("VoltaMarcada.Domain.Entities.WorkOrder", null)
                         .WithMany("ChecklistItems")
+                        .HasForeignKey("CompanyId", "WorkOrderId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrderHistoryEntry", b =>
+                {
+                    b.HasOne("VoltaMarcada.Domain.Entities.WorkOrder", null)
+                        .WithMany("HistoryEntries")
                         .HasForeignKey("CompanyId", "WorkOrderId")
                         .HasPrincipalKey("CompanyId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2395,7 +2495,11 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrder", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("ChecklistItems");
+
+                    b.Navigation("HistoryEntries");
 
                     b.Navigation("Items");
 
