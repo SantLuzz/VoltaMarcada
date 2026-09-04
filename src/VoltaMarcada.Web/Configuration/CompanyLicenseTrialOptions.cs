@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using VoltaMarcada.Application.CompanyOnboarding;
 
@@ -7,6 +8,7 @@ public sealed class CompanyLicenseTrialOptions
 {
     public const string SectionName = "parameters";
 
+    [ConfigurationKeyName("free_trial_days")]
     public int FreeTrialDays { get; init; } = 14;
 }
 

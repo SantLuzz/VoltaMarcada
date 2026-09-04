@@ -40,7 +40,7 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                 table: "CompanyLicenses",
                 column: "CompanyId",
                 unique: true);
-            migrationBuilder.Sql("INSERT INTO \"CompanyLicenses\" (\"Id\", \"CompanyId\", \"Status\", \"TrialStartedAtUtc\", \"TrialEndsAtUtc\", \"PaidUntilUtc\", \"CreatedAtUtc\", \"UpdatedAtUtc\") SELECT md5(\"Id\"::text)::uuid, \"Id\", 0, \"CreatedAtUtc\", \"CreatedAtUtc\" + INTERVAL '14 days', NULL, \"CreatedAtUtc\", \"UpdatedAtUtc\" FROM \"Companies\";");
+            migrationBuilder.Sql("INSERT INTO \"CompanyLicenses\" (\"Id\", \"CompanyId\", \"Status\", \"TrialStartedAtUtc\", \"TrialEndsAtUtc\", \"PaidUntilUtc\", \"CreatedAtUtc\", \"UpdatedAtUtc\") SELECT md5(\"Id\"::text)::uuid, \"Id\", 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '14 days', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP FROM \"Companies\";");
         }
 
         /// <inheritdoc />
