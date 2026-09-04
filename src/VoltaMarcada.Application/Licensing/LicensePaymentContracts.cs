@@ -28,4 +28,5 @@ public sealed record LicensePaymentSubmissionDto(
 public sealed record LicenseRenewalDto(
     decimal MonthlyPrice,
     PixPaymentPayload Pix,
-    LicensePaymentSubmissionDto? PendingPayment);
+    LicensePaymentSubmissionDto? PendingPayment,
+    long MaximumProofSizeBytes = 5_000_000);

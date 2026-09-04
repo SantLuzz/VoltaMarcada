@@ -89,6 +89,8 @@ public static class OperationErrorMessages
             , ["Quote.InvalidInput"] = "Revise os dados do orçamento."
             , ["Quote.NotFound"] = "Orçamento não encontrado."
             , ["Quote.InvalidStatus"] = "Este orçamento não permite essa ação agora."
+            , ["License.InvalidPaymentProof"] = "Envie um comprovante PDF, JPEG, PNG ou WebP dentro do limite permitido."
+            , ["License.PendingPaymentAlreadyExists"] = "Já existe um comprovante aguardando análise."
         };
 
     public static string GetMessage(string? code) =>

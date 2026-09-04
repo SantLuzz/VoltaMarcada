@@ -352,6 +352,12 @@ public sealed class OperationalLicenseAuthorizationTests
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
+        public Task<LicensePayment?> GetPaymentAsync(
+            Guid paymentId,
+            Guid companyId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task<LicensePaymentPersistenceOutcome> AddPaymentAsync(
             LicensePayment payment,
             CancellationToken cancellationToken = default) =>

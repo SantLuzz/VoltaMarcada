@@ -241,6 +241,13 @@ public sealed class LicensePaymentSubmissionTests
             Task.FromResult(Payments.SingleOrDefault(payment =>
                 payment.CompanyId == companyId && payment.Status == LicensePaymentStatus.PendingReview));
 
+        public Task<LicensePayment?> GetPaymentAsync(
+            Guid paymentId,
+            Guid companyId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Payments.SingleOrDefault(payment =>
+                payment.Id == paymentId && payment.CompanyId == companyId));
+
         public Task<LicensePaymentPersistenceOutcome> AddPaymentAsync(
             LicensePayment payment,
             CancellationToken cancellationToken = default)

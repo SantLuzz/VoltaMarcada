@@ -6,5 +6,7 @@ public static class AuthorizationPolicies
 
     public const string CompanyOwner = "CompanyOwner";
 
+    public const string CompanyOwnerLicenseRenewal = "CompanyOwnerLicenseRenewal";
+
     public const string OperationalCompanyLicense = "OperationalCompanyLicense";
 }

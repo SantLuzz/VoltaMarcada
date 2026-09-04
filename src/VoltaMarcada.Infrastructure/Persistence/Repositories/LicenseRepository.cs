@@ -45,6 +45,16 @@ public sealed class LicenseRepository(AppDbContext dbContext) : ILicenseReposito
                     payment.Status == LicensePaymentStatus.PendingReview,
                 cancellationToken);
 
+    public Task<LicensePayment?> GetPaymentAsync(
+        Guid paymentId,
+        Guid companyId,
+        CancellationToken cancellationToken = default) =>
+        dbContext.LicensePayments
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                payment => payment.Id == paymentId && payment.CompanyId == companyId,
+                cancellationToken);
+
     public async Task<LicensePaymentPersistenceOutcome> AddPaymentAsync(
         LicensePayment payment,
         CancellationToken cancellationToken = default)

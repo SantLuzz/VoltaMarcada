@@ -27,6 +27,7 @@ public sealed class GetLicenseRenewalUseCase(
             new LicenseRenewalDto(
                 billing.MonthlyPrice,
                 pix,
-                pendingPayment is null ? null : SubmitLicensePaymentUseCase.Map(pendingPayment)));
+                pendingPayment is null ? null : SubmitLicensePaymentUseCase.Map(pendingPayment),
+                billing.MaximumProofSizeBytes));
     }
 }

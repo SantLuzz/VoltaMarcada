@@ -21,6 +21,7 @@ using VoltaMarcada.Application.PublicBooking;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Components.Server;
+using VoltaMarcada.Application.Licensing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,6 +56,15 @@ builder.Services.AddOptions<CompanyLicenseTrialOptions>()
     .Validate(options => options.FreeTrialDays > 0, "Free trial days must be positive.")
     .ValidateOnStart();
 builder.Services.AddSingleton<ICompanyLicenseTrialConfiguration, CompanyLicenseTrialConfiguration>();
+builder.Services.AddOptions<LicenseBillingOptions>()
+    .Bind(builder.Configuration.GetSection(LicenseBillingOptions.SectionName))
+    .Validate(options => options.MonthlyPrice > 0, "The license monthly price must be positive.")
+    .Validate(options => options.MaximumProofSizeBytes > 0, "The maximum proof size must be positive.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.PixKey), "The PIX key is required.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.BeneficiaryName), "The PIX beneficiary name is required.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.BeneficiaryCity), "The PIX beneficiary city is required.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<ILicenseBillingConfiguration, LicenseBillingConfiguration>();
 builder.Services.AddOptions<LoginRateLimitOptions>()
     .Bind(builder.Configuration.GetSection(LoginRateLimitOptions.SectionName))
     .Validate(options => options.PermitLimit > 0 && options.WindowSeconds > 0 && options.QueueLimit >= 0 && options.LockoutMinutes > 0 && options.MaxFailedAccessAttempts > 0, "Login rate limit settings must be positive.")
@@ -119,6 +129,11 @@ builder.Services.AddAuthorizationBuilder()
         policy.AddRequirements(new CompanyMemberRequirement());
     })
     .AddPolicy(AuthorizationPolicies.CompanyOwner, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(new CompanyOwnerRequirement());
+    })
+    .AddPolicy(AuthorizationPolicies.CompanyOwnerLicenseRenewal, policy =>
     {
         policy.RequireAuthenticatedUser();
         policy.AddRequirements(new CompanyOwnerRequirement());
@@ -196,6 +211,7 @@ app.MapMaintenanceOpportunityEndpoints();
 app.MapAppointmentEndpoints();
 app.MapScheduleBlockRequestEndpoints();
 app.MapQuoteEndpoints();
+app.MapLicenseEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
