@@ -12,11 +12,11 @@ public static class ServiceEndpoints
         var services = endpoints.MapGroup("/services")
             .RequireAuthorization(AuthorizationPolicies.CompanyMember);
 
-        services.MapPost("/", CreateAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
+        services.MapPost("/", CreateAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
         services.MapGet("/", GetAllAsync);
         services.MapGet("/{serviceId:guid}/edit", GetForEditAsync);
-        services.MapPut("/{serviceId:guid}", UpdateAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
-        services.MapDelete("/{serviceId:guid}", DeleteAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
+        services.MapPut("/{serviceId:guid}", UpdateAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
+        services.MapDelete("/{serviceId:guid}", DeleteAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
 
         return endpoints;
     }

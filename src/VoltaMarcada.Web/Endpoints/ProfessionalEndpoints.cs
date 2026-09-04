@@ -15,13 +15,13 @@ public static class ProfessionalEndpoints
         professionals.MapGet("/", GetAllAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
         professionals.MapGet("/options", GetOptionsAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
         professionals.MapGet("/{professionalId:guid}/availability", GetAvailabilityAsync);
-        professionals.MapPut("/{professionalId:guid}/availability", SaveAvailabilityAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
-        professionals.MapPost("/{professionalId:guid}/availability/blocks", CreateScheduleBlockAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
-        professionals.MapDelete("/{professionalId:guid}/availability/blocks/{scheduleBlockId:guid}", DeleteScheduleBlockAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
+        professionals.MapPut("/{professionalId:guid}/availability", SaveAvailabilityAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
+        professionals.MapPost("/{professionalId:guid}/availability/blocks", CreateScheduleBlockAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
+        professionals.MapDelete("/{professionalId:guid}/availability/blocks/{scheduleBlockId:guid}", DeleteScheduleBlockAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
         professionals.MapGet("/{professionalId:guid}", GetForEditAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
-        professionals.MapPost("/", CreateAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
-        professionals.MapPut("/{professionalId:guid}", UpdateAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
-        professionals.MapPut("/{professionalId:guid}/status", ChangeStatusAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
+        professionals.MapPost("/", CreateAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
+        professionals.MapPut("/{professionalId:guid}", UpdateAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
+        professionals.MapPut("/{professionalId:guid}/status", ChangeStatusAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
 
         return endpoints;
     }

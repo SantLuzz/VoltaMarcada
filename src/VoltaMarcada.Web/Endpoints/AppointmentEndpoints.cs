@@ -12,13 +12,13 @@ public static class AppointmentEndpoints
         var appointments = endpoints.MapGroup("/appointments").RequireAuthorization(AuthorizationPolicies.CompanyMember);
         appointments.MapGet("/", GetAsync);
         appointments.MapGet("/slots", GetSlotsAsync);
-        appointments.MapPost("/", CreateAsync);
-        appointments.MapPost("/{appointmentId:guid}/start", StartAsync);
-        appointments.MapPut("/{appointmentId:guid}/reschedule", RescheduleAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
-        appointments.MapPut("/{appointmentId:guid}/professional", ReassignAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
-        appointments.MapPut("/{appointmentId:guid}/adjust", AdjustAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
-        appointments.MapPut("/{appointmentId:guid}/complete", CompleteAsync);
-        appointments.MapDelete("/{appointmentId:guid}", CancelAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
+        appointments.MapPost("/", CreateAsync).RequireOperationalCompanyLicense();
+        appointments.MapPost("/{appointmentId:guid}/start", StartAsync).RequireOperationalCompanyLicense();
+        appointments.MapPut("/{appointmentId:guid}/reschedule", RescheduleAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
+        appointments.MapPut("/{appointmentId:guid}/professional", ReassignAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
+        appointments.MapPut("/{appointmentId:guid}/adjust", AdjustAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
+        appointments.MapPut("/{appointmentId:guid}/complete", CompleteAsync).RequireOperationalCompanyLicense();
+        appointments.MapDelete("/{appointmentId:guid}", CancelAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
         return endpoints;
     }
 

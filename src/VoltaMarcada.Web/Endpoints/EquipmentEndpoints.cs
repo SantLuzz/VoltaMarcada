@@ -11,11 +11,11 @@ public static class EquipmentEndpoints
         var equipment = endpoints.MapGroup("/equipment")
             .RequireAuthorization(AuthorizationPolicies.CompanyMember);
 
-        equipment.MapPost("/", CreateAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
+        equipment.MapPost("/", CreateAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
         equipment.MapGet("/", GetAllAsync);
         equipment.MapGet("/{equipmentId:guid}/edit", GetForEditAsync);
-        equipment.MapPut("/{equipmentId:guid}", UpdateAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
-        equipment.MapDelete("/{equipmentId:guid}", DeleteAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
+        equipment.MapPut("/{equipmentId:guid}", UpdateAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
+        equipment.MapDelete("/{equipmentId:guid}", DeleteAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
 
         return endpoints;
     }

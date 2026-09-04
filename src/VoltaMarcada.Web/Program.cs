@@ -110,6 +110,7 @@ builder.Services.AddScoped<ICurrentDisplayTimeZone, CurrentDisplayTimeZone>();
 builder.Services.AddScoped<IBrazilianDisplayFormatter, BrazilianDisplayFormatter>();
 builder.Services.AddScoped<IAuthorizationHandler, CompanyMemberAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, CompanyOwnerAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, OperationalLicenseAuthorizationHandler>();
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, CompanyMemberAuthorizationResultHandler>();
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AuthorizationPolicies.CompanyMember, policy =>
@@ -121,6 +122,11 @@ builder.Services.AddAuthorizationBuilder()
     {
         policy.RequireAuthenticatedUser();
         policy.AddRequirements(new CompanyOwnerRequirement());
+    })
+    .AddPolicy(AuthorizationPolicies.OperationalCompanyLicense, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(new OperationalLicenseRequirement());
     });
 
 var app = builder.Build();
