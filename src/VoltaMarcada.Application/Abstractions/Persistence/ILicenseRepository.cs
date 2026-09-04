@@ -7,6 +7,12 @@ public sealed record CompanyLicenseMembership(
     CompanyUserRole Role,
     CompanyLicense License);
 
+public enum LicensePaymentPersistenceOutcome
+{
+    Success,
+    PendingPaymentAlreadyExists
+}
+
 public interface ILicenseRepository
 {
     Task<CompanyLicenseMembership?> GetMembershipAndLicenseAsync(
@@ -15,5 +21,17 @@ public interface ILicenseRepository
 
     Task<CompanyLicense?> GetForCompanyAsync(
         Guid companyId,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> HasPendingPaymentAsync(
+        Guid companyId,
+        CancellationToken cancellationToken = default);
+
+    Task<LicensePayment?> GetPendingPaymentAsync(
+        Guid companyId,
+        CancellationToken cancellationToken = default);
+
+    Task<LicensePaymentPersistenceOutcome> AddPaymentAsync(
+        LicensePayment payment,
         CancellationToken cancellationToken = default);
 }

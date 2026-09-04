@@ -18,6 +18,8 @@ using VoltaMarcada.Infrastructure.Communication;
 using VoltaMarcada.Application.Abstractions.Documents;
 using VoltaMarcada.Infrastructure.Documents;
 using VoltaMarcada.Application.Dashboard;
+using VoltaMarcada.Application.Abstractions.Payments;
+using VoltaMarcada.Infrastructure.Payments;
 using QuestPDF.Infrastructure;
 
 namespace VoltaMarcada.Infrastructure;
@@ -50,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<ICompanyOnboardingRepository, CompanyOnboardingRepository>();
         services.AddScoped<ILicenseRepository, LicenseRepository>();
+        services.AddSingleton<IPixPayloadGenerator, BrCodePixPayloadGenerator>();
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<IEquipmentRepository, EquipmentRepository>();
         services.AddScoped<IWorkOrderRepository, WorkOrderRepository>();

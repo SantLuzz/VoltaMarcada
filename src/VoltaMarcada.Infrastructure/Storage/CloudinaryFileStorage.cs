@@ -12,12 +12,16 @@ public sealed class CloudinaryFileStorage(
         FileStorageUploadRequest request,
         CancellationToken cancellationToken)
     {
+        var publicId = request.FileName ?? Guid.NewGuid().ToString("N");
         var upload = await cloudinary.UploadAsync(
             new ImageUploadParams
             {
                 File = new FileDescription(request.File.FileName, request.File.Content),
                 Folder = request.Folder,
-                PublicId = Guid.NewGuid().ToString("N")
+                PublicId = publicId,
+                UniqueFilename = false,
+                Overwrite = false,
+                Type = request.Access == FileStorageAccess.Private ? "authenticated" : null
             },
             cancellationToken);
 
@@ -47,7 +51,8 @@ public sealed class CloudinaryFileStorage(
         var result = await cloudinary.DestroyAsync(
             new DeletionParams(key)
             {
-                ResourceType = ResourceType.Image
+                ResourceType = ResourceType.Image,
+                Type = IsPrivatePaymentKey(key) ? "authenticated" : null
             });
 
         if (!string.Equals(result.Result, "ok", StringComparison.OrdinalIgnoreCase) &&
@@ -64,7 +69,13 @@ public sealed class CloudinaryFileStorage(
             throw new ArgumentException("File key is required.", nameof(key));
         }
 
-        var fileUrl = cloudinary.Api.UrlImgUp.BuildUrl(key);
+        var url = cloudinary.Api.UrlImgUp;
+        if (IsPrivatePaymentKey(key))
+        {
+            url = url.Action("authenticated").Signed(true);
+        }
+
+        var fileUrl = url.BuildUrl(key);
         if (!Uri.TryCreate(fileUrl, UriKind.Absolute, out var uri))
         {
             throw new InvalidOperationException("Cloudinary did not generate a valid delivery URL.");
@@ -72,4 +83,7 @@ public sealed class CloudinaryFileStorage(
 
         return uri;
     }
+
+    private static bool IsPrivatePaymentKey(string key) =>
+        key.StartsWith("pagamentos/", StringComparison.Ordinal);
 }

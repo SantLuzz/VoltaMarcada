@@ -20,6 +20,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<CompanyLicense> CompanyLicenses => Set<CompanyLicense>();
 
+    public DbSet<LicensePayment> LicensePayments => Set<LicensePayment>();
+
     public DbSet<EmployeeInvitation> EmployeeInvitations => Set<EmployeeInvitation>();
 
     public DbSet<State> States => Set<State>();

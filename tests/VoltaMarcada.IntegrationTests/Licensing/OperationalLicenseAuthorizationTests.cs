@@ -341,6 +341,21 @@ public sealed class OperationalLicenseAuthorizationTests
             Guid companyId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(license?.CompanyId == companyId ? license : null);
+
+        public Task<bool> HasPendingPaymentAsync(
+            Guid companyId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<LicensePayment?> GetPendingPaymentAsync(
+            Guid companyId,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<LicensePaymentPersistenceOutcome> AddPaymentAsync(
+            LicensePayment payment,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
     private sealed class TestAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
