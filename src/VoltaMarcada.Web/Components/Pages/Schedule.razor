@@ -75,7 +75,7 @@
                         {
                             <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenCommercialResolutionDialogAsync(request))">Definir próxima etapa</MudButton>
                         }
-                        else
+                        @if (request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending)
                         {
                             @if (request.RequestedTimeProfessionals.Count == 0 && request.Alternatives.Count > 0)
                             {
@@ -489,6 +489,12 @@ else
     [SupplyParameterFromQuery(Name = "maintenanceOpportunityId")]
     public Guid? MaintenanceOpportunityId { get; set; }
 
+    [SupplyParameterFromQuery(Name = "pendingRequests")]
+    public bool PendingRequests { get; set; }
+
+    [SupplyParameterFromQuery(Name = "appointmentId")]
+    public Guid? AppointmentId { get; set; }
+
     private DateTime? startDate;
     private DateTime? endDate;
     private IReadOnlyList<AppointmentDto> appointments = [];
@@ -584,6 +590,21 @@ else
                 .ToArray();
         }
         await LoadAsync();
+        if (AppointmentId is { } appointmentId)
+        {
+            var appointment = await OperationExecutor.ExecuteAsync(
+                (GetAppointmentDetailsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(appointmentId, cancellationToken));
+            if (appointment is not null)
+            {
+                var appointmentDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(appointment.StartAtUtc, displayTimeZone).DateTime);
+                startDate = appointmentDate.ToDateTime(TimeOnly.MinValue);
+                endDate = startDate;
+                await LoadAsync();
+                selectedAppointmentId = appointment.Id;
+                isAppointmentDetailsDialogOpen = true;
+            }
+        }
+
         if (MaintenanceOpportunityId is { } opportunityId && isOwner)
         {
             var context = await OperationExecutor.ExecuteAsync(
@@ -629,8 +650,8 @@ else
         if (startDate is null || endDate is null || endDate < startDate)
         {
             appointments = [];
-            appointmentRequests = await OperationExecutor.ExecuteAsync(
-                (GetAppointmentRequestsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
+            appointmentRequests = FilterAppointmentRequests(await OperationExecutor.ExecuteAsync(
+                (GetAppointmentRequestsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken)));
             return;
         }
 
@@ -648,8 +669,8 @@ else
             appointments = selectedProfessionalId is { } professionalId
                 ? result.Where(appointment => appointment.ProfessionalId == professionalId).ToArray()
                 : result;
-            appointmentRequests = await OperationExecutor.ExecuteAsync(
-                (GetAppointmentRequestsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
+            appointmentRequests = FilterAppointmentRequests(await OperationExecutor.ExecuteAsync(
+                (GetAppointmentRequestsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken)));
         }
         finally
         {
@@ -964,6 +985,11 @@ else
             isSavingNotes = false;
         }
     }
+
+    private IReadOnlyList<AppointmentRequestDto> FilterAppointmentRequests(IReadOnlyList<AppointmentRequestDto> requests) =>
+        PendingRequests
+            ? requests.Where(request => request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending).ToArray()
+            : requests;
 
     private async Task OpenAppointmentDialogAsync()
     {

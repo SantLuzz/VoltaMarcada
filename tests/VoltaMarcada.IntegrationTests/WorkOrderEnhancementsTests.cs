@@ -37,6 +37,37 @@ public sealed class WorkOrderEnhancementsTests
         Assert.Equal(Now, entry.CreatedAtUtc);
     }
 
+    [Fact]
+    public void UpdatePendingDetails_WhenDiscountChanges_UpdatesTheFinalTotal()
+    {
+        var companyId = Guid.NewGuid();
+        var customerId = Guid.NewGuid();
+        var equipmentId = Guid.NewGuid();
+        var serviceId = Guid.NewGuid();
+        var workOrder = WorkOrder.Create(
+            companyId, customerId, equipmentId, serviceId, Guid.NewGuid(), Guid.NewGuid(),
+            WorkOrderPriority.Normal, null,
+            [new WorkOrderItemDefinition("Maintenance", 1, 150m, WorkOrderItemType.Service)],
+            [],
+            Now,
+            discountAmount: 10m);
+
+        workOrder.UpdatePendingDetails(
+            customerId,
+            equipmentId,
+            serviceId,
+            workOrder.ProfessionalId,
+            WorkOrderPriority.Normal,
+            null,
+            [new WorkOrderItemDefinition("Maintenance", 1, 150m, WorkOrderItemType.Service)],
+            [],
+            25m,
+            Now.AddMinutes(1));
+
+        Assert.Equal(25m, workOrder.DiscountAmount);
+        Assert.Equal(125m, workOrder.TotalAmount);
+    }
+
     private static WorkOrder CreateInProgressWorkOrder()
     {
         var companyId = Guid.NewGuid();

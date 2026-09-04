@@ -1,11 +1,13 @@
 @page "/"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@using VoltaMarcada.Application.Dashboard
 @using VoltaMarcada.Application.Scheduling
 @using VoltaMarcada.Application.WorkOrders
-@using VoltaMarcada.Application.MaintenanceOpportunities
+@using VoltaMarcada.Web.Formatting
 @inject IComponentOperationExecutor OperationExecutor
 @inject ISchedulingConfiguration SchedulingConfiguration
 @inject TimeProvider TimeProvider
+@inject IBrazilianDisplayFormatter DisplayFormatter
 @inject ILogger<Dashboard> Logger
 
 <PageTitle>Painel | VoltaMarcada</PageTitle>
@@ -29,22 +31,66 @@
 
 @if (isOwner)
 {
-    <MudGrid Class="mt-4">
-        <MudItem xs="12" sm="6" md="3" Class="dashboard-kpi-item"><MudPaper Outlined="true" Class="pa-3 dashboard-kpi-card"><MudText Typo="Typo.caption">Agendamentos no período</MudText><MudText Typo="Typo.h5">@appointments.Count</MudText></MudPaper></MudItem>
-        <MudItem xs="12" sm="6" md="3" Class="dashboard-kpi-item"><MudPaper Outlined="true" Class="pa-3 dashboard-kpi-card"><MudText Typo="Typo.caption">OS abertas</MudText><MudText Typo="Typo.h5">@openWorkOrders</MudText></MudPaper></MudItem>
-        <MudItem xs="12" sm="6" md="3" Class="dashboard-kpi-item"><MudPaper Outlined="true" Class="pa-3 dashboard-kpi-card"><MudText Typo="Typo.caption">Bloqueios aguardando ação</MudText><MudText Typo="Typo.h5">@pendingBlockRequests</MudText></MudPaper></MudItem>
-        <MudItem xs="12" sm="6" md="3" Class="dashboard-kpi-item">
-            <a class="dashboard-kpi-link" href="/agenda" aria-label="Ver solicitações externas pendentes na agenda">
-                <MudPaper Outlined="true" Class="pa-3 dashboard-kpi-card dashboard-kpi-external-request">
-                    <MudText Typo="Typo.caption">Solicitações externas pendentes</MudText>
-                    <MudText Typo="Typo.h5">@pendingExternalAppointmentRequests</MudText>
-                </MudPaper>
-            </a>
-        </MudItem>
-    </MudGrid>
-    <MudPaper Outlined="true" Class="pa-3 mt-4"><MudText Typo="Typo.h6">Manutencoes</MudText><MudText>@maintenanceSummary.OverdueCount vencidas | @maintenanceSummary.NextSevenDaysCount nos proximos 7 dias | @maintenanceSummary.NextThirtyDaysCount nos proximos 30 dias</MudText><MudButton Href="/manutencoes" Variant="Variant.Text" Color="Color.Primary">Ver manutencoes</MudButton></MudPaper>
-}
+    @if (ownerDashboard is { } dashboard)
+    {
+        <section class="dashboard-owner-actions mt-4" aria-labelledby="owner-actions-title">
+            <MudText Typo="Typo.h6" id="owner-actions-title">O que precisa da sua atenção hoje</MudText>
+            <div class="dashboard-owner-action-grid">
+                <a class="dashboard-owner-action-link" href="/agenda" aria-label="Ver agendamentos de hoje na agenda">
+                    <MudPaper Outlined="true" Class="pa-3 dashboard-owner-action-card">
+                        <MudText Typo="Typo.caption">Agendamentos de hoje</MudText>
+                        <MudText Typo="Typo.h5">@dashboard.Actions.TodayAppointmentCount</MudText>
+                    </MudPaper>
+                </a>
+                <a class="dashboard-owner-action-link" href="/manutencoes?urgency=Overdue" aria-label="Ver manutenções vencidas">
+                    <MudPaper Outlined="true" Class="@GetOwnerActionCardClass(dashboard.Actions.OverdueOpportunityCount, OwnerActionErrorClass)">
+                        <MudText Typo="Typo.caption">Manutenções vencidas</MudText>
+                        <MudText Typo="Typo.h5" Color="@GetOwnerActionColor(dashboard.Actions.OverdueOpportunityCount, Color.Error)">@dashboard.Actions.OverdueOpportunityCount</MudText>
+                    </MudPaper>
+                </a>
+                <a class="dashboard-owner-action-link" href="/manutencoes?urgency=NextSevenDays" aria-label="Ver manutenções próximas">
+                    <MudPaper Outlined="true" Class="@GetOwnerActionCardClass(dashboard.Actions.DueSoonOpportunityCount, OwnerActionWarningClass)">
+                        <MudText Typo="Typo.caption">Manutenções próximas</MudText>
+                        <MudText Typo="Typo.h5" Color="@GetOwnerActionColor(dashboard.Actions.DueSoonOpportunityCount, Color.Warning)">@dashboard.Actions.DueSoonOpportunityCount</MudText>
+                    </MudPaper>
+                </a>
+                <a class="dashboard-owner-action-link" href="/agenda?pendingRequests=true" aria-label="Ver solicitações pendentes na agenda">
+                    <MudPaper Outlined="true" Class="@GetOwnerActionCardClass(dashboard.Actions.PendingAppointmentRequestCount, OwnerActionWarningClass)">
+                        <MudText Typo="Typo.caption">Solicitações pendentes</MudText>
+                        <MudText Typo="Typo.h5" Color="@GetOwnerActionColor(dashboard.Actions.PendingAppointmentRequestCount, Color.Warning)">@dashboard.Actions.PendingAppointmentRequestCount</MudText>
+                    </MudPaper>
+                </a>
+                <a class="dashboard-owner-action-link" href="/orcamentos?status=Sent" aria-label="Ver orçamentos aguardando resposta">
+                    <MudPaper Outlined="true" Class="pa-3 dashboard-owner-action-card">
+                        <MudText Typo="Typo.caption">Orçamentos aguardando resposta</MudText>
+                        <MudText Typo="Typo.h5">@dashboard.Actions.QuotesAwaitingResponseCount</MudText>
+                    </MudPaper>
+                </a>
+                <a class="dashboard-owner-action-link" href="/ordens-servico?status=Open" aria-label="Ver ordens de serviço abertas">
+                    <MudPaper Outlined="true" Class="pa-3 dashboard-owner-action-card">
+                        <MudText Typo="Typo.caption">Ordens de serviço abertas</MudText>
+                        <MudText Typo="Typo.h5">@dashboard.Actions.OpenWorkOrderCount</MudText>
+                    </MudPaper>
+                </a>
+            </div>
+        </section>
 
+        <section class="dashboard-value-funnel" aria-labelledby="value-funnel-title">
+            <MudText Typo="Typo.h6" id="value-funnel-title">Resultados das manutenções neste mês</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Acompanhe as oportunidades de retorno identificadas e convertidas no mês atual.</MudText>
+            <div class="dashboard-value-funnel-grid">
+                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Oportunidades identificadas</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.IdentifiedOpportunityCount</MudText></MudPaper>
+                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Clientes contatados distintos</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.ContactedCustomerCount</MudText></MudPaper>
+                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Solicitações originadas de manutenção</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.MaintenanceRequestCount</MudText></MudPaper>
+                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Agendamentos recuperados</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.RecoveredBookingCount</MudText></MudPaper>
+                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Serviços concluídos</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.CompletedServiceCount</MudText></MudPaper>
+                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Receita recuperada</MudText><MudText Typo="Typo.h6">@DisplayFormatter.FormatCurrency(dashboard.ValueFunnel.RecoveredRevenue)</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">Valor das OS concluídas originadas de manutenção; não representa pagamento.</MudText></MudPaper>
+                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Oportunidades em aberto</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.OpenOpportunityCount</MudText></MudPaper>
+                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Potencial estimado em aberto</MudText><MudText Typo="Typo.h6">@DisplayFormatter.FormatCurrency(dashboard.ValueFunnel.EstimatedPotentialRevenue)</MudText></MudPaper>
+            </div>
+        </section>
+    }
+}
 <MudPaper Outlined="true" Class="dashboard-agenda mt-4">
     <div class="dashboard-agenda-toolbar">
         <div>
@@ -124,9 +170,11 @@
     </a>
 }
 
-<AppointmentDetailsDialog AppointmentId="@selectedAppointmentId" @bind-Visible="isAppointmentDetailsDialogOpen" />
+<AppointmentDetailsDialog AppointmentId="@selectedAppointmentId" @bind-Visible="isAppointmentDetailsDialogOpen" OnChanged="LoadAsync" />
 
 @code {
+    private const string OwnerActionErrorClass = "dashboard-owner-action-card-error";
+    private const string OwnerActionWarningClass = "dashboard-owner-action-card-warning";
     private IReadOnlyList<AppointmentDto> appointments = [];
     private WorkOrderAccessScope? accessScope;
     private DateOnly currentDate;
@@ -136,10 +184,8 @@
     private bool isAppointmentDetailsDialogOpen;
     private bool isOwner;
     private int pendingBlockRequests;
-    private int pendingExternalAppointmentRequests;
-    private int openWorkOrders;
     private Guid? selectedAppointmentId;
-    private MaintenanceOpportunitySummary maintenanceSummary = new(0, 0, 0, 0);
+    private OwnerDashboardDto? ownerDashboard;
     private string? loadError;
 
     protected override async Task OnInitializedAsync()
@@ -194,6 +240,8 @@
 
         isLoading = true;
         loadError = null;
+        ownerDashboard = null;
+        pendingBlockRequests = 0;
         try
         {
             visibleStartDate = isOwner
@@ -206,18 +254,18 @@
 
             if (isOwner)
             {
-                pendingExternalAppointmentRequests = (await OperationExecutor.ExecuteAsync(
-                    (GetAppointmentRequestsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken)))
-                    .Count(request => request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending);
+                var dashboardResult = await OperationExecutor.ExecuteAsync(
+                    (GetOwnerDashboardUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
+                if (!dashboardResult.IsSuccess || dashboardResult.Value is null)
+                {
+                    loadError = "Não foi possível atualizar os dados do painel. Tente novamente.";
+                    return;
+                }
+
+                ownerDashboard = dashboardResult.Value;
                 pendingBlockRequests = (await OperationExecutor.ExecuteAsync(
                     (GetScheduleBlockRequestsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(currentAccessScope, cancellationToken)))
                     .Count(request => request.Status is VoltaMarcada.Domain.Enums.ScheduleBlockRequestStatus.Pending or VoltaMarcada.Domain.Enums.ScheduleBlockRequestStatus.RequiresAppointmentResolution);
-                openWorkOrders = (await OperationExecutor.ExecuteAsync(
-                    (GetWorkOrdersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new GetWorkOrdersQuery(null, null), cancellationToken)))
-                    .Count(workOrder => workOrder.Status is VoltaMarcada.Domain.Enums.WorkOrderStatus.Pending or VoltaMarcada.Domain.Enums.WorkOrderStatus.InProgress);
-                var summaryResult = await OperationExecutor.ExecuteAsync(
-                    (GetMaintenanceOpportunitySummaryUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
-                if (summaryResult.IsSuccess) maintenanceSummary = summaryResult.Value!;
             }
         }
         catch (Exception exception)
@@ -230,6 +278,12 @@
             isLoading = false;
         }
     }
+
+    private static string GetOwnerActionCardClass(int count, string attentionClass) =>
+        count == 0 ? "pa-3 dashboard-owner-action-card" : $"pa-3 dashboard-owner-action-card {attentionClass}";
+
+    private static Color GetOwnerActionColor(int count, Color attentionColor) =>
+        count == 0 ? Color.Default : attentionColor;
 
     private IReadOnlyList<DateOnly> GetVisibleDays() => Enumerable.Range(0, 7).Select(offset => visibleStartDate.AddDays(offset)).ToArray();
 

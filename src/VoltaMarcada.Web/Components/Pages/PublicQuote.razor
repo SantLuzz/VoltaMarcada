@@ -2,6 +2,8 @@
 @layout PublicLayout
 @using VoltaMarcada.Application.Quotes
 @using VoltaMarcada.Web.Configuration
+@using VoltaMarcada.Web.Formatting
+@inject IBrazilianDisplayFormatter DisplayFormatter
 @inject IComponentOperationExecutor OperationExecutor
 @inject PublicQuoteActionLimiter PublicQuoteActionLimiter
 
@@ -28,12 +30,12 @@ else
         @foreach (var item in quote.Items)
         {
             <MudStack Row="true" Justify="Justify.SpaceBetween" Class="py-2">
-                <MudText>@item.Description (@item.Quantity)</MudText><MudText>@item.TotalAmount.ToString("C")</MudText>
+                <MudText>@item.Description (@item.Quantity)</MudText><MudText>@DisplayFormatter.FormatCurrency(item.TotalAmount)</MudText>
             </MudStack>
         }
-        @if (quote.DiscountAmount > 0) { <MudText>Desconto: -@quote.DiscountAmount.ToString("C")</MudText> }
+        @if (quote.DiscountAmount > 0) { <MudText>Desconto: -@DisplayFormatter.FormatCurrency(quote.DiscountAmount)</MudText> }
         <MudDivider Class="my-3" />
-        <MudText Typo="Typo.h6">Total: @quote.TotalAmount.ToString("C")</MudText>
+        <MudText Typo="Typo.h6">Total: @DisplayFormatter.FormatCurrency(quote.TotalAmount)</MudText>
         @if (quote.Status == VoltaMarcada.Domain.Enums.QuoteStatus.Approved)
         {
             <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mt-4">Orçamento aprovado. A empresa dará continuidade ao atendimento.</MudAlert>

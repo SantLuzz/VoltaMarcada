@@ -74,7 +74,12 @@
         }
     }
 
-    <MudText Typo="Typo.subtitle1">Total da OS: @DisplayFormatter.FormatCurrency(ServiceSubtotal + Items.Sum(item => item.Quantity * item.UnitPrice))</MudText>
+    @if (!ReadOnly)
+    {
+        <BrazilianCurrencyInput Id="work-order-discount" Name="work-order-discount" Label="Desconto" Value="@DiscountAmount" ValueChanged="OnDiscountAmountChanged" Variant="Variant.Text" />
+    }
+    <MudText Typo="Typo.body2">Desconto: -@DisplayFormatter.FormatCurrency(DiscountAmount)</MudText>
+    <MudText Typo="Typo.subtitle1">Total da OS: @DisplayFormatter.FormatCurrency(ServiceSubtotal + Items.Sum(item => item.Quantity * item.UnitPrice) - DiscountAmount)</MudText>
 </MudStack>
 
 @code {
@@ -101,6 +106,12 @@
 
     [Parameter]
     public bool IsServicePriceReadOnly { get; set; }
+    [Parameter]
+    public decimal DiscountAmount { get; set; }
+
+    [Parameter]
+    public EventCallback<decimal> DiscountAmountChanged { get; set; }
+
 
     private decimal ServiceSubtotal => ServiceUnitPrice ?? 0m;
 
@@ -121,4 +132,6 @@
         var updated = Items.Select((item, currentIndex) => currentIndex == index ? updatedItem : item).ToList();
         await ItemsChanged.InvokeAsync(updated);
     }
+
+    private Task OnDiscountAmountChanged(decimal? value) => DiscountAmountChanged.InvokeAsync(value ?? 0m);
 }

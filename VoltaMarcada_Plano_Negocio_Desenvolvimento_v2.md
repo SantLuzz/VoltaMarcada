@@ -1237,6 +1237,8 @@ aprovação e criação da OS.
 
 # Fase 10 --- Histórico, dashboards e refinamento operacional
 
+
+**Status: Conclu&#xED;da.**
 ## Histórico do equipamento
 
 O equipamento deve funcionar como um histórico técnico.

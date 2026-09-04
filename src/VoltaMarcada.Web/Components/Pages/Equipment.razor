@@ -60,7 +60,14 @@
                 <MudTh aria-label="Ações"></MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd DataLabel="Equipamento"><GridTextCell Value="@GetEquipmentDescription(context)" /></MudTd>
+                <MudTd DataLabel="Equipamento">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <GridTextCell Value="@GetEquipmentDescription(context)" />
+                        <MudTooltip Text="@HistoryTooltipText">
+                            <MudIconButton Icon="@Icons.Material.Filled.History" Color="Color.Primary" aria-label="@HistoryTooltipText" OnClick="@(() => OpenHistory(context.Id))" />
+                        </MudTooltip>
+                    </MudStack>
+                </MudTd>
                 <MudTd DataLabel="Cliente"><GridTextCell Value="@context.CustomerName" /></MudTd>
                 <MudTd DataLabel="Número de série"><GridTextCell Value="@(context.SerialNumber ?? string.Empty)" /></MudTd>
                 <MudTd DataLabel="Local de instalação"><GridTextCell Value="@(context.LocationDescription ?? string.Empty)" /></MudTd>
@@ -103,6 +110,8 @@
     </DialogActions>
 </MudDialog>
 
+<EquipmentHistoryDrawer EquipmentId="@selectedEquipmentId" @bind-Open="isHistoryDrawerOpen" />
+
 @code {
     private readonly DialogOptions deleteDialogOptions = new()
     {
@@ -111,8 +120,11 @@
         FullWidth = true
     };
 
+    private const string HistoryTooltipText = "Ver hist\u00F3rico t\u00E9cnico";
     private IReadOnlyList<EquipmentDto> equipment = [];
     private EquipmentDto? equipmentPendingDeletion;
+    private Guid? selectedEquipmentId;
+    private bool isHistoryDrawerOpen;
     private string? searchFilter;
     private string? loadError;
     private bool isLoading = true;
@@ -154,6 +166,12 @@
                 isLoading = false;
             }
         }
+    }
+
+    private void OpenHistory(Guid equipmentId)
+    {
+        selectedEquipmentId = equipmentId;
+        isHistoryDrawerOpen = true;
     }
 
     private void OpenDeleteDialog(EquipmentDto equipmentToDelete)

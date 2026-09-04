@@ -7,6 +7,8 @@
 @using VoltaMarcada.Application.Services
 @using VoltaMarcada.Application.Scheduling
 @using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Web.Formatting
+@inject IBrazilianDisplayFormatter DisplayFormatter
 @inject IComponentOperationExecutor OperationExecutor
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -33,7 +35,7 @@ else
         <BrazilianCurrencyInput Id="quote-discount" Name="quote-discount" Label="Desconto" Value="@discountAmount" ValueChanged="@(value => discountAmount = value ?? 0m)" Disabled="@IsReadOnly" />
         @foreach (var item in items) { <MudPaper Outlined="true" Class="pa-3"><MudGrid><MudItem xs="12" md="5"><MudTextField @bind-Value="item.Description" Label="Descrição" Disabled="@IsReadOnly" /></MudItem><MudItem xs="12" md="2"><MudNumericField T="decimal" @bind-Value="item.Quantity" Label="Quantidade" Disabled="@IsReadOnly" /></MudItem><MudItem xs="12" md="3"><BrazilianCurrencyInput Id="@($"quote-item-{items.IndexOf(item)}-unit-price")" Name="@($"quote-item-{items.IndexOf(item)}-unit-price")" Label="Valor unitário" Value="@item.UnitPrice" ValueChanged="@(value => item.UnitPrice = value ?? 0m)" Disabled="@IsReadOnly" /></MudItem><MudItem xs="12" md="2"><MudSelect T="QuoteItemType" @bind-Value="item.Type" Label="Tipo" Disabled="@(IsReadOnly || item.Type == QuoteItemType.Service)">@foreach (var type in Enum.GetValues<QuoteItemType>()) { <MudSelectItem Value="@type">@GetQuoteItemTypeName(type)</MudSelectItem> }</MudSelect></MudItem></MudGrid>@if (!IsReadOnly && item.Type != QuoteItemType.Service) { <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@(() => RemoveItem(item))">Remover item</MudButton> }</MudPaper> }
         @if (!IsReadOnly) { <MudButton Variant="Variant.Outlined" OnClick="AddItem">Adicionar item</MudButton> }
-        <MudText Typo="Typo.h6">Total: @GetTotal().ToString("C")</MudText>
+        <MudText Typo="Typo.h6">Total: @DisplayFormatter.FormatCurrency(GetTotal())</MudText>
         <MudStack Row="true"><MudButton Variant="Variant.Outlined" OnClick="@(() => NavigationManager.NavigateTo("/orcamentos"))">Voltar</MudButton>@if (quote is not null) { <MudButton Variant="Variant.Outlined" Href="@($"/quotes/{quote.Id}/pdf")" Target="_blank">Baixar PDF</MudButton> }@if (!IsReadOnly) { <MudButton Color="Color.Primary" OnClick="SaveAsync">@(quote is null ? "Criar orçamento" : "Salvar alterações")</MudButton> }</MudStack>
     </MudStack></MudPaper>
 }

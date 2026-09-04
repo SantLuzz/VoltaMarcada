@@ -158,6 +158,9 @@ else
 </MudDialog>
 
 @code {
+    [SupplyParameterFromQuery(Name = "urgency")]
+    public string? UrgencyQuery { get; set; }
+
     private readonly DialogOptions dialogOptions = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
     private MaintenanceOpportunitySummary summary = new(0, 0, 0, 0);
     private IReadOnlyList<MaintenanceOpportunityListItem> items = [];
@@ -175,6 +178,11 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (Enum.TryParse<MaintenanceOpportunityUrgency>(UrgencyQuery, true, out var queryUrgency))
+        {
+            urgency = queryUrgency;
+        }
+
         displayTimeZone = await CurrentDisplayTimeZone.GetTimeZoneAsync();
         await LoadAsync();
     }

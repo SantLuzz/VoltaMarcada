@@ -2,8 +2,11 @@
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
 @using VoltaMarcada.Application.WorkOrders
 @using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Web.Formatting
 @inject IComponentOperationExecutor OperationExecutor
 
+@inject ICurrentDisplayTimeZone CurrentDisplayTimeZone
+@inject IBrazilianDisplayFormatter DisplayFormatter
 <PageTitle>Ordens de serviço | VoltaMarcada</PageTitle>
 <PageHeader Title="Ordens de serviço" Description="Acompanhe os atendimentos e a execução dos serviços.">
     <Actions><MudButton Href="/ordens-servico/registro" Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add">Nova OS</MudButton></Actions>
@@ -37,6 +40,8 @@
             <HeaderContent>
                 <MudTh>Cliente</MudTh>
                 <MudTh>Equipamento</MudTh>
+                <MudTh>C&#243;digo da OS</MudTh>
+                <MudTh>Abertura</MudTh>
                 <MudTh>Serviço</MudTh>
                 <MudTh>Status</MudTh>
                 <MudTh>Prioridade</MudTh>
@@ -44,6 +49,8 @@
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Cliente"><GridTextCell Value="@context.CustomerName" /></MudTd>
+                <MudTd DataLabel="C&#243;digo da OS">@GetDisplayCode(context.Id)</MudTd>
+                <MudTd DataLabel="Abertura">@DisplayFormatter.FormatDateTime(context.CreatedAtUtc, displayTimeZone)</MudTd>
                 <MudTd DataLabel="Equipamento"><GridTextCell Value="@context.EquipmentDescription" /></MudTd>
                 <MudTd DataLabel="Serviço"><GridTextCell Value="@context.ServiceName" /></MudTd>
                 <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@GetStatusName(context.Status)</MudChip></MudTd>
@@ -55,18 +62,37 @@
 </MudPaper>
 
 @code {
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? StatusQuery { get; set; }
+
     private IReadOnlyList<WorkOrderListItem> orders = [];
     private string? searchFilter;
     private WorkOrderStatus? statusFilter;
     private bool isLoading = true;
+    private bool showOnlyOpenStatuses;
+    private TimeZoneInfo displayTimeZone = TimeZoneInfo.Utc;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        showOnlyOpenStatuses = string.Equals(StatusQuery, "Open", StringComparison.OrdinalIgnoreCase);
+        if (!showOnlyOpenStatuses && Enum.TryParse<WorkOrderStatus>(StatusQuery, true, out var queryStatus))
+        {
+            statusFilter = queryStatus;
+        }
+
+        displayTimeZone = await CurrentDisplayTimeZone.GetTimeZoneAsync();
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
         isLoading = true;
         orders = await OperationExecutor.ExecuteAsync(
-            (GetWorkOrdersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new GetWorkOrdersQuery(searchFilter, statusFilter), cancellationToken));
+            (GetWorkOrdersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new GetWorkOrdersQuery(searchFilter, showOnlyOpenStatuses ? null : statusFilter), cancellationToken));
+        if (showOnlyOpenStatuses)
+        {
+            orders = orders.Where(order => order.Status is WorkOrderStatus.Pending or WorkOrderStatus.InProgress).ToArray();
+        }
         isLoading = false;
     }
 
@@ -101,4 +127,6 @@
         WorkOrderStatus.Cancelled => Color.Default,
         _ => Color.Warning
     };
+    private static string GetDisplayCode(Guid id) => id.ToString("N")[..8].ToUpperInvariant();
+
 }

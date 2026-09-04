@@ -95,7 +95,8 @@ export async function restoreAndUploadStagedPhoto(workOrderId, photoType, status
     const response = await fetch(`/work-orders/${workOrderId}/photos?type=${encodeURIComponent(photoType)}`, { method: "POST", body: data, credentials: "same-origin" });
     if (!response.ok) { setStatus(statusId, "Não foi possível salvar a foto. Tente novamente."); return; }
     await clearStagedPhoto(workOrderId, photoType);
-    window.location.assign(window.location.href);
+    setStatus(statusId, "Foto enviada com sucesso.");
+    window.dispatchEvent(new CustomEvent("volta-marcada:work-order-photo-uploaded", { detail: { workOrderId, photoType } }));
 }
 
 async function stageBrowserFile(workOrderId, photoType, file) {

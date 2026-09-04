@@ -3,6 +3,8 @@
 @using Microsoft.JSInterop
 @using VoltaMarcada.Application.Quotes
 @using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Web.Formatting
+@inject IBrazilianDisplayFormatter DisplayFormatter
 @inject IComponentOperationExecutor OperationExecutor
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
@@ -22,7 +24,7 @@ else
             <MudTd DataLabel="Equipamento">@context.EquipmentDescription</MudTd>
             <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@GetStatusName(context.Status)</MudChip></MudTd>
             <MudTd DataLabel="Validade">@context.ValidUntil.ToString("dd/MM/yyyy")</MudTd>
-            <MudTd DataLabel="Total">@context.TotalAmount.ToString("C")</MudTd>
+            <MudTd DataLabel="Total">@DisplayFormatter.FormatCurrency(context.TotalAmount)</MudTd>
             <MudTd DataLabel="Ações">
                 <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => NavigationManager.NavigateTo($"/orcamentos/registro?id={context.Id}"))">Abrir</MudButton>
                 @if (context.Status == QuoteStatus.Draft) { <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => SendAsync(context.Id))">Enviar</MudButton> }
@@ -34,10 +36,13 @@ else
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? StatusQuery { get; set; }
+
     private IReadOnlyList<QuoteDto> quotes = [];
     private bool isLoading = true;
     protected override async Task OnInitializedAsync() => await LoadAsync();
-    private async Task LoadAsync() { isLoading = true; quotes = await OperationExecutor.ExecuteAsync((GetQuotesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken)); isLoading = false; }
+    private async Task LoadAsync() { isLoading = true; quotes = await OperationExecutor.ExecuteAsync((GetQuotesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken)); if (Enum.TryParse<QuoteStatus>(StatusQuery, true, out var queryStatus)) { quotes = quotes.Where(quote => quote.Status == queryStatus).ToArray(); } isLoading = false; }
     private async Task SendAsync(Guid quoteId) { var result = await OperationExecutor.ExecuteAsync((SendQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quoteId, cancellationToken)); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } if (!string.IsNullOrWhiteSpace(result.Value?.WhatsAppUrl)) { await JsRuntime.InvokeVoidAsync("open", result.Value.WhatsAppUrl, "_blank"); } else { Snackbar.Add("Link do orçamento preparado.", Severity.Success); } await LoadAsync(); }
     private async Task ApproveAsync(Guid quoteId) { var result = await OperationExecutor.ExecuteAsync((ApproveQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quoteId, cancellationToken)); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } Snackbar.Add("Orçamento aprovado e OS criada.", Severity.Success); await LoadAsync(); }
     private async Task RejectAsync(Guid quoteId) { var result = await OperationExecutor.ExecuteAsync((RejectQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quoteId, cancellationToken)); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } Snackbar.Add("Orçamento recusado.", Severity.Success); await LoadAsync(); }

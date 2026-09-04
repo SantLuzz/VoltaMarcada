@@ -108,6 +108,7 @@ public sealed class UpdateWorkOrderUseCase(
             command.ReportedProblem,
             items,
             checklistItems,
+            command.DiscountAmount,
             now);
 
         var actorUserId = currentUser.UserId == Guid.Empty ? (Guid?)null : currentUser.UserId;

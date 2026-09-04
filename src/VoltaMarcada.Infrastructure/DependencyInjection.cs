@@ -17,6 +17,7 @@ using VoltaMarcada.Application.Abstractions.Communication;
 using VoltaMarcada.Infrastructure.Communication;
 using VoltaMarcada.Application.Abstractions.Documents;
 using VoltaMarcada.Infrastructure.Documents;
+using VoltaMarcada.Application.Dashboard;
 using QuestPDF.Infrastructure;
 
 namespace VoltaMarcada.Infrastructure;
@@ -57,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<IAppointmentRepository, AppointmentRepository>();
         services.AddScoped<IAppointmentRequestRepository, AppointmentRequestRepository>();
         services.AddScoped<IMaintenanceOpportunityRepository, MaintenanceOpportunityRepository>();
+        services.AddScoped<IOwnerDashboardRepository, OwnerDashboardRepository>();
         services.AddScoped<ICustomerContactRepository, CustomerContactRepository>();
         services.AddScoped<IServiceRequestRepository, ServiceRequestRepository>();
         services.AddScoped<IQuoteRepository, QuoteRepository>();
