@@ -1,6 +1,7 @@
 using MudBlazor.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
+using VoltaMarcada.Application.CompanyOnboarding;
 using VoltaMarcada.Application;
 using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Application.Abstractions.Routing;
@@ -49,6 +50,11 @@ builder.Services.AddOptions<PublicBookingOptions>()
     .Validate(options => options.MaintenanceLinkLifetimeDays is > 0 and <= 365, "Maintenance link lifetime must be between 1 and 365 days.")
     .ValidateOnStart();
 builder.Services.AddSingleton<IPublicBookingConfiguration, PublicBookingConfiguration>();
+builder.Services.AddOptions<CompanyLicenseTrialOptions>()
+    .Bind(builder.Configuration.GetSection(CompanyLicenseTrialOptions.SectionName))
+    .Validate(options => options.FreeTrialDays > 0, "Free trial days must be positive.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<ICompanyLicenseTrialConfiguration, CompanyLicenseTrialConfiguration>();
 builder.Services.AddOptions<LoginRateLimitOptions>()
     .Bind(builder.Configuration.GetSection(LoginRateLimitOptions.SectionName))
     .Validate(options => options.PermitLimit > 0 && options.WindowSeconds > 0 && options.QueueLimit >= 0 && options.LockoutMinutes > 0 && options.MaxFailedAccessAttempts > 0, "Login rate limit settings must be positive.")

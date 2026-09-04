@@ -14,6 +14,7 @@ public sealed class CompleteCompanyOnboardingUseCase(
     ICompanyOnboardingRepository repository,
     IFileStorage fileStorage,
     IValidator<CompleteCompanyOnboardingCommand> validator,
+    ICompanyLicenseTrialConfiguration licenseTrialConfiguration,
     TimeProvider timeProvider)
 {
     public async Task<OperationResult<Guid>> ExecuteAsync(
@@ -85,7 +86,8 @@ public sealed class CompleteCompanyOnboardingUseCase(
             now);
         var ownerMembership = CompanyUser.Create(currentUser.UserId, company.Id, CompanyUserRole.Owner, now);
 
-        var outcome = await repository.CreateCompanyAndOwnerAsync(company, ownerMembership, cancellationToken);
+        var license = CompanyLicense.Create(company.Id, now, licenseTrialConfiguration.TrialDays);
+        var outcome = await repository.CreateCompanyAndOwnerAsync(company, ownerMembership, license, cancellationToken);
         if (outcome != CompanyOnboardingPersistenceOutcome.Success && logoKey is not null)
         {
             await fileStorage.DeleteAsync(logoKey, cancellationToken);

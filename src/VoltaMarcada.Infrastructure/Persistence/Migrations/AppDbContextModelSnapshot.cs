@@ -563,6 +563,41 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.ToTable("CompanyBusinessHours", (string)null);
                 });
 
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.CompanyLicense", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("PaidUntilUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("TrialEndsAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("TrialStartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_CompanyLicenses_CompanyId");
+
+                    b.ToTable("CompanyLicenses", (string)null);
+                });
+
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.CompanyUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2044,6 +2079,15 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .WithMany("BusinessHours")
                         .HasForeignKey("CompanyId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.CompanyLicense", b =>
+                {
+                    b.HasOne("VoltaMarcada.Domain.Entities.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

@@ -15,6 +15,7 @@ public interface ICompanyOnboardingRepository
     Task<CompanyOnboardingPersistenceOutcome> CreateCompanyAndOwnerAsync(
         Company company,
         CompanyUser ownerMembership,
+        CompanyLicense license,
         CancellationToken cancellationToken = default);
 }
 
