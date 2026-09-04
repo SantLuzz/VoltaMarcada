@@ -16,7 +16,7 @@ public sealed class GetWorkOrderDetailsUseCase(IWorkOrderRepository repository, 
         var canExecute = workOrder.Status == WorkOrderStatus.InProgress;
         var canManageAdditionalItems = workOrder.Status is not (WorkOrderStatus.Completed or WorkOrderStatus.Cancelled);
         var actorNames = await repository.GetHistoryActorNamesAsync(scope.CompanyId, workOrder.HistoryEntries.Where(entry => entry.ActorUserId is not null).Select(entry => entry.ActorUserId!.Value).Distinct().ToArray(), cancellationToken);
-        return new WorkOrderDetailDto(workOrder.Id, workOrder.CustomerId, workOrder.EquipmentId, workOrder.ServiceId, workOrder.ProfessionalId, workOrder.Status, workOrder.Priority, workOrder.ReportedProblem, workOrder.ExecutionNotes, service.RequireBeforePhotos, service.RequireAfterPhotos, workOrder.TotalAmount,
+        return new WorkOrderDetailDto(workOrder.Id, workOrder.CustomerId, workOrder.EquipmentId, workOrder.ServiceId, workOrder.ProfessionalId, workOrder.Status, workOrder.Priority, workOrder.ReportedProblem, workOrder.ExecutionNotes, service.RequireBeforePhotos, service.RequireAfterPhotos, workOrder.DiscountAmount, workOrder.TotalAmount,
             workOrder.Items.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderItemDto(x.Id, x.Description, x.Quantity, x.UnitPrice, x.Type, x.TotalAmount, x.DisplayOrder)).ToArray(),
             workOrder.ChecklistItems.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderChecklistItemDto(x.Id, x.Description, x.IsRequired, x.IsCompleted, x.CompletedAtUtc, x.DisplayOrder)).ToArray(),
             workOrder.Photos.OrderBy(x => x.CreatedAtUtc).Select(x => new WorkOrderPhotoDto(x.Id, x.Type, x.Description, x.CreatedAtUtc)).ToArray(),

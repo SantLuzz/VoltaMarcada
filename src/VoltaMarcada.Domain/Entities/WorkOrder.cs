@@ -52,7 +52,7 @@ public sealed class WorkOrder : ICompanyScopedEntity
         return workOrder;
     }
 
-    public void UpdatePendingDetails(Guid customerId, Guid equipmentId, Guid serviceId, Guid? professionalId, WorkOrderPriority priority, string? reportedProblem, IReadOnlyCollection<WorkOrderItemDefinition> items, IReadOnlyCollection<WorkOrderChecklistItemDefinition> checklistItems, DateTimeOffset now)
+    public void UpdatePendingDetails(Guid customerId, Guid equipmentId, Guid serviceId, Guid? professionalId, WorkOrderPriority priority, string? reportedProblem, IReadOnlyCollection<WorkOrderItemDefinition> items, IReadOnlyCollection<WorkOrderChecklistItemDefinition> checklistItems, decimal discountAmount, DateTimeOffset now)
     {
         EnsurePending(); RequireId(customerId, "Customer"); RequireId(equipmentId, "Equipment"); RequireId(serviceId, "Service");
         if (serviceId != ServiceId) throw new DomainException("Work order service cannot be changed.");
@@ -66,8 +66,8 @@ public sealed class WorkOrder : ICompanyScopedEntity
         {
             throw new DomainException("Work order service item cannot be changed.");
         }
-        if (!Enum.IsDefined(priority)) throw new DomainException("Work order priority is invalid.");
-        CustomerId = customerId; EquipmentId = equipmentId; ServiceId = serviceId; ProfessionalId = professionalId; Priority = priority; ReportedProblem = NormalizeOptionalText(reportedProblem);
+        if (!Enum.IsDefined(priority)) throw new DomainException("Work order priority is invalid."); if (discountAmount < 0) throw new DomainException("Work order discount cannot be negative.");
+        CustomerId = customerId; EquipmentId = equipmentId; ServiceId = serviceId; ProfessionalId = professionalId; Priority = priority; ReportedProblem = NormalizeOptionalText(reportedProblem); DiscountAmount = discountAmount;
         ReplaceItems(items, now); ReplaceChecklistItems(checklistItems); UpdatedAtUtc = now.ToUniversalTime();
     }
 

@@ -246,6 +246,7 @@ else
     private Guid? professionalId;
     private Guid? currentProfessionalId;
     private decimal? serviceUnitPrice;
+    private decimal discountAmount;
     private WorkOrderPriority priority = WorkOrderPriority.Normal;
     private string reportedProblem = string.Empty;
     private bool createAppointment;
@@ -345,6 +346,7 @@ else
         serviceUnitPrice = detail.Items.SingleOrDefault(item => item.Type == WorkOrderItemType.Service)?.UnitPrice
             ?? (GetSelectedService()?.PriceType == ServicePriceType.Fixed ? GetSelectedService()?.BasePrice : null);
         items = detail.Items.Where(item => item.Type == WorkOrderItemType.Additional).Select(item => new WorkOrderItemInput(item.Description, item.Quantity, item.UnitPrice)).ToList();
+        discountAmount = detail.DiscountAmount;
         await LoadEquipmentAsync(false);
         await LoadProfessionalOptions();
         await LoadNewWorkOrderAppointmentSlotsAsync();
@@ -569,7 +571,7 @@ else
                 ? new WorkOrderAppointmentInput(DateOnly.FromDateTime(newAppointmentDate!.Value), newAppointmentStartTime!.Value)
                 : null;
             var result = await OperationExecutor.ExecuteAsync(
-                (CreateWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items, appointment, SourceAppointmentId), cancellationToken));
+                (CreateWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, discountAmount, items, appointment, SourceAppointmentId), cancellationToken));
             if (result.IsSuccess && result.Value?.WorkOrderId is { } createdId)
             {
                 NavigationManager.NavigateTo($"/ordens-servico/registro?id={createdId}");
@@ -581,7 +583,7 @@ else
         }
 
         var updateResult = await OperationExecutor.ExecuteAsync(
-            (UpdateWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrderId.Value, new UpdateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, items), cancellationToken));
+            (UpdateWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrderId.Value, new UpdateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, discountAmount, items), cancellationToken));
         if (updateResult.IsSuccess)
         {
             Snackbar.Add("OS atualizada.", Severity.Success);
