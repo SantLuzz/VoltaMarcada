@@ -1,5 +1,6 @@
 @using VoltaMarcada.Application.Scheduling
 @inject IComponentOperationExecutor OperationExecutor
+@inject ISnackbar Snackbar
 
 <MudDialog Visible="Visible" VisibleChanged="SetVisibleAsync">
     <TitleContent><MudText Typo="Typo.h6">Detalhes do atendimento</MudText></TitleContent>
@@ -60,6 +61,17 @@
         }
     </DialogContent>
     <DialogActions>
+        @if (appointmentDetails?.Status == VoltaMarcada.Domain.Enums.AppointmentStatus.Scheduled)
+        {
+            <MudButton Href="@($"/agenda?appointmentId={appointmentDetails.Id}")" Variant="Variant.Outlined">Ver na agenda</MudButton>
+            <MudButton OnClick="StartAsync" Color="Color.Primary" Variant="Variant.Filled">Iniciar atendimento</MudButton>
+            <MudButton OnClick="CancelAsync" Color="Color.Error" Variant="Variant.Outlined">Cancelar agendamento</MudButton>
+        }
+        @if (appointmentDetails?.Status == VoltaMarcada.Domain.Enums.AppointmentStatus.InProgress)
+        {
+            <MudButton OnClick="CompleteAsync" Color="Color.Primary" Variant="Variant.Filled">Concluir atendimento</MudButton>
+            <MudButton Href="@($"/agenda?appointmentId={appointmentDetails.Id}")" Variant="Variant.Outlined">Ver na agenda</MudButton>
+        }
         @if (appointmentDetails is not null &&
              appointmentDetails.Status == VoltaMarcada.Domain.Enums.AppointmentStatus.Completed &&
              (appointmentDetails.Type == VoltaMarcada.Domain.Enums.AppointmentType.Visit || appointmentDetails.Type == VoltaMarcada.Domain.Enums.AppointmentType.Other))
@@ -84,6 +96,9 @@
 
     [Parameter]
     public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
 
     private Guid? loadedAppointmentId;
     private bool isLoading;
@@ -121,6 +136,40 @@
         }
 
         await VisibleChanged.InvokeAsync(visible);
+    }
+
+    private async Task StartAsync()
+    {
+        if (appointmentDetails is null) return;
+        var result = await OperationExecutor.ExecuteAsync(
+            (StartAppointmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(appointmentDetails.Id, cancellationToken));
+        if (!result.IsSuccess) { Snackbar.Add("Nao foi possivel iniciar o atendimento.", Severity.Warning); return; }
+        await ReloadAsync();
+    }
+
+    private async Task CompleteAsync()
+    {
+        if (appointmentDetails is null) return;
+        var result = await OperationExecutor.ExecuteAsync(
+            (CompleteAppointmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(appointmentDetails.Id, cancellationToken));
+        if (!result.IsSuccess) { Snackbar.Add("Nao foi possivel concluir o atendimento.", Severity.Warning); return; }
+        await ReloadAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        if (appointmentDetails is null) return;
+        var result = await OperationExecutor.ExecuteAsync(
+            (CancelAppointmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(appointmentDetails.Id, cancellationToken));
+        if (!result.IsSuccess) { Snackbar.Add("Nao foi possivel cancelar o agendamento.", Severity.Warning); return; }
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        loadedAppointmentId = null;
+        await OnParametersSetAsync();
+        await OnChanged.InvokeAsync();
     }
 
     private static Color GetStatusColor(VoltaMarcada.Domain.Enums.AppointmentStatus status) => status switch

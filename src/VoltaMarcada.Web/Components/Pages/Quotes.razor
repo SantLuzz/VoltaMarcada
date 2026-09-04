@@ -3,6 +3,8 @@
 @using Microsoft.JSInterop
 @using VoltaMarcada.Application.Quotes
 @using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Web.Formatting
+@inject IBrazilianDisplayFormatter DisplayFormatter
 @inject IComponentOperationExecutor OperationExecutor
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JsRuntime
@@ -22,7 +24,7 @@ else
             <MudTd DataLabel="Equipamento">@context.EquipmentDescription</MudTd>
             <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@GetStatusName(context.Status)</MudChip></MudTd>
             <MudTd DataLabel="Validade">@context.ValidUntil.ToString("dd/MM/yyyy")</MudTd>
-            <MudTd DataLabel="Total">@context.TotalAmount.ToString("C")</MudTd>
+            <MudTd DataLabel="Total">@DisplayFormatter.FormatCurrency(context.TotalAmount)</MudTd>
             <MudTd DataLabel="Ações">
                 <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => NavigationManager.NavigateTo($"/orcamentos/registro?id={context.Id}"))">Abrir</MudButton>
                 @if (context.Status == QuoteStatus.Draft) { <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => SendAsync(context.Id))">Enviar</MudButton> }

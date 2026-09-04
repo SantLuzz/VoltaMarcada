@@ -52,7 +52,7 @@ else
                             </MudTooltip>
                             @if (CanEdit)
                             {
-                                <MudButton Class="work-order-selection-action" OnClick="@(() => customerDialogOpen = true)">Novo cliente</MudButton>
+                                <MudTooltip Text="Novo cliente"><MudIconButton Class="work-order-selection-action" Icon="@Icons.Material.Filled.Add" AriaLabel="Novo cliente" OnClick="@(() => customerDialogOpen = true)" /></MudTooltip>
                             }
                         </MudStack>
                     </MudItem>
@@ -68,7 +68,7 @@ else
                             </MudTooltip>
                             @if (CanEdit)
                             {
-                                <MudButton Class="work-order-selection-action" Disabled="@(customerId is null)" OnClick="@(() => equipmentDialogOpen = true)">Novo equipamento</MudButton>
+                                <MudTooltip Text="Novo equipamento"><MudIconButton Class="work-order-selection-action" Icon="@Icons.Material.Filled.Add" AriaLabel="Novo equipamento" Disabled="@(customerId is null)" OnClick="@(() => equipmentDialogOpen = true)" /></MudTooltip>
                             }
                         </MudStack>
                     </MudItem>
@@ -126,6 +126,7 @@ else
                         <WorkOrderItemsEditor @bind-Items="items"
                                               ServiceName="@GetSelectedServiceName()"
                                               @bind-ServiceUnitPrice="serviceUnitPrice"
+                                              @bind-DiscountAmount="discountAmount"
                                               IsServicePriceFixed="@IsServicePriceFixed"
                                               IsServicePriceReadOnly="@(WorkOrderId is not null)"
                                               ReadOnly="@(!CanManageAdditionalItems)" />
@@ -294,8 +295,18 @@ else
         currentProfessionalId = scope.ProfessionalId;
         customers = await OperationExecutor.ExecuteAsync(
             (GetCustomersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken));
-        services = (await OperationExecutor.ExecuteAsync(
+        var activeServices = (await OperationExecutor.ExecuteAsync(
             (GetServicesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken))).Where(x => x.IsActive).ToArray();
+        if (isOwner)
+        {
+            services = activeServices;
+        }
+        else
+        {
+            var currentProfessional = await OperationExecutor.ExecuteAsync(
+                (GetCurrentEmployeeProfessionalUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
+            services = currentProfessional is null ? [] : activeServices.Where(service => currentProfessional.ServiceIds.Contains(service.Id)).ToArray();
+        }
         await using (var dbContext = await DbContextFactory.CreateDbContextAsync())
         {
             states = await dbContext.States.AsNoTracking()
@@ -345,7 +356,7 @@ else
         reportedProblem = detail.ReportedProblem ?? string.Empty;
         serviceUnitPrice = detail.Items.SingleOrDefault(item => item.Type == WorkOrderItemType.Service)?.UnitPrice
             ?? (GetSelectedService()?.PriceType == ServicePriceType.Fixed ? GetSelectedService()?.BasePrice : null);
-        items = detail.Items.Where(item => item.Type == WorkOrderItemType.Additional).Select(item => new WorkOrderItemInput(item.Description, item.Quantity, item.UnitPrice)).ToList();
+        items = detail.Items.Where(item => item.Type != WorkOrderItemType.Service).Select(item => new WorkOrderItemInput(item.Description, item.Quantity, item.UnitPrice)).ToList();
         discountAmount = detail.DiscountAmount;
         await LoadEquipmentAsync(false);
         await LoadProfessionalOptions();

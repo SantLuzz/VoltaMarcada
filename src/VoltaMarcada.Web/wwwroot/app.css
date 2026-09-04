@@ -81,6 +81,8 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 .dashboard-calendar-empty { display: block; padding-top: 8px; }
 .dashboard-day-calendar { margin: 0 auto; max-width: 760px; }
 .dashboard-appointment-card { align-items: flex-start; border-color: var(--servicesync-border); border-left: 3px solid var(--servicesync-primary); border-radius: 6px; box-sizing: border-box; color: var(--servicesync-text); display: flex; flex-direction: column; gap: 2px; justify-content: flex-start; min-height: 64px; padding: 10px; text-align: left; text-transform: none; width: 100%; }
+.dashboard-appointment-card-cancelled { border-left-color: var(--mud-palette-error); }
+.dashboard-appointment-card-completed { border-left-color: var(--mud-palette-success); }
 .dashboard-appointment-card:hover { background: color-mix(in srgb, var(--servicesync-primary) 6%, white); }
 .dashboard-appointment-time { color: var(--servicesync-primary); font-size: .75rem; font-weight: 700; }
 .dashboard-appointment-label { font-size: .8125rem; line-height: 1.25; }
@@ -260,6 +262,14 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 
 .equipment-history-drawer {
     max-width: 100vw;
+@media (max-width: 599.95px) {
+    .agenda-request-actions { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .agenda-request-actions .mud-button-root,
+    .agenda-request-actions .mud-select {
+        min-width: 0;
+        width: 100%;
+    }
+}
 }
 
 .equipment-history-loading,

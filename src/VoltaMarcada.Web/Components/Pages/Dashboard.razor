@@ -170,7 +170,7 @@
     </a>
 }
 
-<AppointmentDetailsDialog AppointmentId="@selectedAppointmentId" @bind-Visible="isAppointmentDetailsDialogOpen" />
+<AppointmentDetailsDialog AppointmentId="@selectedAppointmentId" @bind-Visible="isAppointmentDetailsDialogOpen" OnChanged="LoadAsync" />
 
 @code {
     private const string OwnerActionErrorClass = "dashboard-owner-action-card-error";

@@ -17,6 +17,20 @@ public sealed class WorkOrderEnhancementsComponentTests
     }
 
     private static string ReadSource(string relativePath) => File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VoltaMarcada.Web", relativePath));
+    [Fact]
+    public void WorkOrderScreen_ShouldFilterProfessionalServicesAndKeepPhotoUploadInPlace()
+    {
+        var registrationSource = ReadSource("Components/Pages/WorkOrderRegistration.razor");
+        var editorSource = ReadSource("Components/Shared/WorkOrderItemsEditor.razor");
+        var photoModuleSource = ReadSource("wwwroot/js/work-order-photo-staging.js");
+
+        Assert.Contains("GetCurrentEmployeeProfessionalUseCase", registrationSource, StringComparison.Ordinal);
+        Assert.Contains("ServiceIds.Contains(service.Id)", registrationSource, StringComparison.Ordinal);
+        Assert.Contains("DiscountAmount", editorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("window.location.assign", photoModuleSource, StringComparison.Ordinal);
+        Assert.Contains("volta-marcada:work-order-photo-uploaded", photoModuleSource, StringComparison.Ordinal);
+    }
+
 
     private static string FindRepositoryRoot()
     {

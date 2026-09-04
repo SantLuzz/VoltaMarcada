@@ -19,14 +19,16 @@ public sealed class ServiceRequestRepository(AppDbContext dbContext) : IServiceR
             join appointmentRequest in dbContext.AppointmentRequests.AsNoTracking() on serviceRequest.AppointmentRequestId equals appointmentRequest.Id
             join customer in dbContext.Customers.AsNoTracking() on serviceRequest.CustomerId equals customer.Id
             join service in dbContext.Services.AsNoTracking() on appointmentRequest.ServiceId equals service.Id
-            join professional in dbContext.Professionals.AsNoTracking() on appointmentRequest.ProfessionalId equals professional.Id
-            join companyUser in dbContext.CompanyUsers.AsNoTracking() on professional.CompanyUserId equals companyUser.Id
-            join user in dbContext.Users.AsNoTracking() on companyUser.UserId equals user.Id
+            join professional in dbContext.Professionals.AsNoTracking().Where(item => item.CompanyId == companyId) on appointmentRequest.ProfessionalId equals professional.Id into professionals
+            from professional in professionals.DefaultIfEmpty()
+            join companyUser in dbContext.CompanyUsers.AsNoTracking().Where(item => item.CompanyId == companyId) on professional.CompanyUserId equals companyUser.Id into companyUsers
+            from companyUser in companyUsers.DefaultIfEmpty()
+            join user in dbContext.Users.AsNoTracking() on companyUser.UserId equals user.Id into users
+            from user in users.DefaultIfEmpty()
             where serviceRequest.CompanyId == companyId &&
                   appointmentRequest.CompanyId == companyId &&
                   customer.CompanyId == companyId &&
                   service.CompanyId == companyId &&
-                  professional.CompanyId == companyId &&
                   serviceRequest.Status == ServiceRequestStatus.Pending &&
                   appointmentRequest.Status == AppointmentRequestStatus.Pending
             orderby appointmentRequest.RequestedStartAtUtc, serviceRequest.CreatedAtUtc
@@ -36,7 +38,7 @@ public sealed class ServiceRequestRepository(AppDbContext dbContext) : IServiceR
                 customer.Name,
                 customer.WhatsApp,
                 service.Name,
-                user.FullName ?? user.Email ?? "Professional")
+                user == null ? string.Empty : user.FullName ?? user.Email ?? string.Empty)
         ).ToArrayAsync(cancellationToken);
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);
 }

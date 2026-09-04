@@ -1,7 +1,7 @@
 document.addEventListener("submit", event => {
     const form = event.target;
 
-    if (!(form instanceof HTMLFormElement) || !form.checkValidity()) {
+    if (!(form instanceof HTMLFormElement) || form.dataset.submissionLoading !== "true" || !form.checkValidity()) {
         return;
     }
 
