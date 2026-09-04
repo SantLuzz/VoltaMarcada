@@ -8,22 +8,22 @@
 @inject IJSRuntime JsRuntime
 @inject ISnackbar Snackbar
 
-<PageTitle>OrÃ§amentos | VoltaMarcada</PageTitle>
-<PageHeader Title="OrÃ§amentos" Description="Prepare, envie e acompanhe as decisÃµes dos clientes."><Actions><MudButton Color="Color.Primary" OnClick="@(() => NavigationManager.NavigateTo("/orcamentos/registro"))">Novo orÃ§amento</MudButton></Actions></PageHeader>
+<PageTitle>Orçamentos | VoltaMarcada</PageTitle>
+<PageHeader Title="Orçamentos" Description="Prepare, envie e acompanhe as decisões dos clientes."><Actions><MudButton Color="Color.Primary" OnClick="@(() => NavigationManager.NavigateTo("/orcamentos/registro"))">Novo orçamento</MudButton></Actions></PageHeader>
 
 @if (isLoading) { <MudProgressLinear Indeterminate="true" /> }
-else if (quotes.Count == 0) { <EmptyState Title="Nenhum orÃ§amento" Description="Os orÃ§amentos preparados a partir de solicitaÃ§Ãµes aparecerÃ£o aqui." /> }
+else if (quotes.Count == 0) { <EmptyState Title="Nenhum orçamento" Description="Os orçamentos preparados a partir de solicitações aparecerão aqui." /> }
 else
 {
     <MudTable Items="quotes" Hover="true" Class="servicesync-data-grid">
-        <HeaderContent><MudTh>Cliente</MudTh><MudTh>Equipamento</MudTh><MudTh>Status</MudTh><MudTh>Validade</MudTh><MudTh>Total</MudTh><MudTh>AÃ§Ãµes</MudTh></HeaderContent>
+        <HeaderContent><MudTh>Cliente</MudTh><MudTh>Equipamento</MudTh><MudTh>Status</MudTh><MudTh>Validade</MudTh><MudTh>Total</MudTh><MudTh>Ações</MudTh></HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Cliente">@context.CustomerName</MudTd>
             <MudTd DataLabel="Equipamento">@context.EquipmentDescription</MudTd>
             <MudTd DataLabel="Status"><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@GetStatusName(context.Status)</MudChip></MudTd>
             <MudTd DataLabel="Validade">@context.ValidUntil.ToString("dd/MM/yyyy")</MudTd>
             <MudTd DataLabel="Total">@context.TotalAmount.ToString("C")</MudTd>
-            <MudTd DataLabel="AÃ§Ãµes">
+            <MudTd DataLabel="Ações">
                 <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => NavigationManager.NavigateTo($"/orcamentos/registro?id={context.Id}"))">Abrir</MudButton>
                 @if (context.Status == QuoteStatus.Draft) { <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => SendAsync(context.Id))">Enviar</MudButton> }
                 @if (context.Status == QuoteStatus.Sent) { <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Success" OnClick="@(() => ApproveAsync(context.Id))">Aprovar</MudButton><MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => RejectAsync(context.Id))">Recusar</MudButton> }
@@ -41,9 +41,9 @@ else
     private bool isLoading = true;
     protected override async Task OnInitializedAsync() => await LoadAsync();
     private async Task LoadAsync() { isLoading = true; quotes = await OperationExecutor.ExecuteAsync((GetQuotesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken)); if (Enum.TryParse<QuoteStatus>(StatusQuery, true, out var queryStatus)) { quotes = quotes.Where(quote => quote.Status == queryStatus).ToArray(); } isLoading = false; }
-    private async Task SendAsync(Guid quoteId) { var result = await OperationExecutor.ExecuteAsync((SendQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quoteId, cancellationToken)); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } if (!string.IsNullOrWhiteSpace(result.Value?.WhatsAppUrl)) { await JsRuntime.InvokeVoidAsync("open", result.Value.WhatsAppUrl, "_blank"); } else { Snackbar.Add("Link do orÃ§amento preparado.", Severity.Success); } await LoadAsync(); }
-    private async Task ApproveAsync(Guid quoteId) { var result = await OperationExecutor.ExecuteAsync((ApproveQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quoteId, cancellationToken)); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } Snackbar.Add("OrÃ§amento aprovado e OS criada.", Severity.Success); await LoadAsync(); }
-    private async Task RejectAsync(Guid quoteId) { var result = await OperationExecutor.ExecuteAsync((RejectQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quoteId, cancellationToken)); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } Snackbar.Add("OrÃ§amento recusado.", Severity.Success); await LoadAsync(); }
+    private async Task SendAsync(Guid quoteId) { var result = await OperationExecutor.ExecuteAsync((SendQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quoteId, cancellationToken)); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } if (!string.IsNullOrWhiteSpace(result.Value?.WhatsAppUrl)) { await JsRuntime.InvokeVoidAsync("open", result.Value.WhatsAppUrl, "_blank"); } else { Snackbar.Add("Link do orçamento preparado.", Severity.Success); } await LoadAsync(); }
+    private async Task ApproveAsync(Guid quoteId) { var result = await OperationExecutor.ExecuteAsync((ApproveQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quoteId, cancellationToken)); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } Snackbar.Add("Orçamento aprovado e OS criada.", Severity.Success); await LoadAsync(); }
+    private async Task RejectAsync(Guid quoteId) { var result = await OperationExecutor.ExecuteAsync((RejectQuoteUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quoteId, cancellationToken)); if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); return; } Snackbar.Add("Orçamento recusado.", Severity.Success); await LoadAsync(); }
     private static Color GetStatusColor(QuoteStatus status) => status switch { QuoteStatus.Draft => Color.Default, QuoteStatus.Sent => Color.Warning, QuoteStatus.Approved => Color.Success, QuoteStatus.Rejected => Color.Error, _ => Color.Default };
     private static string GetStatusName(QuoteStatus status) => status switch { QuoteStatus.Draft => "Rascunho", QuoteStatus.Sent => "Enviado", QuoteStatus.Approved => "Aprovado", QuoteStatus.Rejected => "Recusado", QuoteStatus.Expired => "Expirado", _ => status.ToString() };
 }

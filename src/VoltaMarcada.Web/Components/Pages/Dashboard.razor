@@ -12,7 +12,7 @@
 
 <PageTitle>Painel | VoltaMarcada</PageTitle>
 
-<PageHeader Title="@(isOwner ? "Painel operacional" : "Minha agenda")" Description="@(isOwner ? "Acompanhe o que precisa de aÃ§Ã£o na sua operaÃ§Ã£o." : "Veja onde precisa ir e o que precisa fazer.")">
+<PageHeader Title="@(isOwner ? "Painel operacional" : "Minha agenda")" Description="@(isOwner ? "Acompanhe o que precisa de ação na sua operação." : "Veja onde precisa ir e o que precisa fazer.")">
     <Actions>
         @if (isOwner || accessScope?.ProfessionalId is not null)
         {
@@ -34,7 +34,7 @@
     @if (ownerDashboard is { } dashboard)
     {
         <section class="dashboard-owner-actions mt-4" aria-labelledby="owner-actions-title">
-            <MudText Typo="Typo.h6" id="owner-actions-title">O que precisa da sua atenÃ§Ã£o hoje</MudText>
+            <MudText Typo="Typo.h6" id="owner-actions-title">O que precisa da sua atenção hoje</MudText>
             <div class="dashboard-owner-action-grid">
                 <a class="dashboard-owner-action-link" href="/agenda" aria-label="Ver agendamentos de hoje na agenda">
                     <MudPaper Outlined="true" Class="pa-3 dashboard-owner-action-card">
@@ -42,33 +42,33 @@
                         <MudText Typo="Typo.h5">@dashboard.Actions.TodayAppointmentCount</MudText>
                     </MudPaper>
                 </a>
-                <a class="dashboard-owner-action-link" href="/manutencoes?urgency=Overdue" aria-label="Ver manutenÃ§Ãµes vencidas">
+                <a class="dashboard-owner-action-link" href="/manutencoes?urgency=Overdue" aria-label="Ver manutenções vencidas">
                     <MudPaper Outlined="true" Class="@GetOwnerActionCardClass(dashboard.Actions.OverdueOpportunityCount, OwnerActionErrorClass)">
-                        <MudText Typo="Typo.caption">ManutenÃ§Ãµes vencidas</MudText>
+                        <MudText Typo="Typo.caption">Manutenções vencidas</MudText>
                         <MudText Typo="Typo.h5" Color="@GetOwnerActionColor(dashboard.Actions.OverdueOpportunityCount, Color.Error)">@dashboard.Actions.OverdueOpportunityCount</MudText>
                     </MudPaper>
                 </a>
-                <a class="dashboard-owner-action-link" href="/manutencoes?urgency=Overdue" aria-label="Ver manutenÃ§Ãµes prÃ³ximas">
+                <a class="dashboard-owner-action-link" href="/manutencoes?urgency=NextSevenDays" aria-label="Ver manutenções próximas">
                     <MudPaper Outlined="true" Class="@GetOwnerActionCardClass(dashboard.Actions.DueSoonOpportunityCount, OwnerActionWarningClass)">
-                        <MudText Typo="Typo.caption">ManutenÃ§Ãµes prÃ³ximas</MudText>
+                        <MudText Typo="Typo.caption">Manutenções próximas</MudText>
                         <MudText Typo="Typo.h5" Color="@GetOwnerActionColor(dashboard.Actions.DueSoonOpportunityCount, Color.Warning)">@dashboard.Actions.DueSoonOpportunityCount</MudText>
                     </MudPaper>
                 </a>
-                <a class="dashboard-owner-action-link" href="/agenda" aria-label="Ver solicitaÃ§Ãµes pendentes na agenda">
+                <a class="dashboard-owner-action-link" href="/agenda?pendingRequests=true" aria-label="Ver solicitações pendentes na agenda">
                     <MudPaper Outlined="true" Class="@GetOwnerActionCardClass(dashboard.Actions.PendingAppointmentRequestCount, OwnerActionWarningClass)">
-                        <MudText Typo="Typo.caption">SolicitaÃ§Ãµes pendentes</MudText>
+                        <MudText Typo="Typo.caption">Solicitações pendentes</MudText>
                         <MudText Typo="Typo.h5" Color="@GetOwnerActionColor(dashboard.Actions.PendingAppointmentRequestCount, Color.Warning)">@dashboard.Actions.PendingAppointmentRequestCount</MudText>
                     </MudPaper>
                 </a>
-                <a class="dashboard-owner-action-link" href="/orcamentos?status=Sent" aria-label="Ver orÃ§amentos aguardando resposta">
+                <a class="dashboard-owner-action-link" href="/orcamentos?status=Sent" aria-label="Ver orçamentos aguardando resposta">
                     <MudPaper Outlined="true" Class="pa-3 dashboard-owner-action-card">
-                        <MudText Typo="Typo.caption">OrÃ§amentos aguardando resposta</MudText>
+                        <MudText Typo="Typo.caption">Orçamentos aguardando resposta</MudText>
                         <MudText Typo="Typo.h5">@dashboard.Actions.QuotesAwaitingResponseCount</MudText>
                     </MudPaper>
                 </a>
-                <a class="dashboard-owner-action-link" href="/ordens-servico?status=Open" aria-label="Ver ordens de serviÃ§o abertas">
+                <a class="dashboard-owner-action-link" href="/ordens-servico?status=Open" aria-label="Ver ordens de serviço abertas">
                     <MudPaper Outlined="true" Class="pa-3 dashboard-owner-action-card">
-                        <MudText Typo="Typo.caption">Ordens de serviÃ§o abertas</MudText>
+                        <MudText Typo="Typo.caption">Ordens de serviço abertas</MudText>
                         <MudText Typo="Typo.h5">@dashboard.Actions.OpenWorkOrderCount</MudText>
                     </MudPaper>
                 </a>
@@ -76,15 +76,15 @@
         </section>
 
         <section class="dashboard-value-funnel" aria-labelledby="value-funnel-title">
-            <MudText Typo="Typo.h6" id="value-funnel-title">Resultados das manutenÃ§Ãµes neste mÃªs</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">Acompanhe as oportunidades de retorno identificadas e convertidas no mÃªs atual.</MudText>
+            <MudText Typo="Typo.h6" id="value-funnel-title">Resultados das manutenções neste mês</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Acompanhe as oportunidades de retorno identificadas e convertidas no mês atual.</MudText>
             <div class="dashboard-value-funnel-grid">
                 <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Oportunidades identificadas</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.IdentifiedOpportunityCount</MudText></MudPaper>
                 <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Clientes contatados distintos</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.ContactedCustomerCount</MudText></MudPaper>
-                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">SolicitaÃ§Ãµes originadas de manutenÃ§Ã£o</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.MaintenanceRequestCount</MudText></MudPaper>
+                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Solicitações originadas de manutenção</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.MaintenanceRequestCount</MudText></MudPaper>
                 <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Agendamentos recuperados</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.RecoveredBookingCount</MudText></MudPaper>
-                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">ServiÃ§os concluÃ­dos</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.CompletedServiceCount</MudText></MudPaper>
-                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Receita recuperada</MudText><MudText Typo="Typo.h6">@DisplayFormatter.FormatCurrency(dashboard.ValueFunnel.RecoveredRevenue)</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">Valor das OS concluÃ­das originadas de manutenÃ§Ã£o; nÃ£o representa pagamento.</MudText></MudPaper>
+                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Serviços concluídos</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.CompletedServiceCount</MudText></MudPaper>
+                <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Receita recuperada</MudText><MudText Typo="Typo.h6">@DisplayFormatter.FormatCurrency(dashboard.ValueFunnel.RecoveredRevenue)</MudText><MudText Typo="Typo.caption" Color="Color.Secondary">Valor das OS concluídas originadas de manutenção; não representa pagamento.</MudText></MudPaper>
                 <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Oportunidades em aberto</MudText><MudText Typo="Typo.h6">@dashboard.ValueFunnel.OpenOpportunityCount</MudText></MudPaper>
                 <MudPaper Outlined="true" Class="pa-3 dashboard-value-funnel-card"><MudText Typo="Typo.caption">Potencial estimado em aberto</MudText><MudText Typo="Typo.h6">@DisplayFormatter.FormatCurrency(dashboard.ValueFunnel.EstimatedPotentialRevenue)</MudText></MudPaper>
             </div>
@@ -94,13 +94,13 @@
 <MudPaper Outlined="true" Class="dashboard-agenda mt-4">
     <div class="dashboard-agenda-toolbar">
         <div>
-            <MudText Typo="Typo.h6">@(isOwner ? "Agenda semanal" : "Minha agenda diÃ¡ria")</MudText>
+            <MudText Typo="Typo.h6">@(isOwner ? "Agenda semanal" : "Minha agenda diária")</MudText>
             <MudText Color="Color.Secondary">@GetPeriodDescription()</MudText>
         </div>
         <MudStack Row="true" Spacing="1">
-            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" AriaLabel="PerÃ­odo anterior" OnClick="ShowPreviousPeriodAsync" Disabled="@isLoading" />
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" AriaLabel="Período anterior" OnClick="ShowPreviousPeriodAsync" Disabled="@isLoading" />
             <MudButton Variant="Variant.Outlined" OnClick="ShowTodayAsync" Disabled="@isLoading">Hoje</MudButton>
-            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" AriaLabel="PrÃ³ximo perÃ­odo" OnClick="ShowNextPeriodAsync" Disabled="@isLoading" />
+            <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" AriaLabel="Próximo período" OnClick="ShowNextPeriodAsync" Disabled="@isLoading" />
         </MudStack>
     </div>
 
@@ -146,7 +146,7 @@
         <section class="dashboard-day-calendar">
             @if (dayAppointments.Count == 0)
             {
-                <EmptyState Icon="@Icons.Material.Filled.EventBusy" Title="Nenhum atendimento" Description="VocÃª nÃ£o tem compromissos neste dia." />
+                <EmptyState Icon="@Icons.Material.Filled.EventBusy" Title="Nenhum atendimento" Description="Você não tem compromissos neste dia." />
             }
             else
             {
@@ -163,9 +163,9 @@
 
 @if (isOwner && pendingBlockRequests > 0)
 {
-    <a class="dashboard-block-request-alert" href="/agenda" aria-label="Ver solicitaÃ§Ãµes de bloqueio na agenda">
+    <a class="dashboard-block-request-alert" href="/agenda" aria-label="Ver solicitações de bloqueio na agenda">
         <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-4">
-            @pendingBlockRequests solicitaÃ§Ã£o(Ãµes) de bloqueio aguardam sua anÃ¡lise. Ver na agenda.
+            @pendingBlockRequests solicitação(ões) de bloqueio aguardam sua análise. Ver na agenda.
         </MudAlert>
     </a>
 }
@@ -202,7 +202,7 @@
         catch (Exception exception)
         {
             Logger.LogError(exception, "Unable to initialize the dashboard");
-            loadError = "NÃ£o foi possÃ­vel carregar o painel. Tente novamente.";
+            loadError = "Não foi possível carregar o painel. Tente novamente.";
             isLoading = false;
         }
     }
@@ -258,7 +258,7 @@
                     (GetOwnerDashboardUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
                 if (!dashboardResult.IsSuccess || dashboardResult.Value is null)
                 {
-                    loadError = "NÃ£o foi possÃ­vel atualizar os dados do painel. Tente novamente.";
+                    loadError = "Não foi possível atualizar os dados do painel. Tente novamente.";
                     return;
                 }
 
@@ -271,7 +271,7 @@
         catch (Exception exception)
         {
             Logger.LogError(exception, "Unable to load dashboard data for {CurrentDate}", currentDate);
-            loadError = "NÃ£o foi possÃ­vel atualizar os dados do painel. Tente novamente.";
+            loadError = "Não foi possível atualizar os dados do painel. Tente novamente.";
         }
         finally
         {

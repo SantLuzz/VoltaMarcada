@@ -25,7 +25,7 @@
 
 <PageTitle>Agenda | VoltaMarcada</PageTitle>
 
-<PageHeader Title="Agenda" Description="Consulte os atendimentos no perÃ­odo selecionado.">
+<PageHeader Title="Agenda" Description="Consulte os atendimentos no período selecionado.">
     <Actions>
         @if (isOwner || accessScope?.ProfessionalId is not null)
         {
@@ -39,13 +39,13 @@
 @if (isOwner && appointmentRequests.Count > 0)
 {
     <MudPaper Outlined="true" Class="pa-4 mt-4">
-        <MudText Typo="Typo.h6">SolicitaÃ§Ãµes externas pendentes</MudText>
+        <MudText Typo="Typo.h6">Solicitações externas pendentes</MudText>
         <MudList T="AppointmentRequestDto">
             @foreach (var request in appointmentRequests)
             {
                 <MudListItem T="AppointmentRequestDto" Value="@request" Icon="@Icons.Material.Filled.EventAvailable">
-                    <MudText Typo="Typo.subtitle2">@request.CustomerName Â· @request.ServiceName</MudText>
-                    <MudText Typo="Typo.body2">@request.Date.ToString("dd/MM/yyyy") Ã s @request.StartTime.ToString("HH:mm")</MudText>
+                    <MudText Typo="Typo.subtitle2">@request.CustomerName · @request.ServiceName</MudText>
+                    <MudText Typo="Typo.body2">@request.Date.ToString("dd/MM/yyyy") às @request.StartTime.ToString("HH:mm")</MudText>
                     @if (!string.IsNullOrWhiteSpace(request.EquipmentDescription))
                     {
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Equipamento: @request.EquipmentDescription</MudText>
@@ -54,14 +54,14 @@
                         <MudChip T="string" Size="Size.Small" Color="@(request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending ? Color.Warning : Color.Info)">@(request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending ? "Aguardando empresa" : "Aguardando cliente")</MudChip>
                         @if (request.Status == VoltaMarcada.Domain.Enums.AppointmentRequestStatus.Pending && request.RequestedTimeProfessionals.Count > 0)
                         {
-                            <MudText Typo="Typo.caption" Color="Color.Success">DisponÃ­veis no horÃ¡rio solicitado: @string.Join(", ", request.RequestedTimeProfessionals.Select(item => item.ProfessionalName))</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Success">Disponíveis no horário solicitado: @string.Join(", ", request.RequestedTimeProfessionals.Select(item => item.ProfessionalName))</MudText>
                         }
                     </MudStack>
                     @if (request.HasCustomerProfileProposal)
                     {
                         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
-                            Dados informados pelo cliente: @request.ProposedCustomerName Â· @request.ProposedCustomerWhatsApp
-                            @if (!string.IsNullOrWhiteSpace(request.ProposedCustomerEmail)) { <text> Â· @request.ProposedCustomerEmail</text> }
+                            Dados informados pelo cliente: @request.ProposedCustomerName · @request.ProposedCustomerWhatsApp
+                            @if (!string.IsNullOrWhiteSpace(request.ProposedCustomerEmail)) { <text> · @request.ProposedCustomerEmail</text> }
                             @if (!string.IsNullOrWhiteSpace(request.ProposedAddress)) { <br /><text>@request.ProposedAddress</text> }
                             @if (isOwner)
                             {
@@ -73,7 +73,7 @@
                     {
                         @if (request.RequiresCommercialResolution)
                         {
-                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenCommercialResolutionDialogAsync(request))">Definir prÃ³xima etapa</MudButton>
+                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenCommercialResolutionDialogAsync(request))">Definir próxima etapa</MudButton>
                         }
                         else
                         {
@@ -81,15 +81,15 @@
                             {
                                 @foreach (var alternative in request.Alternatives)
                                 {
-                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionForAlternativeAsync(request, alternative))">Propor horÃ¡rio: @alternative.Date.ToString("dd/MM") Ã s @alternative.StartTime.ToString("HH:mm") Â· @alternative.ProfessionalName</MudButton>
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionForAlternativeAsync(request, alternative))">Propor horário: @alternative.Date.ToString("dd/MM") às @alternative.StartTime.ToString("HH:mm") · @alternative.ProfessionalName</MudButton>
                                 }
                             }
                             else if (request.Alternatives.Count > 0)
                             {
-                                <MudText Typo="Typo.caption" Color="Color.Warning">Alternativas: @string.Join(" Â· ", request.Alternatives.Select(item => $"{item.Date:dd/MM HH:mm} - {item.ProfessionalName}"))</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Warning">Alternativas: @string.Join(" · ", request.Alternatives.Select(item => $"{item.Date:dd/MM HH:mm} - {item.ProfessionalName}"))</MudText>
                                 @foreach (var alternative in request.Alternatives)
                                 {
-                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionForAlternativeAsync(request, alternative))">@alternative.Date.ToString("dd/MM") Ã s @alternative.StartTime.ToString("HH:mm") Â· @alternative.ProfessionalName</MudButton>
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionForAlternativeAsync(request, alternative))">@alternative.Date.ToString("dd/MM") às @alternative.StartTime.ToString("HH:mm") · @alternative.ProfessionalName</MudButton>
                                 }
                             }
                             @if (request.RequestedTimeProfessionals.Count > 0)
@@ -102,18 +102,18 @@
                                             <MudSelectItem Value="@((Guid?)professional.ProfessionalId)">@professional.ProfessionalName</MudSelectItem>
                                         }
                                     </MudSelect>
-                                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(GetSelectedRequestProfessional(request) is null)" OnClick="@(() => AcceptRequestAsync(request))">Confirmar horÃ¡rio</MudButton>
+                                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(GetSelectedRequestProfessional(request) is null)" OnClick="@(() => AcceptRequestAsync(request))">Confirmar horário</MudButton>
                                 </MudStack>
                             }
                             <MudStack Row="true" Spacing="1" Class="agenda-request-actions">
-                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionDialogAsync(request))">Escolher outro horÃ¡rio</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenSuggestionDialogAsync(request))">Escolher outro horário</MudButton>
                                 <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => OpenRequestRejectionDialog(request))">Recusar</MudButton>
                             </MudStack>
                         }
                     }
                     else
                     {
-                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => OpenRequestRejectionDialog(request))">Recusar solicitaÃ§Ã£o</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => OpenRequestRejectionDialog(request))">Recusar solicitação</MudButton>
                     }
                 </MudListItem>
             }
@@ -136,13 +136,13 @@
                 </MudSelect>
             </MudItem>
         }
-        <MudItem xs="12"><MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="LoadAsync">Aplicar perÃ­odo</MudButton></MudItem>
+        <MudItem xs="12"><MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="LoadAsync">Aplicar período</MudButton></MudItem>
     </MudGrid>
 </MudPaper>
 
 @if (!isOwner)
 {
-    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">Sua agenda pessoal: veja os atendimentos de hoje, da semana ou de outro perÃ­odo.</MudAlert>
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">Sua agenda pessoal: veja os atendimentos de hoje, da semana ou de outro período.</MudAlert>
 }
 
 @if (isLoading)
@@ -151,7 +151,7 @@
 }
 else if (appointments.Count == 0)
 {
-    <EmptyState Icon="@Icons.Material.Filled.EventBusy" Title="Nenhum atendimento" Description="NÃ£o hÃ¡ agendamentos para este perÃ­odo." />
+    <EmptyState Icon="@Icons.Material.Filled.EventBusy" Title="Nenhum atendimento" Description="Não há agendamentos para este período." />
 }
 else
 {
@@ -160,11 +160,11 @@ else
         {
             <MudListItem T="AppointmentDto" Value="@appointment" Icon="@Icons.Material.Filled.Event" OnClick="@(() => OpenAppointmentDetails(appointment.Id))">
                 <MudStack Spacing="0">
-                    <MudText Typo="Typo.subtitle2">@DisplayFormatter.FormatDateTime(appointment.StartAtUtc, displayTimeZone) â€” @GetStatusName(appointment.Status)</MudText>
+                    <MudText Typo="Typo.subtitle2">@DisplayFormatter.FormatDateTime(appointment.StartAtUtc, displayTimeZone) — @GetStatusName(appointment.Status)</MudText>
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(appointment.Origin == VoltaMarcada.Domain.Enums.AppointmentOrigin.External ? Color.Info : Color.Default)">@(appointment.Origin == VoltaMarcada.Domain.Enums.AppointmentOrigin.External ? "Externo" : "Interno")</MudChip>
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@GetAppointmentTypeName(appointment.Type)</MudChip>
-                    <MudText Typo="Typo.body2">@(appointment.CustomerName ?? "Cliente nÃ£o informado") Â· @(appointment.ServiceName ?? "ServiÃ§o nÃ£o informado")</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment.ProfessionalName@(string.IsNullOrWhiteSpace(appointment.EquipmentName) ? string.Empty : $" Â· {appointment.EquipmentName}")</MudText>
+                    <MudText Typo="Typo.body2">@(appointment.CustomerName ?? "Cliente não informado") · @(appointment.ServiceName ?? "Serviço não informado")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment.ProfessionalName@(string.IsNullOrWhiteSpace(appointment.EquipmentName) ? string.Empty : $" · {appointment.EquipmentName}")</MudText>
                     @if (!string.IsNullOrWhiteSpace(appointment.Description))
                     {
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment.Description</MudText>
@@ -215,7 +215,7 @@ else
 <MudDialog @bind-Visible="isNotesDialogOpen">
     <TitleContent><MudText Typo="Typo.h6">Editar agendamento</MudText></TitleContent>
     <DialogContent>
-        <MudTextField Label="ObservaÃ§Ãµes" Lines="3" @bind-Value="editedNotes" Disabled="@isSavingNotes" />
+        <MudTextField Label="Observações" Lines="3" @bind-Value="editedNotes" Disabled="@isSavingNotes" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseNotesDialog" Disabled="@isSavingNotes">Cancelar</MudButton>
@@ -244,10 +244,10 @@ else
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12">
-                    <MudSelect T="Guid?" Label="Ordem de serviÃ§o" Placeholder="Opcional: vincule a uma OS" Clearable="true" @bind-Value="appointmentWorkOrderId" @bind-Value:after="OnAppointmentWorkOrderChangedAsync" Disabled="@isCreatingAppointment">
+                    <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Opcional: vincule a uma OS" Clearable="true" @bind-Value="appointmentWorkOrderId" @bind-Value:after="OnAppointmentWorkOrderChangedAsync" Disabled="@isCreatingAppointment">
                         @foreach (var workOrder in appointmentWorkOrders)
                         {
-                            <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName â€” @workOrder.ServiceName</MudSelectItem>
+                            <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
@@ -268,7 +268,7 @@ else
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudSelect T="Guid?" Label="ServiÃ§o" Placeholder="Selecione um serviÃ§o" @bind-Value="appointmentServiceId" @bind-Value:after="OnAppointmentServiceChangedAsync" Disabled="@(isCreatingAppointment || appointmentWorkOrderId is not null || MaintenanceOpportunityId is not null)">
+                    <MudSelect T="Guid?" Label="Serviço" Placeholder="Selecione um serviço" @bind-Value="appointmentServiceId" @bind-Value:after="OnAppointmentServiceChangedAsync" Disabled="@(isCreatingAppointment || appointmentWorkOrderId is not null || MaintenanceOpportunityId is not null)">
                         @foreach (var service in appointmentServices)
                         {
                             <MudSelectItem Value="@((Guid?)service.Id)">@service.Name (@service.DurationMinutes min)</MudSelectItem>
@@ -287,10 +287,10 @@ else
                 else
                 {
                     <MudItem xs="12">
-                        <MudSelect T="Guid?" Label="Ordem de serviÃ§o" Placeholder="Selecione uma ordem de serviÃ§o" @bind-Value="appointmentWorkOrderId" @bind-Value:after="OnAppointmentWorkOrderChangedAsync" Disabled="@isCreatingAppointment">
+                        <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Selecione uma ordem de serviço" @bind-Value="appointmentWorkOrderId" @bind-Value:after="OnAppointmentWorkOrderChangedAsync" Disabled="@isCreatingAppointment">
                             @foreach (var workOrder in appointmentWorkOrders)
                             {
-                                <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName â€” @workOrder.ServiceName</MudSelectItem>
+                                <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
                             }
                         </MudSelect>
                     </MudItem>
@@ -299,7 +299,7 @@ else
                     <MudDatePicker Label="Data" @bind-Date="appointmentDate" @bind-Date:after="LoadAvailableAppointmentSlotsAsync" Disabled="@isCreatingAppointment" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudSelect T="TimeOnly?" Label="HorÃ¡rio" Placeholder="Selecione um horÃ¡rio" @bind-Value="appointmentStartTime" Disabled="@(isCreatingAppointment || availableAppointmentSlots.Count == 0)">
+                    <MudSelect T="TimeOnly?" Label="Horário" Placeholder="Selecione um horário" @bind-Value="appointmentStartTime" Disabled="@(isCreatingAppointment || availableAppointmentSlots.Count == 0)">
                         @foreach (var slot in availableAppointmentSlots)
                         {
                             <MudSelectItem Value="@((TimeOnly?)slot.StartTime)">@slot.StartTime.ToString("HH:mm")</MudSelectItem>
@@ -307,7 +307,7 @@ else
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField Label="ObservaÃ§Ãµes" Lines="3" @bind-Value="appointmentNotes" Disabled="@isCreatingAppointment" />
+                    <MudTextField Label="Observações" Lines="3" @bind-Value="appointmentNotes" Disabled="@isCreatingAppointment" />
                 </MudItem>
             </MudGrid>
         }
@@ -337,10 +337,10 @@ else
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudSelect T="Guid?" Label="Ordem de serviÃ§o" Placeholder="Opcional" Clearable="true" @bind-Value="adjustmentWorkOrderId" @bind-Value:after="OnAdjustmentWorkOrderChangedAsync" Disabled="@isAdjusting">
+                    <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Opcional" Clearable="true" @bind-Value="adjustmentWorkOrderId" @bind-Value:after="OnAdjustmentWorkOrderChangedAsync" Disabled="@isAdjusting">
                         @foreach (var workOrder in adjustmentWorkOrders)
                         {
-                            <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName â€” @workOrder.ServiceName</MudSelectItem>
+                            <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
@@ -348,7 +348,7 @@ else
                     <MudDatePicker Label="Data" @bind-Date="adjustmentDate" @bind-Date:after="LoadAdjustmentSlotsAsync" Disabled="@isAdjusting" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudSelect T="TimeOnly?" Label="HorÃ¡rio" @bind-Value="adjustmentStartTime" Disabled="@(isAdjusting || adjustmentSlots.Count == 0)">
+                    <MudSelect T="TimeOnly?" Label="Horário" @bind-Value="adjustmentStartTime" Disabled="@(isAdjusting || adjustmentSlots.Count == 0)">
                         @foreach (var slot in adjustmentSlots)
                         {
                             <MudSelectItem Value="@((TimeOnly?)slot.StartTime)">@slot.StartTime.ToString("HH:mm")</MudSelectItem>
@@ -370,7 +370,7 @@ else
 <MudDialog @bind-Visible="isCancelDialogOpen">
     <TitleContent><MudText Typo="Typo.h6">Cancelar agendamento</MudText></TitleContent>
     <DialogContent>
-        <MudText>Deseja cancelar este agendamento? Esta aÃ§Ã£o nÃ£o poderÃ¡ ser desfeita.</MudText>
+        <MudText>Deseja cancelar este agendamento? Esta ação não poderá ser desfeita.</MudText>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="CloseCancelDialog" Disabled="@isChangingStatus">Voltar</MudButton>
@@ -379,11 +379,11 @@ else
 </MudDialog>
 
 <MudDialog @bind-Visible="isRequestRejectionDialogOpen">
-    <TitleContent><MudText Typo="Typo.h6">Recusar solicitaÃ§Ã£o</MudText></TitleContent>
+    <TitleContent><MudText Typo="Typo.h6">Recusar solicitação</MudText></TitleContent>
     <DialogContent>
         @if (requestToReject is not null)
         {
-            <MudText Typo="Typo.body2" Class="mb-4">@requestToReject.CustomerName Â· @requestToReject.ServiceName</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4">@requestToReject.CustomerName · @requestToReject.ServiceName</MudText>
             <MudTextField Label="Motivo da recusa"
                           Lines="3"
                           Required="true"
@@ -392,7 +392,7 @@ else
                           Immediate="true"
                           @bind-Value="requestRejectionReason"
                           Disabled="@isRejectingRequest" />
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">A recusa serÃ¡ registrada e uma mensagem serÃ¡ preparada no WhatsApp do cliente.</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">A recusa será registrada e uma mensagem será preparada no WhatsApp do cliente.</MudText>
         }
     </DialogContent>
     <DialogActions>
@@ -407,11 +407,11 @@ else
 </MudDialog>
 
 <MudDialog @bind-Visible="isRequestSuggestionDialogOpen">
-    <TitleContent><MudText Typo="Typo.h6">Sugerir outro horÃ¡rio</MudText></TitleContent>
+    <TitleContent><MudText Typo="Typo.h6">Sugerir outro horário</MudText></TitleContent>
     <DialogContent>
         @if (requestToSuggest is not null)
         {
-            <MudText Typo="Typo.body2" Class="mb-4">@requestToSuggest.CustomerName Â· @requestToSuggest.ServiceName</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4">@requestToSuggest.CustomerName · @requestToSuggest.ServiceName</MudText>
             <MudGrid Spacing="2">
                 @if (isOwner)
                 {
@@ -426,7 +426,7 @@ else
                 }
                 <MudItem xs="12"><MudDatePicker Label="Data" @bind-Date="suggestionDate" @bind-Date:after="LoadSuggestionSlotsAsync" MinDate="@TimeProvider.GetLocalNow().Date" Variant="Variant.Outlined" /></MudItem>
                 <MudItem xs="12">
-                    <MudSelect T="TimeOnly?" Label="HorÃ¡rio" @bind-Value="suggestionStartTime" Variant="Variant.Outlined" FullWidth="@true" Disabled="@(suggestionSlots.Count == 0)">
+                    <MudSelect T="TimeOnly?" Label="Horário" @bind-Value="suggestionStartTime" Variant="Variant.Outlined" FullWidth="@true" Disabled="@(suggestionSlots.Count == 0)">
                         @foreach (var slot in suggestionSlots) { <MudSelectItem Value="@((TimeOnly?)slot.StartTime)">@slot.StartTime.ToString("HH:mm")</MudSelectItem> }
                     </MudSelect>
                 </MudItem>
@@ -440,12 +440,12 @@ else
 </MudDialog>
 
 <MudDialog @bind-Visible="isCommercialResolutionDialogOpen">
-    <TitleContent><MudText Typo="Typo.h6">Definir prÃ³xima etapa</MudText></TitleContent>
+    <TitleContent><MudText Typo="Typo.h6">Definir próxima etapa</MudText></TitleContent>
     <DialogContent>
         @if (serviceRequestToResolve is not null)
         {
             <MudStack Spacing="2">
-                <MudText>@serviceRequestToResolve.CustomerName Â· @serviceRequestToResolve.ServiceName</MudText>
+                <MudText>@serviceRequestToResolve.CustomerName · @serviceRequestToResolve.ServiceName</MudText>
                 <MudSelect T="Guid" Label="Equipamento" @bind-Value="commercialEquipmentId" Required="true">
                     <MudSelectItem Value="@Guid.Empty">Selecione um equipamento</MudSelectItem>
                     @foreach (var item in commercialEquipment)
@@ -454,8 +454,8 @@ else
                     }
                 </MudSelect>
                 <MudRadioGroup T="ServiceRequestResolution" @bind-Value="commercialResolution">
-                    <MudRadio Value="ServiceRequestResolution.PrepareQuote">Gerar orÃ§amento</MudRadio>
-                    <MudRadio Value="ServiceRequestResolution.ScheduleVisit">Agendar visita tÃ©cnica</MudRadio>
+                    <MudRadio Value="ServiceRequestResolution.PrepareQuote">Gerar orçamento</MudRadio>
+                    <MudRadio Value="ServiceRequestResolution.ScheduleVisit">Agendar visita técnica</MudRadio>
                 </MudRadioGroup>
                 @if (commercialResolution == ServiceRequestResolution.ScheduleVisit)
                 {
@@ -466,9 +466,9 @@ else
                             <MudSelectItem Value="@item.Id">@item.CompanyMemberName</MudSelectItem>
                         }
                     </MudSelect>
-                    <MudTextField @bind-Value="commercialAppointmentDescription" Label="DescriÃ§Ã£o para o cliente" Required="true" MaxLength="1000" />
+                    <MudTextField @bind-Value="commercialAppointmentDescription" Label="Descrição para o cliente" Required="true" MaxLength="1000" />
                 }
-                <MudNumericField T="decimal?" @bind-Value="commercialServiceUnitPrice" Label="Valor do serviÃ§o" Adornment="Adornment.Start" AdornmentText="R$" />
+                <MudNumericField T="decimal?" @bind-Value="commercialServiceUnitPrice" Label="Valor do serviço" Adornment="Adornment.Start" AdornmentText="R$" />
                 @if (serviceRequestToResolve.HasCustomerProfileProposal)
                 {
                     <MudCheckBox T="bool" @bind-Value="applyCommercialCustomerProfileProposal" Color="Color.Primary">Aplicar os dados propostos pelo cliente ao cadastro</MudCheckBox>
@@ -665,7 +665,7 @@ else
         var selectedProfessionalId = GetSelectedRequestProfessional(request);
         if (selectedProfessionalId is null)
         {
-            Snackbar.Add("Selecione um profissional disponÃ­vel para confirmar o horÃ¡rio.", Severity.Warning);
+            Snackbar.Add("Selecione um profissional disponível para confirmar o horário.", Severity.Warning);
             return;
         }
 
@@ -681,7 +681,7 @@ else
             return;
         }
 
-        Snackbar.Add("SolicitaÃ§Ã£o confirmada.", Severity.Success);
+        Snackbar.Add("Solicitação confirmada.", Severity.Success);
         await LoadAsync();
     }
 
@@ -701,7 +701,7 @@ else
             .SingleOrDefault(item => item.AppointmentRequestId == request.Id);
         if (serviceRequestToResolve is null)
         {
-            Snackbar.Add("A solicitaÃ§Ã£o comercial nÃ£o estÃ¡ mais pendente.", Severity.Warning);
+            Snackbar.Add("A solicitação comercial não está mais pendente.", Severity.Warning);
             await LoadAsync();
             return;
         }
@@ -717,7 +717,7 @@ else
         commercialEquipmentId = Guid.Empty;
         commercialProfessionalId = Guid.Empty;
         commercialResolution = ServiceRequestResolution.PrepareQuote;
-        commercialAppointmentDescription = $"Visita tÃ©cnica para {serviceRequestToResolve.ServiceName}";
+        commercialAppointmentDescription = $"Visita técnica para {serviceRequestToResolve.ServiceName}";
         commercialServiceUnitPrice = null;
         applyCommercialCustomerProfileProposal = false;
         isCommercialResolutionDialogOpen = true;
@@ -762,7 +762,7 @@ else
 
             isCommercialResolutionDialogOpen = false;
             serviceRequestToResolve = null;
-            Snackbar.Add(commercialResolution == ServiceRequestResolution.PrepareQuote ? "OrÃ§amento preparado." : "Visita tÃ©cnica agendada.", Severity.Success);
+            Snackbar.Add(commercialResolution == ServiceRequestResolution.PrepareQuote ? "Orçamento preparado." : "Visita técnica agendada.", Severity.Success);
             if (result.Value?.QuoteId is { } quoteId)
             {
                 NavigationManager.NavigateTo($"/orcamentos/registro?id={quoteId}");
@@ -828,7 +828,7 @@ else
             else
             {
                 await JsRuntime.InvokeVoidAsync("serviceSync.copyText", link);
-                Snackbar.Add("O WhatsApp do cliente Ã© invÃ¡lido. O link foi copiado.", Severity.Warning);
+                Snackbar.Add("O WhatsApp do cliente é inválido. O link foi copiado.", Severity.Warning);
             }
             isRequestSuggestionDialogOpen = false;
             requestToSuggest = null;
@@ -838,7 +838,7 @@ else
     }
 
     private static string CreateSuggestedTimeWhatsAppMessage(AppointmentRequestDto request, DateOnly date, TimeOnly startTime, string link) =>
-        $"OlÃ¡, {request.CustomerName}!\n\nA empresa propÃ´s um horÃ¡rio para {request.ServiceName}: {date:dd/MM/yyyy} Ã s {startTime:HH:mm}.\n\nPara aceitar ou recusar, acesse:\n{link}";
+        $"Olá, {request.CustomerName}!\n\nA empresa propôs um horário para {request.ServiceName}: {date:dd/MM/yyyy} às {startTime:HH:mm}.\n\nPara aceitar ou recusar, acesse:\n{link}";
 
     private void OpenRequestRejectionDialog(AppointmentRequestDto request)
     {
@@ -880,7 +880,7 @@ else
             else
             {
                 await JsRuntime.InvokeVoidAsync("serviceSync.copyText", message);
-                Snackbar.Add("Recusa registrada. O WhatsApp do cliente Ã© invÃ¡lido e a mensagem foi copiada.", Severity.Warning);
+                Snackbar.Add("Recusa registrada. O WhatsApp do cliente é inválido e a mensagem foi copiada.", Severity.Warning);
             }
 
             isRequestRejectionDialogOpen = false;
@@ -1080,7 +1080,7 @@ else
         {
             appointmentWorkOrderId = null;
             appointmentProfessionalId = null;
-            Snackbar.Add("A ordem de serviÃ§o nÃ£o estÃ¡ disponÃ­vel para agendamento.", Severity.Warning);
+            Snackbar.Add("A ordem de serviço não está disponível para agendamento.", Severity.Warning);
             return;
         }
 
@@ -1113,7 +1113,7 @@ else
     {
         if (appointmentProfessionalId is not { } professionalId || appointmentDate is null || appointmentStartTime is null || GetSelectedAppointmentService() is not { } service || !isOwner && appointmentWorkOrderId is null)
         {
-            Snackbar.Add("Selecione serviÃ§o, profissional, data e horÃ¡rio.", Severity.Warning);
+            Snackbar.Add("Selecione serviço, profissional, data e horário.", Severity.Warning);
             return;
         }
 
@@ -1233,7 +1233,7 @@ else
     {
         if (appointmentToAdjust is null || adjustmentProfessionalId is not { } professionalId || adjustmentDate is null || adjustmentStartTime is null || string.IsNullOrWhiteSpace(adjustmentReason))
         {
-            Snackbar.Add("Informe profissional, data, horÃ¡rio e motivo do ajuste.", Severity.Warning);
+            Snackbar.Add("Informe profissional, data, horário e motivo do ajuste.", Severity.Warning);
             return;
         }
 
@@ -1272,7 +1272,7 @@ else
     private async Task CompleteAppointmentAsync(Guid appointmentId)
     {
         await ChangeAppointmentStatusAsync(await OperationExecutor.ExecuteAsync(
-            (CompleteAppointmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(appointmentId, cancellationToken)), "Atendimento concluÃ­do.");
+            (CompleteAppointmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(appointmentId, cancellationToken)), "Atendimento concluído.");
     }
 
     private void OpenCancelDialog(AppointmentDto appointment)
@@ -1348,7 +1348,7 @@ else
 
     private static string GetStatusName(VoltaMarcada.Domain.Enums.AppointmentStatus status) => status switch
     {
-        VoltaMarcada.Domain.Enums.AppointmentStatus.Completed => "ConcluÃ­do",
+        VoltaMarcada.Domain.Enums.AppointmentStatus.Completed => "Concluído",
         VoltaMarcada.Domain.Enums.AppointmentStatus.Cancelled => "Cancelado",
         VoltaMarcada.Domain.Enums.AppointmentStatus.InProgress => "Em andamento",
         _ => "Agendado"
@@ -1356,8 +1356,8 @@ else
 
     private static string GetAppointmentTypeName(VoltaMarcada.Domain.Enums.AppointmentType type) => type switch
     {
-        VoltaMarcada.Domain.Enums.AppointmentType.Visit => "Visita tÃ©cnica",
-        VoltaMarcada.Domain.Enums.AppointmentType.Service => "ExecuÃ§Ã£o de serviÃ§o",
+        VoltaMarcada.Domain.Enums.AppointmentType.Visit => "Visita técnica",
+        VoltaMarcada.Domain.Enums.AppointmentType.Service => "Execução de serviço",
         _ => "Outro atendimento"
     };
 }
