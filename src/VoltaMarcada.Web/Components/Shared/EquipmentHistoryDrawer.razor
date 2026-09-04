@@ -1,7 +1,10 @@
 @using Microsoft.JSInterop
 @using VoltaMarcada.Application.Equipment
+@using VoltaMarcada.Web.Formatting
 @inject IComponentOperationExecutor OperationExecutor
 @inject IJSRuntime JsRuntime
+@inject ICurrentDisplayTimeZone CurrentDisplayTimeZone
+@inject IBrazilianDisplayFormatter DisplayFormatter
 @implements IAsyncDisposable
 
 <MudDrawer Open="@Open" OpenChanged="SetOpenAsync" Anchor="Anchor.End" Variant="DrawerVariant.Temporary" Elevation="8" Width="520px" Class="equipment-history-drawer">
@@ -42,7 +45,7 @@
                     {
                         <MudPaper Outlined="true" Class="pa-3 equipment-history-record">
                             <MudText Typo="Typo.subtitle2">@record.ServiceName</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@record.WorkOrderDisplayNumber &#183; @record.CompletedAtUtc.LocalDateTime.ToString("dd/MM/yyyy")</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@record.WorkOrderDisplayNumber &#183; @DisplayFormatter.FormatDateTime(record.CompletedAtUtc, displayTimeZone)</MudText>
                             @if (!string.IsNullOrWhiteSpace(record.ProfessionalName))
                             {
                                 <MudText Typo="Typo.body2">@TechnicianLabel: @record.ProfessionalName</MudText>
@@ -78,6 +81,7 @@
     private bool isInitialLoading;
     private bool isLoadingMore;
     private string? loadError;
+    private TimeZoneInfo displayTimeZone = TimeZoneInfo.Utc;
     private const string HistoryTitle = "Hist\u00F3rico do equipamento";
     private const string CloseHistoryLabel = "Fechar hist\u00F3rico";
     private const string EmptyHistoryTitle = "Sem hist\u00F3rico t\u00E9cnico";
@@ -86,6 +90,11 @@
     private const string EvidenceLabel = "Evid\u00EAncias";
     private const string NextMaintenanceLabel = "Pr\u00F3xima manuten\u00E7\u00E3o";
     private const string LoadErrorMessage = "N\u00E3o foi poss\u00EDvel carregar o hist\u00F3rico deste equipamento.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        displayTimeZone = await CurrentDisplayTimeZone.GetTimeZoneAsync();
+    }
 
     protected override async Task OnParametersSetAsync()
     {

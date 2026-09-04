@@ -2115,3 +2115,53 @@ Do not create isolated visual styles for individual pages.
 
 Do not introduce new colors, spacing conventions,
 button styles or card styles without a strong reason.
+
+## Autonomous SDD + Token Budget
+
+This project uses Superpowers SDD with autonomous execution.
+
+### Autonomy
+- Execute the complete approved SDD plan without waiting for human review between tasks.
+- Do not ask for confirmation between normal implementation tasks.
+- Continue automatically through implementation, automated review, fixes, and verification.
+- Stop only for destructive/irreversible actions, security-sensitive actions, external side effects such as push/publish/merge, or when the plan is fundamentally ambiguous.
+- The human validates the application after the implementation cycle; do not depend on manual code review.
+
+### Model routing
+- Controller/coordinator: Terra, reasoning low or medium.
+- Architecture, cross-cutting changes, difficult debugging, and integration: Terra medium.
+- Mechanical implementation with a clear specification: Luna.
+- Single-file or 1-2 file isolated changes: Luna.
+- Straightforward tests for already specified behavior: Luna.
+- Small scoped re-reviews: Luna or Terra low.
+- Integration reviews requiring judgment: Terra low or medium.
+- Final whole-branch review: Terra medium.
+
+Never use Terra high/xhigh unless explicitly requested or required after repeated failed fix attempts.
+
+Always explicitly select the model for every dispatched subagent.
+Do not allow subagents to silently inherit the controller model.
+
+### Scope control
+- Execute all tasks in the approved SDD plan, but nothing outside it.
+- Do not proactively add features.
+- Do not refactor unrelated code.
+- Do not inspect unrelated directories unless necessary to resolve an integration issue.
+- Follow the existing architecture and established project patterns.
+- Prefer the smallest correct implementation satisfying the task specification.
+
+### Token conservation
+- Keep subagent reports concise.
+- Store detailed reports and findings in SDD artifact files instead of chat context.
+- Do not repeat the complete plan/spec in subagent prompts when a task brief file exists.
+- Reuse SDD task briefs, ledger, and existing artifacts.
+- Never redispatch tasks marked complete in the SDD ledger.
+- Batch tiny same-shape edits into one implementation dispatch when appropriate.
+- Prefer targeted tests during individual implementation tasks.
+- Run broader/full relevant verification at integration milestones and final review.
+
+### Quality protection
+- Do not skip automated review merely to save tokens.
+- Do not skip tests required by the plan.
+- A Luna implementation that fails review should be corrected before continuing.
+- Escalate to Terra when the task requires architectural judgment, multi-file integration reasoning, or difficult debugging.

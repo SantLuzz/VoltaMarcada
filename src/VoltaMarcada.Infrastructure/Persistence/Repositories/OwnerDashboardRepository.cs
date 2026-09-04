@@ -40,6 +40,7 @@ public sealed class OwnerDashboardRepository(AppDbContext dbContext) : IOwnerDas
         var actions = new OwnerDashboardActionCounts(
             await dbContext.Appointments.AsNoTracking().CountAsync(
                 appointment => appointment.CompanyId == companyId &&
+                               appointment.Status != AppointmentStatus.Cancelled &&
                                appointment.StartAtUtc >= period.TodayStartAtUtc &&
                                appointment.StartAtUtc < period.TomorrowStartAtUtc,
                 cancellationToken),

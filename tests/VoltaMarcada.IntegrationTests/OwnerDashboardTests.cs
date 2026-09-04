@@ -43,6 +43,8 @@ public sealed class OwnerDashboardTests
         var secondCompanyOpportunity = CreateOpportunity(secondCompanyId, secondCustomer.Id, secondEquipment.Id, secondService.Id, new DateOnly(2026, 9, 2), Now);
 
         var recoveredAppointment = CreateAppointment(companyId, professionalId, customer.Id, equipment.Id, service.Id, Now.AddHours(2));
+        var cancelledAppointment = CreateAppointment(companyId, professionalId, customer.Id, equipment.Id, service.Id, new(2026, 9, 3, 3, 15, 0, TimeSpan.Zero));
+        cancelledAppointment.Cancel(Now);
         recoveredOpportunity.Convert(MaintenanceOpportunityConversionType.Appointment, recoveredAppointment.Id, Now.AddHours(1));
         quoteOnlyOpportunity.Convert(MaintenanceOpportunityConversionType.Quote, Guid.NewGuid(), Now.AddHours(1));
 
@@ -81,7 +83,7 @@ public sealed class OwnerDashboardTests
         dbContext.AddRange(
             customer, secondCustomer, equipment, secondEquipment, service, secondService,
             overdue, dueSoon, recoveredOpportunity, quoteOnlyOpportunity, outsideMonth, secondCompanyOpportunity,
-            recoveredAppointment, recoveredRequest, pendingMaintenanceRequest, unrelatedRequest, secondCompanyRequest,
+            recoveredAppointment, cancelledAppointment, recoveredRequest, pendingMaintenanceRequest, unrelatedRequest, secondCompanyRequest,
             eligibleCompleted, unrelatedCompleted, openPending, openInProgress, secondCompanyOpen,
             sentQuote, draftQuote, secondCompanyQuote,
             firstSentContact, secondSentContact, preparedContact, secondCompanyContact,
