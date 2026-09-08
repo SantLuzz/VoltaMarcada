@@ -20,7 +20,8 @@ public sealed class SubmitLicensePaymentUseCase(
             [".jpg"] = "image/jpeg",
             [".jpeg"] = "image/jpeg",
             [".png"] = "image/png",
-            [".webp"] = "image/webp"
+            [".webp"] = "image/webp",
+            [".heic"] = "image/heic"
         };
 
     public async Task<OperationResult<LicensePaymentSubmissionDto>> ExecuteAsync(
@@ -40,11 +41,11 @@ public sealed class SubmitLicensePaymentUseCase(
 
         var now = timeProvider.GetUtcNow();
         var payment = LicensePayment.Create(companyId, billing.MonthlyPrice, now);
-        var fileName = $"{payment.Id}{extension}";
+        var fileName = $"{now:yyyyMMddHHmmssfff}{extension}";
         var stored = await fileStorage.UploadAsync(
             new FileStorageUploadRequest(
                 upload.File with { FileName = fileName },
-                $"pagamentos/{companyId}",
+                $"pagamentos/{companyId:N}",
                 fileName,
                 FileStorageAccess.Private),
             cancellationToken);

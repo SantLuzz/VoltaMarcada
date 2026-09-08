@@ -80,10 +80,10 @@ else if (renewal is not null)
                     <div class="mt-4">
                         <MudText Typo="Typo.subtitle2">Enviar comprovante</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
-                            Formatos aceitos: PDF, JPEG, PNG e WebP.
+                            Formatos aceitos: PDF, JPEG, PNG, WebP e HEIC.
                         </MudText>
                         <InputFile OnChange="SubmitProofAsync"
-                                   accept="application/pdf,image/jpeg,image/png,image/webp"
+                                   accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
                                    disabled="@isSubmitting" />
                         @if (isSubmitting)
                         {

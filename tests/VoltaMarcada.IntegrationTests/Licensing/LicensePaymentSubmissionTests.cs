@@ -29,9 +29,9 @@ public sealed class LicensePaymentSubmissionTests
         Assert.Equal(fixture.CompanyId, Assert.Single(fixture.Repository.Payments).CompanyId);
         Assert.Equal(49.90m, result.Value.Amount);
         Assert.Equal(Now, result.Value.SubmittedAtUtc);
-        Assert.Equal($"pagamentos/{fixture.CompanyId}", fixture.Storage.LastUpload!.Folder);
-        Assert.Equal($"{result.Value.Id}.png", fixture.Storage.LastUpload.FileName);
-        Assert.Equal($"pagamentos/{fixture.CompanyId}/{result.Value.Id}.png", Assert.Single(fixture.Repository.Payments).ProofFileKey);
+        Assert.Equal($"pagamentos/{fixture.CompanyId:N}", fixture.Storage.LastUpload!.Folder);
+        Assert.Equal("20260904153000000.png", fixture.Storage.LastUpload.FileName);
+        Assert.Equal($"pagamentos/{fixture.CompanyId:N}/20260904153000000.png", Assert.Single(fixture.Repository.Payments).ProofFileKey);
     }
 
     [Theory]
@@ -61,6 +61,7 @@ public sealed class LicensePaymentSubmissionTests
     [InlineData("proof.jpeg", "image/jpeg")]
     [InlineData("proof.png", "image/png")]
     [InlineData("proof.webp", "image/webp")]
+    [InlineData("proof.heic", "image/heic")]
     public async Task Submit_accepts_each_supported_extension_and_matching_content_type(
         string fileName,
         string contentType)
