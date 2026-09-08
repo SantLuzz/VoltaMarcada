@@ -13,6 +13,12 @@ public enum LicensePaymentPersistenceOutcome
     PendingPaymentAlreadyExists
 }
 
+public enum LicensePaymentReviewPersistenceOutcome
+{
+    Success,
+    NotPending
+}
+
 public interface ILicenseRepository
 {
     Task<CompanyLicenseMembership?> GetMembershipAndLicenseAsync(
@@ -39,4 +45,19 @@ public interface ILicenseRepository
     Task<LicensePaymentPersistenceOutcome> AddPaymentAsync(
         LicensePayment payment,
         CancellationToken cancellationToken = default);
+
+    Task<LicensePaymentReviewPersistenceOutcome> ReviewPaymentAsync(
+        Guid paymentId,
+        Guid administratorId,
+        Licensing.LicensePaymentReviewCommand command,
+        DateTimeOffset now,
+        CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+    Task<IReadOnlyList<Licensing.PlatformLicensePaymentDto>> GetPlatformPaymentsAsync(
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<Licensing.PlatformLicensePaymentDto>>([]);
+    Task<LicensePayment?> GetPaymentForPlatformAsync(
+        Guid paymentId,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<LicensePayment?>(null);
 }

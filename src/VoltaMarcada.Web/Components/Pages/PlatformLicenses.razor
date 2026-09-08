@@ -1,0 +1,98 @@
+@page "/plataforma/licencas"
+@attribute [Authorize(Policy = AuthorizationPolicies.PlatformAdministrator)]
+@using VoltaMarcada.Application.Licensing
+@using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Infrastructure.Licensing
+@inject GetPlatformLicensePaymentsUseCase GetPayments
+@inject ReviewLicensePaymentUseCase ReviewPayment
+@inject IComponentOperationExecutor OperationExecutor
+@inject ISnackbar Snackbar
+@inject OverdueLicenseNotificationService OverdueNotifications
+
+<PageTitle>Pagamentos de licenças</PageTitle>
+
+<PageHeader Title="Pagamentos de licenças" Description="Revise comprovantes de renovação enviados pelas empresas." />
+
+<MudButton Color="Color.Primary" Variant="Variant.Outlined" Disabled="@sendingNotifications" OnClick="SendOverdueNotificationsAsync">Enviar avisos vencidos</MudButton>
+
+@if (loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <MudTable Items="@FilteredPayments" Hover="true" Breakpoint="Breakpoint.Md" Class="servicesync-data-grid">
+        <HeaderContent>
+            <MudTh>Empresa</MudTh><MudTh>Responsável</MudTh><MudTh>Valor</MudTh><MudTh>Enviado em</MudTh><MudTh>Status</MudTh><MudTh>Ações</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Empresa">@context.CompanyName</MudTd>
+            <MudTd DataLabel="Responsável">@context.OwnerEmail</MudTd>
+            <MudTd DataLabel="Valor">@context.Amount.ToString("C")</MudTd>
+            <MudTd DataLabel="Enviado em">@context.SubmittedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
+            <MudTd DataLabel="Status"><MudChip T="string" Color="@StatusColor(context.Status)">@StatusText(context.Status)</MudChip></MudTd>
+            <MudTd DataLabel="Ações">
+                <MudStack Row="true" Spacing="1">
+                    <MudButton Href="@($"/platform/licenses/payments/{context.Id}/proof")" Target="_blank" Variant="Variant.Outlined">Comprovante</MudButton>
+                    @if (context.Status == LicensePaymentStatus.PendingReview)
+                    {
+                        <MudButton Color="Color.Success" Variant="Variant.Filled" Disabled="@processing" OnClick="@(() => DecideAsync(context, LicensePaymentReviewDecision.Approve))">Aprovar</MudButton>
+                        <MudButton Color="Color.Error" Variant="Variant.Outlined" Disabled="@processing" OnClick="@(() => SelectForRejection(context))">Rejeitar</MudButton>
+                    }
+                </MudStack>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+    @if (selectedForRejection is not null)
+    {
+        <MudPaper Class="pa-4 mt-4" Outlined="true">
+            <MudText Typo="Typo.h6">Rejeitar comprovante</MudText>
+            <MudTextField @bind-Value="rejectionReason" Label="Motivo da rejeição" Variant="Variant.Outlined" Required="true" FullWidth="true" />
+            <MudStack Row="true" Class="mt-3"><MudButton OnClick="RejectSelectedAsync" Color="Color.Error" Disabled="@(processing || string.IsNullOrWhiteSpace(rejectionReason))">Confirmar rejeição</MudButton><MudButton OnClick="CancelRejection" Variant="Variant.Text">Cancelar</MudButton></MudStack>
+        </MudPaper>
+    }
+}
+
+@code {
+    private IReadOnlyList<PlatformLicensePaymentDto> payments = [];
+    private PlatformLicensePaymentDto? selectedForRejection;
+    private string? rejectionReason;
+    private bool loading = true;
+    private bool processing;
+    private bool sendingNotifications;
+
+    private IEnumerable<PlatformLicensePaymentDto> FilteredPayments => payments;
+
+    protected override async Task OnInitializedAsync()
+    {
+        payments = await GetPayments.ExecuteAsync();
+        loading = false;
+    }
+
+    private async Task SendOverdueNotificationsAsync()
+    {
+        sendingNotifications = true;
+        try { await OverdueNotifications.SendOverdueNotificationsAsync(CancellationToken.None); Snackbar.Add("Avisos vencidos processados.", Severity.Success); }
+        catch { Snackbar.Add("Não foi possível processar os avisos.", Severity.Error); }
+        finally { sendingNotifications = false; }
+    }
+
+    private async Task DecideAsync(PlatformLicensePaymentDto payment, LicensePaymentReviewDecision decision, string? reason = null)
+    {
+        processing = true;
+        try
+        {
+            var result = await ReviewPayment.ExecuteAsync(payment.Id, new(decision, reason));
+            if (result.IsSuccess) { Snackbar.Add("Comprovante revisado.", Severity.Success); payments = await GetPayments.ExecuteAsync(); }
+            else { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Error); }
+        }
+        finally { processing = false; }
+    }
+
+    private void SelectForRejection(PlatformLicensePaymentDto payment) { selectedForRejection = payment; rejectionReason = null; }
+    private async Task RejectSelectedAsync() { await DecideAsync(selectedForRejection!, LicensePaymentReviewDecision.Reject, rejectionReason); selectedForRejection = null; rejectionReason = null; }
+    private void CancelRejection() { selectedForRejection = null; rejectionReason = null; }
+    private static string StatusText(LicensePaymentStatus? status) => status switch { LicensePaymentStatus.PendingReview => "Pendente", LicensePaymentStatus.Approved => "Aprovado", LicensePaymentStatus.Rejected => "Rejeitado", _ => "Indisponível" };
+    private static Color StatusColor(LicensePaymentStatus? status) => status switch { LicensePaymentStatus.PendingReview => Color.Warning, LicensePaymentStatus.Approved => Color.Success, LicensePaymentStatus.Rejected => Color.Error, _ => Color.Default };
+}

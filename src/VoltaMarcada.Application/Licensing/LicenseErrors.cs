@@ -4,6 +4,14 @@ namespace VoltaMarcada.Application.Licensing;
 
 public static class LicenseErrors
 {
+    public static readonly OperationError InvalidPaymentReview =
+        new("License.InvalidPaymentReview", OperationErrorType.Validation, "Payment review is invalid.");
+
+    public static readonly OperationError RejectionReasonRequired =
+        new("License.RejectionReasonRequired", OperationErrorType.Validation, "Payment rejection reason is required.");
+
+    public static readonly OperationError PaymentNotPendingReview =
+        new("License.PaymentNotPendingReview", OperationErrorType.Conflict, "Payment is not pending review.");
     public static readonly OperationError InvalidPaymentProof =
         new(
             "License.InvalidPaymentProof",

@@ -85,4 +85,43 @@ public sealed class LicensePayment : ICompanyScopedEntity
         ProofLength = length;
         UpdatedAtUtc = now.ToUniversalTime();
     }
+
+    public void Approve(Guid administratorId, DateTimeOffset decidedAtUtc)
+    {
+        RecordDecision(LicensePaymentStatus.Approved, administratorId, null, decidedAtUtc);
+    }
+
+    public void Reject(Guid administratorId, string reason, DateTimeOffset decidedAtUtc)
+    {
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 2_000)
+        {
+            throw new DomainException("Payment rejection reason is required and cannot exceed 2000 characters.");
+        }
+
+        RecordDecision(LicensePaymentStatus.Rejected, administratorId, reason.Trim(), decidedAtUtc);
+    }
+
+    private void RecordDecision(
+        LicensePaymentStatus status,
+        Guid administratorId,
+        string? reason,
+        DateTimeOffset decidedAtUtc)
+    {
+        if (Status != LicensePaymentStatus.PendingReview)
+        {
+            throw new DomainException("Only a pending payment can be reviewed.");
+        }
+
+        if (administratorId == Guid.Empty)
+        {
+            throw new DomainException("Platform administrator ID is required.");
+        }
+
+        var utcDecidedAt = decidedAtUtc.ToUniversalTime();
+        Status = status;
+        DecisionReason = reason;
+        DecidedAtUtc = utcDecidedAt;
+        DecidedByUserId = administratorId;
+        UpdatedAtUtc = utcDecidedAt;
+    }
 }

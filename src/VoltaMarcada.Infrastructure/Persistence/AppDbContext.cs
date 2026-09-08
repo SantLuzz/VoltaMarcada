@@ -22,6 +22,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<LicensePayment> LicensePayments => Set<LicensePayment>();
 
+    public DbSet<LicenseOverdueNotification> LicenseOverdueNotifications => Set<LicenseOverdueNotification>();
+
     public DbSet<EmployeeInvitation> EmployeeInvitations => Set<EmployeeInvitation>();
 
     public DbSet<State> States => Set<State>();

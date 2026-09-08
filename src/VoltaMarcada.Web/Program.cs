@@ -142,6 +142,11 @@ builder.Services.AddAuthorizationBuilder()
     {
         policy.RequireAuthenticatedUser();
         policy.AddRequirements(new OperationalLicenseRequirement());
+    })
+    .AddPolicy(AuthorizationPolicies.PlatformAdministrator, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole(PlatformRoles.PlatformAdministrator);
     });
 
 var app = builder.Build();
@@ -212,6 +217,7 @@ app.MapAppointmentEndpoints();
 app.MapScheduleBlockRequestEndpoints();
 app.MapQuoteEndpoints();
 app.MapLicenseEndpoints();
+app.MapPlatformLicenseEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
