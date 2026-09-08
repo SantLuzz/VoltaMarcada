@@ -919,6 +919,31 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.ToTable("Equipment", (string)null);
                 });
 
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.LicenseOverdueNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyLicenseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("SentOn")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyLicenseId", "OwnerUserId", "SentOn")
+                        .IsUnique();
+
+                    b.ToTable("LicenseOverdueNotifications", (string)null);
+                });
+
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.LicensePayment", b =>
                 {
                     b.Property<Guid>("Id")
