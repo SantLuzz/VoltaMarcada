@@ -13,6 +13,8 @@ public sealed class OverdueLicenseNotificationService(
     TimeProvider timeProvider,
     ILogger<OverdueLicenseNotificationService> logger) : BackgroundService
 {
+    private static readonly TimeZoneInfo SaoPauloTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -28,7 +30,7 @@ public sealed class OverdueLicenseNotificationService(
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var sender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
         var now = timeProvider.GetUtcNow();
-        var sentOn = DateOnly.FromDateTime(now.UtcDateTime);
+        var sentOn = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, SaoPauloTimeZone).DateTime);
         var recipients = await (from license in db.CompanyLicenses
                                 join membership in db.CompanyUsers on license.CompanyId equals membership.CompanyId
                                 join user in db.Users on membership.UserId equals user.Id
