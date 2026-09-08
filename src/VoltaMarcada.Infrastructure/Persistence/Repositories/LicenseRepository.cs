@@ -128,11 +128,13 @@ public sealed class LicenseRepository(AppDbContext dbContext) : ILicenseReposito
                join membership in dbContext.CompanyUsers.AsNoTracking() on company.Id equals membership.CompanyId
                join user in dbContext.Users.AsNoTracking() on membership.UserId equals user.Id
                join license in dbContext.CompanyLicenses.AsNoTracking() on company.Id equals license.CompanyId
+               join reviewerCandidate in dbContext.Users.AsNoTracking() on payment.DecidedByUserId equals reviewerCandidate.Id into reviewers
+               from reviewer in reviewers.DefaultIfEmpty()
                where membership.Role == CompanyUserRole.Owner
                orderby payment.SubmittedAtUtc descending
                select new VoltaMarcada.Application.Licensing.PlatformLicensePaymentDto(
                    payment.Id, company.TradeName, user.Email ?? string.Empty, license.PaidUntilUtc,
-                   payment.Amount, payment.SubmittedAtUtc, payment.Status, payment.DecidedAtUtc, payment.DecisionReason))
+                   payment.Amount, payment.SubmittedAtUtc, payment.Status, payment.DecidedAtUtc, payment.DecisionReason, user.FullName, reviewer == null ? null : reviewer.FullName))
             .ToListAsync(cancellationToken);
     public Task<LicensePayment?> GetPaymentForPlatformAsync(
         Guid paymentId,

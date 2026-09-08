@@ -18,6 +18,12 @@ public static class LicenseErrors
             OperationErrorType.Validation,
             "Payment proof is invalid.");
 
+    public static readonly OperationError RenewalNotEligible =
+        new(
+            "License.RenewalNotEligible",
+            OperationErrorType.Validation,
+            "License is not eligible for renewal.");
+
     public static readonly OperationError PendingPaymentAlreadyExists =
         new(
             "License.PendingPaymentAlreadyExists",

@@ -60,6 +60,13 @@ public sealed class CompanyLicense
             : GetTrialAccessMode(utcNow, policy);
     }
 
+    public bool IsEligibleForRenewal(DateTimeOffset now)
+    {
+        var utcNow = now.ToUniversalTime();
+        return PaidUntilUtc is not { } paidUntilUtc ||
+            paidUntilUtc - utcNow <= TimeSpan.FromDays(7);
+    }
+
     public void Renew(DateTimeOffset approvedAtUtc)
     {
         var utcApprovedAt = approvedAtUtc.ToUniversalTime();

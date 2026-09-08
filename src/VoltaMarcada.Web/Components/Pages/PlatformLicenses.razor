@@ -23,14 +23,14 @@ else
 {
     <MudTable Items="@FilteredPayments" Hover="true" Breakpoint="Breakpoint.Md" Class="servicesync-data-grid">
         <HeaderContent>
-            <MudTh>Empresa</MudTh><MudTh>Responsável</MudTh><MudTh>Valor</MudTh><MudTh>Enviado em</MudTh><MudTh>Status</MudTh><MudTh>Ações</MudTh>
+            <MudTh>Empresa</MudTh><MudTh>Responsável</MudTh><MudTh>Vencimento</MudTh><MudTh>Valor</MudTh><MudTh>Enviado em</MudTh><MudTh>Status</MudTh><MudTh>Análise</MudTh><MudTh>Ações</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Empresa">@context.CompanyName</MudTd>
-            <MudTd DataLabel="Responsável">@context.OwnerEmail</MudTd>
+            <MudTd DataLabel="Responsável">@(context.OwnerName ?? context.OwnerEmail)<br /><small>@context.OwnerEmail</small></MudTd><MudTd DataLabel="Vencimento">@(context.PaidUntilUtc?.ToLocalTime().ToString("dd/MM/yyyy") ?? "Trial")</MudTd>
             <MudTd DataLabel="Valor">@context.Amount.ToString("C")</MudTd>
             <MudTd DataLabel="Enviado em">@context.SubmittedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
-            <MudTd DataLabel="Status"><MudChip T="string" Color="@StatusColor(context.Status)">@StatusText(context.Status)</MudChip></MudTd>
+            <MudTd DataLabel="Status"><MudChip T="string" Color="@StatusColor(context.Status)">@StatusText(context.Status)</MudChip></MudTd><MudTd DataLabel="Análise">@(context.ReviewerName ?? "-")<br />@(context.DecidedAtUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</MudTd>
             <MudTd DataLabel="Ações">
                 <MudStack Row="true" Spacing="1">
                     <MudButton Href="@($"/platform/licenses/payments/{context.Id}/proof")" Target="_blank" Variant="Variant.Outlined">Comprovante</MudButton>

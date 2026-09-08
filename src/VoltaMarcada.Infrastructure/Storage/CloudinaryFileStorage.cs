@@ -13,24 +13,37 @@ public sealed class CloudinaryFileStorage(
         CancellationToken cancellationToken)
     {
         var publicId = request.FileName ?? Guid.NewGuid().ToString("N");
-        var upload = await cloudinary.UploadAsync(
-            new ImageUploadParams
-            {
-                File = new FileDescription(request.File.FileName, request.File.Content),
-                Folder = request.Folder,
-                PublicId = publicId,
-                UniqueFilename = false,
-                Overwrite = false,
-                Type = request.Access == FileStorageAccess.Private ? "authenticated" : null
-            },
-            cancellationToken);
+        var storedPublicId = IsRawDocument(request.File.ContentType)
+            ? (await cloudinary.UploadAsync(
+                new RawUploadParams
+                {
+                    File = new FileDescription(request.File.FileName, request.File.Content),
+                    Folder = request.Folder,
+                    PublicId = publicId,
+                    UniqueFilename = false,
+                    Overwrite = false,
+                    Type = request.Access == FileStorageAccess.Private ? "authenticated" : null
+                },
+                string.Empty,
+                cancellationToken)).PublicId
+            : (await cloudinary.UploadAsync(
+                new ImageUploadParams
+                {
+                    File = new FileDescription(request.File.FileName, request.File.Content),
+                    Folder = request.Folder,
+                    PublicId = publicId,
+                    UniqueFilename = false,
+                    Overwrite = false,
+                    Type = request.Access == FileStorageAccess.Private ? "authenticated" : null
+                },
+                cancellationToken)).PublicId;
 
-        if (string.IsNullOrWhiteSpace(upload.PublicId))
+        if (string.IsNullOrWhiteSpace(storedPublicId))
         {
             throw new InvalidOperationException("Cloudinary did not return a public ID for the uploaded file.");
         }
 
-        return new FileStorageUploadResult(upload.PublicId);
+        return new FileStorageUploadResult(storedPublicId);
     }
 
     public async Task<FileStorageDownloadResult> GetAsync(string key, CancellationToken cancellationToken)
@@ -51,7 +64,7 @@ public sealed class CloudinaryFileStorage(
         var result = await cloudinary.DestroyAsync(
             new DeletionParams(key)
             {
-                ResourceType = ResourceType.Image,
+                ResourceType = IsRawDocumentKey(key) ? ResourceType.Raw : ResourceType.Image,
                 Type = IsPrivatePaymentKey(key) ? "authenticated" : null
             });
 
@@ -70,6 +83,10 @@ public sealed class CloudinaryFileStorage(
         }
 
         var url = cloudinary.Api.UrlImgUp;
+        if (IsRawDocumentKey(key))
+        {
+            url = url.ResourceType("raw");
+        }
         if (IsPrivatePaymentKey(key))
         {
             url = url.Action("authenticated").Signed(true);
@@ -86,4 +103,10 @@ public sealed class CloudinaryFileStorage(
 
     private static bool IsPrivatePaymentKey(string key) =>
         key.StartsWith("pagamentos/", StringComparison.Ordinal);
+
+    private static bool IsRawDocument(string contentType) =>
+        string.Equals(contentType, "application/pdf", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsRawDocumentKey(string key) =>
+        Path.GetExtension(key).Equals(".pdf", StringComparison.OrdinalIgnoreCase);
 }

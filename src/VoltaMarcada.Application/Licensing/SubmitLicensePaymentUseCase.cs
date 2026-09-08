@@ -34,12 +34,18 @@ public sealed class SubmitLicensePaymentUseCase(
         }
 
         var companyId = await currentCompany.GetCompanyIdAsync(cancellationToken);
+        var now = timeProvider.GetUtcNow();
+        var license = await repository.GetForCompanyAsync(companyId, cancellationToken);
+        if (license is not null && !license.IsEligibleForRenewal(now))
+        {
+            return OperationResult<LicensePaymentSubmissionDto>.Failure(LicenseErrors.RenewalNotEligible);
+        }
+
         if (await repository.HasPendingPaymentAsync(companyId, cancellationToken))
         {
             return OperationResult<LicensePaymentSubmissionDto>.Failure(LicenseErrors.PendingPaymentAlreadyExists);
         }
 
-        var now = timeProvider.GetUtcNow();
         var payment = LicensePayment.Create(companyId, billing.MonthlyPrice, now);
         var fileName = $"{now:yyyyMMddHHmmssfff}{extension}";
         var stored = await fileStorage.UploadAsync(

@@ -11,4 +11,6 @@ public sealed record PlatformLicensePaymentDto(
     DateTimeOffset SubmittedAtUtc,
     LicensePaymentStatus? Status,
     DateTimeOffset? DecidedAtUtc,
-    string? DecisionReason);
+    string? DecisionReason,
+    string? OwnerName = null,
+    string? ReviewerName = null);
