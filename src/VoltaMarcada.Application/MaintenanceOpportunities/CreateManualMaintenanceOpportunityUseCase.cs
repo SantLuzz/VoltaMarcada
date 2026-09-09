@@ -83,7 +83,13 @@ internal static class MaintenanceRecommendationDueDateResolver
 
         var timeZone = TimeZoneInfo.FindSystemTimeZoneById(schedulingConfiguration.DefaultTimeZoneId);
         var businessDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, timeZone).DateTime);
-        dueDate = businessDate.AddDays(recommendation.IntervalDays!.Value);
+        var intervalDays = recommendation.IntervalDays!.Value;
+        if (intervalDays > DateOnly.MaxValue.DayNumber - businessDate.DayNumber)
+        {
+            return false;
+        }
+
+        dueDate = businessDate.AddDays(intervalDays);
         return true;
     }
 }

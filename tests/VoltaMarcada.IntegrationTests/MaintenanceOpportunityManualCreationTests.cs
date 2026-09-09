@@ -176,6 +176,19 @@ public sealed class MaintenanceOpportunityManualCreationTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_rejects_interval_that_exceeds_date_range()
+    {
+        var fixture = new Fixture();
+
+        var result = await fixture.UseCase.ExecuteAsync(
+            new(fixture.CustomerId, fixture.EquipmentId,
+                new(int.MaxValue, null, fixture.ServiceId, "Annual maintenance")));
+
+        Assert.Equal(MaintenanceOpportunityErrors.InvalidInput, result.Error);
+        Assert.Empty(fixture.Repository.Added);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_rejects_minimum_due_date()
     {
         var fixture = new Fixture();
