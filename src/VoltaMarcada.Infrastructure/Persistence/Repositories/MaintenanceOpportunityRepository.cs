@@ -94,7 +94,8 @@ public sealed class MaintenanceOpportunityRepository(AppDbContext dbContext) : I
             join service in dbContext.Services.AsNoTracking().Where(item => item.CompanyId == companyId)
                 on opportunity.RecommendedServiceId equals service.Id
             join workOrder in dbContext.WorkOrders.AsNoTracking().Where(item => item.CompanyId == companyId)
-                on opportunity.PreviousWorkOrderId equals workOrder.Id
+                on opportunity.PreviousWorkOrderId equals workOrder.Id into workOrders
+            from workOrder in workOrders.DefaultIfEmpty()
             orderby opportunity.DueDate, customer.Name
             select new
             {
@@ -148,7 +149,7 @@ public sealed class MaintenanceOpportunityRepository(AppDbContext dbContext) : I
             item.CustomerName,
             item.CustomerWhatsApp,
             FormatEquipment(item.Type, item.Manufacturer, item.Model),
-            item.CompletedAtUtc ?? item.Opportunity.CreatedAtUtc,
+            item.CompletedAtUtc,
             item.RecommendedServiceName,
             item.Opportunity.DueDate,
             item.Opportunity.Notes,

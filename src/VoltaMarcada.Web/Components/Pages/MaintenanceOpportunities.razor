@@ -12,7 +12,7 @@
 @inject ICurrentDisplayTimeZone CurrentDisplayTimeZone
 @inject IBrazilianDisplayFormatter DisplayFormatter
 
-<PageTitle>Manutenções | VoltaMarcada</PageTitle>
+<PageTitle>ManutenÃ§Ãµes | VoltaMarcada</PageTitle>
 <PageHeader Title="Oportunidades de retorno" Description="Acompanhe o momento recomendado para trazer cada cliente de volta." />
 
 @if (isLoading)
@@ -23,8 +23,8 @@ else
 {
     <MudGrid Class="mt-4">
         <MudItem xs="6" sm="3"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">Vencidas</MudText><MudText Typo="Typo.h5" Color="Color.Error">@summary.OverdueCount</MudText></MudPaper></MudItem>
-        <MudItem xs="6" sm="3"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">Próximos 7 dias</MudText><MudText Typo="Typo.h5" Color="Color.Warning">@summary.NextSevenDaysCount</MudText></MudPaper></MudItem>
-        <MudItem xs="6" sm="3"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">Próximos 30 dias</MudText><MudText Typo="Typo.h5">@summary.NextThirtyDaysCount</MudText></MudPaper></MudItem>
+        <MudItem xs="6" sm="3"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">PrÃ³ximos 7 dias</MudText><MudText Typo="Typo.h5" Color="Color.Warning">@summary.NextSevenDaysCount</MudText></MudPaper></MudItem>
+        <MudItem xs="6" sm="3"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">PrÃ³ximos 30 dias</MudText><MudText Typo="Typo.h5">@summary.NextThirtyDaysCount</MudText></MudPaper></MudItem>
         <MudItem xs="6" sm="3"><MudPaper Outlined="true" Class="pa-3"><MudText Typo="Typo.caption">Aguardando cliente</MudText><MudText Typo="Typo.h5" Color="Color.Info">@summary.AwaitingCustomerCount</MudText></MudPaper></MudItem>
     </MudGrid>
 
@@ -36,14 +36,14 @@ else
                     <MudSelectItem Value="@((MaintenanceOpportunityStatus?)MaintenanceOpportunityStatus.Contacted)">Contato realizado</MudSelectItem>
                     <MudSelectItem Value="@((MaintenanceOpportunityStatus?)MaintenanceOpportunityStatus.AwaitingCustomer)">Aguardando cliente</MudSelectItem>
                     <MudSelectItem Value="@((MaintenanceOpportunityStatus?)MaintenanceOpportunityStatus.Converted)">Convertida</MudSelectItem>
-                    <MudSelectItem Value="@((MaintenanceOpportunityStatus?)MaintenanceOpportunityStatus.ClosedWithoutConversion)">Encerrada sem conversão</MudSelectItem>
+                    <MudSelectItem Value="@((MaintenanceOpportunityStatus?)MaintenanceOpportunityStatus.ClosedWithoutConversion)">Encerrada sem conversÃ£o</MudSelectItem>
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudSelect T="MaintenanceOpportunityUrgency?" Label="Prioridade" Clearable="true" @bind-Value="urgency" @bind-Value:after="LoadAsync">
                     <MudSelectItem Value="@((MaintenanceOpportunityUrgency?)MaintenanceOpportunityUrgency.Overdue)">Vencidas</MudSelectItem>
-                    <MudSelectItem Value="@((MaintenanceOpportunityUrgency?)MaintenanceOpportunityUrgency.NextSevenDays)">Próximos 7 dias</MudSelectItem>
-                    <MudSelectItem Value="@((MaintenanceOpportunityUrgency?)MaintenanceOpportunityUrgency.NextThirtyDays)">Próximos 30 dias</MudSelectItem>
+                    <MudSelectItem Value="@((MaintenanceOpportunityUrgency?)MaintenanceOpportunityUrgency.NextSevenDays)">PrÃ³ximos 7 dias</MudSelectItem>
+                    <MudSelectItem Value="@((MaintenanceOpportunityUrgency?)MaintenanceOpportunityUrgency.NextThirtyDays)">PrÃ³ximos 30 dias</MudSelectItem>
                     <MudSelectItem Value="@((MaintenanceOpportunityUrgency?)MaintenanceOpportunityUrgency.Future)">Futuras</MudSelectItem>
                 </MudSelect>
             </MudItem>
@@ -53,7 +53,7 @@ else
 
         @if (items.Count == 0)
         {
-            <EmptyState Icon="@Icons.Material.Filled.BuildCircle" Title="Nenhuma oportunidade encontrada" Description="As recomendações criadas ao concluir uma OS aparecerão aqui." />
+            <EmptyState Icon="@Icons.Material.Filled.BuildCircle" Title="Nenhuma oportunidade encontrada" Description="As recomendaÃ§Ãµes criadas ao concluir uma OS aparecerÃ£o aqui." />
         }
         else
         {
@@ -66,8 +66,8 @@ else
                                 <MudText Typo="Typo.subtitle1">@item.CustomerName</MudText>
                                 <MudChip T="string" Size="Size.Small" Color="@GetUrgencyColor(item.Urgency)">@GetUrgencyName(item.Urgency)</MudChip>
                             </MudStack>
-                            <MudText Typo="Typo.body2">@item.EquipmentDescription · @item.RecommendedServiceName</MudText>
-                            <MudText Typo="Typo.caption">Última manutenção: @FormatDate(item.PreviousWorkOrderCompletedAtUtc) · Recomendada: @item.DueDate.ToString("dd/MM/yyyy")</MudText>
+                            <MudText Typo="Typo.body2">@item.EquipmentDescription Â· @item.RecommendedServiceName</MudText>
+                            <MudText Typo="Typo.caption">Ãšltima manutenÃ§Ã£o: @(item.PreviousWorkOrderCompletedAtUtc is { } previousWorkOrderCompletedAtUtc ? FormatDate(previousWorkOrderCompletedAtUtc) : "-") Â· Recomendada: @item.DueDate.ToString("dd/MM/yyyy")</MudText>
                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                 <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(item.Status)">@GetStatusName(item.Status)</MudChip>
                                 <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => selectedOpportunity = item)">Detalhes</MudButton>
@@ -78,7 +78,7 @@ else
                                 <MudStack Row="true" Wrap="Wrap.Wrap" Class="maintenance-actions">
                                     <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Send" Disabled="@IsContactActionPending(item.Id)" OnClick="@(() => PrepareWhatsAppAsync(item.Id))">Preparar contato</MudButton>
                                     <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CalendarMonth" OnClick="@(() => ScheduleAsync(item.Id))">Agendar atendimento</MudButton>
-                                    <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.RequestQuote" OnClick="@(() => CreateQuote(item.Id))">Gerar orçamento</MudButton>
+                                    <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.RequestQuote" OnClick="@(() => CreateQuote(item.Id))">Gerar orÃ§amento</MudButton>
                                     <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@(() => OpenDiscardDialog(item))">Descartar</MudButton>
                                 </MudStack>
                             }
@@ -88,7 +88,7 @@ else
                             }
                             else
                             {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">Encerrada sem conversão em @(item.ClosedAtUtc is { } closedAtUtc ? FormatDateTime(closedAtUtc) : "-"). Motivo: @item.ClosureReason</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Encerrada sem conversÃ£o em @(item.ClosedAtUtc is { } closedAtUtc ? FormatDateTime(closedAtUtc) : "-"). Motivo: @item.ClosureReason</MudText>
                             }
                         </MudStack>
                     </MudPaper>
@@ -105,15 +105,15 @@ else
         {
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1">@item.CustomerName</MudText>
-                <MudText>@item.EquipmentDescription · @item.RecommendedServiceName</MudText>
-                <MudText Typo="Typo.body2">Última manutenção: @FormatDate(item.PreviousWorkOrderCompletedAtUtc)</MudText>
-                <MudText Typo="Typo.body2">Próxima recomendada: @item.DueDate.ToString("dd/MM/yyyy")</MudText>
+                <MudText>@item.EquipmentDescription Â· @item.RecommendedServiceName</MudText>
+                <MudText Typo="Typo.body2">Ãšltima manutenÃ§Ã£o: @(item.PreviousWorkOrderCompletedAtUtc is { } previousWorkOrderCompletedAtUtc ? FormatDate(previousWorkOrderCompletedAtUtc) : "-")</MudText>
+                <MudText Typo="Typo.body2">PrÃ³xima recomendada: @item.DueDate.ToString("dd/MM/yyyy")</MudText>
                 @if (!string.IsNullOrWhiteSpace(item.Notes))
                 {
                     <MudText Typo="Typo.body2">@item.Notes</MudText>
                 }
                 <MudDivider />
-                <MudText Typo="Typo.subtitle2">Histórico de contatos</MudText>
+                <MudText Typo="Typo.subtitle2">HistÃ³rico de contatos</MudText>
                 @if (item.Contacts.Count == 0)
                 {
                     <MudText Typo="Typo.body2">Nenhum contato preparado ainda.</MudText>
@@ -123,7 +123,7 @@ else
                     @foreach (var contact in item.Contacts)
                     {
                         <MudPaper Outlined="true" Class="pa-2">
-                            <MudText Typo="Typo.body2">WhatsApp · @GetContactStatusName(contact.Status)</MudText>
+                            <MudText Typo="Typo.body2">WhatsApp Â· @GetContactStatusName(contact.Status)</MudText>
                             <MudText Typo="Typo.caption">Preparado em @FormatDateTime(contact.CreatedAtUtc)</MudText>
                             @if (contact.SentAtUtc is { } sentAtUtc)
                             {
@@ -262,19 +262,19 @@ else
     private bool IsContactActionPending(Guid id) => contactActionIds.Contains(id);
     private static bool IsOpen(MaintenanceOpportunityStatus value) => value is not MaintenanceOpportunityStatus.Converted and not MaintenanceOpportunityStatus.ClosedWithoutConversion;
     private static Color GetUrgencyColor(MaintenanceOpportunityUrgency value) => value switch { MaintenanceOpportunityUrgency.Overdue => Color.Error, MaintenanceOpportunityUrgency.NextSevenDays => Color.Warning, _ => Color.Primary };
-    private static string GetUrgencyName(MaintenanceOpportunityUrgency value) => value switch { MaintenanceOpportunityUrgency.Overdue => "Vencida", MaintenanceOpportunityUrgency.NextSevenDays => "Próximos 7 dias", MaintenanceOpportunityUrgency.NextThirtyDays => "Próximos 30 dias", _ => "Futura" };
+    private static string GetUrgencyName(MaintenanceOpportunityUrgency value) => value switch { MaintenanceOpportunityUrgency.Overdue => "Vencida", MaintenanceOpportunityUrgency.NextSevenDays => "PrÃ³ximos 7 dias", MaintenanceOpportunityUrgency.NextThirtyDays => "PrÃ³ximos 30 dias", _ => "Futura" };
     private static Color GetStatusColor(MaintenanceOpportunityStatus value) => value switch { MaintenanceOpportunityStatus.Converted => Color.Success, MaintenanceOpportunityStatus.ClosedWithoutConversion => Color.Default, MaintenanceOpportunityStatus.AwaitingCustomer => Color.Info, MaintenanceOpportunityStatus.Contacted => Color.Warning, _ => Color.Primary };
-    private static string GetStatusName(MaintenanceOpportunityStatus value) => value switch { MaintenanceOpportunityStatus.Contacted => "Contato realizado", MaintenanceOpportunityStatus.AwaitingCustomer => "Aguardando cliente", MaintenanceOpportunityStatus.Converted => "Convertida", MaintenanceOpportunityStatus.ClosedWithoutConversion => "Encerrada sem conversão", _ => "Pendente" };
+    private static string GetStatusName(MaintenanceOpportunityStatus value) => value switch { MaintenanceOpportunityStatus.Contacted => "Contato realizado", MaintenanceOpportunityStatus.AwaitingCustomer => "Aguardando cliente", MaintenanceOpportunityStatus.Converted => "Convertida", MaintenanceOpportunityStatus.ClosedWithoutConversion => "Encerrada sem conversÃ£o", _ => "Pendente" };
     private static string GetContactStatusName(CustomerContactStatus value) => value == CustomerContactStatus.Prepared ? "Preparado" : "Enviado";
     private string FormatDateTime(DateTimeOffset value) => DisplayFormatter.FormatDateTime(value, displayTimeZone);
     private string FormatDate(DateTimeOffset value) => FormatDateTime(value)[..10];
     private string GetConversionText(MaintenanceOpportunityListItem item)
     {
         if (item.ConversionReference is { } reference && item.ConversionType == MaintenanceOpportunityConversionType.Appointment)
-            return $"Convertida em agendamento → Agendamento #{reference.EntityId.ToString()[..8]} → {(reference.AppointmentStartAtUtc is { } startAtUtc ? FormatDateTime(startAtUtc) : "-")}";
+            return $"Convertida em agendamento â†’ Agendamento #{reference.EntityId.ToString()[..8]} â†’ {(reference.AppointmentStartAtUtc is { } startAtUtc ? FormatDateTime(startAtUtc) : "-")}";
         if (item.ConversionReference is { } quoteReference && item.ConversionType == MaintenanceOpportunityConversionType.Quote)
-            return $"Convertida em orçamento → Orçamento #{quoteReference.EntityId.ToString()[..8]} → {GetQuoteStatusName(quoteReference.QuoteStatus)}";
+            return $"Convertida em orÃ§amento â†’ OrÃ§amento #{quoteReference.EntityId.ToString()[..8]} â†’ {GetQuoteStatusName(quoteReference.QuoteStatus)}";
         return "Convertida em fluxo externo.";
     }
-    private static string GetQuoteStatusName(QuoteStatus? value) => value switch { QuoteStatus.Draft => "Rascunho", QuoteStatus.Sent => "Aguardando aprovação", QuoteStatus.Approved => "Aprovado", QuoteStatus.Rejected => "Recusado", QuoteStatus.Expired => "Expirado", _ => "Acompanhamento indisponível" };
+    private static string GetQuoteStatusName(QuoteStatus? value) => value switch { QuoteStatus.Draft => "Rascunho", QuoteStatus.Sent => "Aguardando aprovaÃ§Ã£o", QuoteStatus.Approved => "Aprovado", QuoteStatus.Rejected => "Recusado", QuoteStatus.Expired => "Expirado", _ => "Acompanhamento indisponÃ­vel" };
 }

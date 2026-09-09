@@ -25,7 +25,7 @@ public sealed record MaintenanceOpportunityListItem(
     string CustomerName,
     string CustomerWhatsApp,
     string EquipmentDescription,
-    DateTimeOffset PreviousWorkOrderCompletedAtUtc,
+    DateTimeOffset? PreviousWorkOrderCompletedAtUtc,
     string RecommendedServiceName,
     DateOnly DueDate,
     string Notes,
