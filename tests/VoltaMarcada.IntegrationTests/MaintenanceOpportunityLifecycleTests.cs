@@ -51,7 +51,14 @@ public sealed class MaintenanceOpportunityLifecycleTests
     [Fact]
     public void CloseWithoutConversion_WhenReasonIsProvided_RecordsClosureTraceability()
     {
-        var opportunity = CreateOpportunity();
+        var opportunity = MaintenanceOpportunity.CreateManual(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            new DateOnly(2026, 10, 1),
+            "Maintenance reminder",
+            Now);
         var userId = Guid.NewGuid();
 
         opportunity.CloseWithoutConversion(userId, "Customer declined the offer.", Now);
@@ -60,6 +67,7 @@ public sealed class MaintenanceOpportunityLifecycleTests
         Assert.Equal(userId, opportunity.ClosedByUserId);
         Assert.Equal("Customer declined the offer.", opportunity.ClosureReason);
         Assert.Equal(Now, opportunity.ClosedAtUtc);
+        Assert.Null(opportunity.PreviousWorkOrderId);
     }
 
     private static MaintenanceOpportunity CreateOpportunity() => MaintenanceOpportunity.Create(
