@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<DeleteServiceUseCase>();
         services.AddScoped<WorkOrderAuthorization>();
         services.AddScoped<MaintenanceOpportunityOwnerAuthorization>();
+        services.AddScoped<CreateManualMaintenanceOpportunityUseCase>();
         services.AddScoped<GetMaintenanceOpportunitiesUseCase>();
         services.AddScoped<GetMaintenanceOpportunitySummaryUseCase>();
         services.AddScoped<GetOwnerDashboardUseCase>();

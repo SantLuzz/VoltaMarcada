@@ -1,6 +1,7 @@
 using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Application.Abstractions.Operations;
 using VoltaMarcada.Application.Abstractions.Persistence;
+using VoltaMarcada.Application.MaintenanceOpportunities;
 using VoltaMarcada.Application.Scheduling;
 using VoltaMarcada.Domain.Entities;
 
@@ -34,7 +35,7 @@ public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IA
             return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(order.Id));
         }
 
-        if (!TryGetDueDate(recommendation, now, out var dueDate))
+        if (!MaintenanceRecommendationDueDateResolver.TryResolve(recommendation, now, schedulingConfiguration, out var dueDate))
         {
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidMaintenanceRecommendation);
         }
@@ -64,23 +65,4 @@ public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IA
         return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(order.Id));
     }
 
-    private bool TryGetDueDate(MaintenanceRecommendationInput recommendation, DateTimeOffset now, out DateOnly dueDate)
-    {
-        dueDate = default;
-        if ((recommendation.IntervalDays is null) == (recommendation.DueDate is null) || recommendation.IntervalDays is <= 0)
-        {
-            return false;
-        }
-
-        if (recommendation.DueDate is { } explicitDueDate)
-        {
-            dueDate = explicitDueDate;
-            return explicitDueDate != DateOnly.MinValue;
-        }
-
-        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(schedulingConfiguration.DefaultTimeZoneId);
-        var completionDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, timeZone).DateTime);
-        dueDate = completionDate.AddDays(recommendation.IntervalDays!.Value);
-        return true;
-    }
 }
