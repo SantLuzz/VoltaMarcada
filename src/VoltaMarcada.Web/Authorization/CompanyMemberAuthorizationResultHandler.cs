@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.Extensions.DependencyInjection;
 using VoltaMarcada.Application.Abstractions.Persistence;
 using VoltaMarcada.Domain.Enums;
+using VoltaMarcada.Infrastructure.Identity;
 using VoltaMarcada.Web.Routing;
 
 namespace VoltaMarcada.Web.Authorization;
@@ -28,6 +29,17 @@ public sealed class CompanyMemberAuthorizationResultHandler(IServiceScopeFactory
         var failedRequirements = authorizeResult.AuthorizationFailure?.FailedRequirements ?? [];
         if (failedRequirements.OfType<CompanyMemberRequirement>().Any())
         {
+            if (context.User.IsInRole(PlatformRoles.PlatformAdministrator))
+            {
+                if (HttpMethods.IsGet(context.Request.Method))
+                {
+                    context.Response.Redirect("/plataforma");
+                    return;
+                }
+
+                await defaultHandler.HandleAsync(next, context, policy, authorizeResult);
+                return;
+            }
             var requestedPath = context.Request.PathBase.ToString()
                 + context.Request.Path
                 + context.Request.QueryString;

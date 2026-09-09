@@ -1,6 +1,7 @@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @using VoltaMarcada.Web.Routing
+@using VoltaMarcada.Infrastructure.Identity
 
 <section class="status-page" aria-live="polite">
     <MudStack AlignItems="AlignItems.Center" Spacing="2">
@@ -14,6 +15,12 @@
     {
         var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var returnUrl = LocalReturnUrl.GetCurrentPath(new Uri(NavigationManager.Uri), new Uri(NavigationManager.BaseUri));
+        if (authenticationState.User.IsInRole(PlatformRoles.PlatformAdministrator))
+        {
+            NavigationManager.NavigateTo("/plataforma", forceLoad: true);
+            return;
+        }
+
         var destination = authenticationState.User.Identity?.IsAuthenticated == true ? "/onboarding/company" : "/account/login";
         NavigationManager.NavigateTo(destination + QueryString.Create("returnUrl", returnUrl), forceLoad: true);
     }

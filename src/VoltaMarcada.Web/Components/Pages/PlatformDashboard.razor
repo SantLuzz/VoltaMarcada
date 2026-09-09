@@ -1,0 +1,20 @@
+@page "/plataforma"
+@attribute [Authorize(Policy = AuthorizationPolicies.PlatformAdministrator)]
+@layout PlatformLayout
+
+<PageTitle>Administração da plataforma | VoltaMarcada</PageTitle>
+
+<PageHeader Title="Administração da plataforma" Description="Acompanhe licenças e pagamentos das empresas cadastradas." />
+
+<MudGrid Class="mt-4">
+    <MudItem xs="12" md="6">
+        <MudPaper Outlined="true" Class="pa-4">
+            <MudStack Spacing="2">
+                <MudIcon Icon="@Icons.Material.Filled.Paid" Color="Color.Primary" Size="Size.Large" />
+                <MudText Typo="Typo.h6">Licenças e pagamentos</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Revise comprovantes enviados, acompanhe vencimentos e aprove ou rejeite pagamentos manualmente.</MudText>
+                <MudButton Href="/plataforma/licencas" Color="Color.Primary" Variant="Variant.Filled">Gerenciar licenças</MudButton>
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+</MudGrid>

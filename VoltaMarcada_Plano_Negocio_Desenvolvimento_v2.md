@@ -1330,6 +1330,8 @@ comerciais.
 
 # Fase 11 --- Licença, PIX e baixa manual
 
+**Status: Concluída.**
+
 ## Licença da empresa
 
 Cada empresa possui uma licença própria, independente dos usuários.

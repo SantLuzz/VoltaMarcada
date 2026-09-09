@@ -144,7 +144,12 @@ public static class AccountEndpoints
             user,
             PlatformRoles.PlatformAdministrator);
 
-        return hasMembership || isPlatformAdministrator
+        if (isPlatformAdministrator)
+        {
+            return Results.Redirect("/plataforma");
+        }
+
+        return hasMembership
             ? Results.Redirect(LocalReturnUrl.Normalize(request.ReturnUrl, "/"))
             : RedirectToOnboarding(request.ReturnUrl);
     }

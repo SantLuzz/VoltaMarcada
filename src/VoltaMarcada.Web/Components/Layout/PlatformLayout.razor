@@ -1,0 +1,39 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="@VoltaMarcadaTheme.Instance" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0" Class="main-app-bar">
+        <MudText Typo="Typo.h6">VoltaMarcada</MudText>
+        <MudText Typo="Typo.caption" Class="ml-2">Administração da plataforma</MudText>
+        <MudSpacer />
+        <form method="post" action="/account/logout" class="logout-form">
+            <AntiforgeryToken />
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Text" Color="Color.Inherit" StartIcon="@Icons.Material.Filled.Logout">
+                Sair
+            </MudButton>
+        </form>
+    </MudAppBar>
+
+    <MudDrawer Open="true" Variant="DrawerVariant.Responsive" Breakpoint="Breakpoint.Md" Elevation="0" Width="280px" Class="main-drawer">
+        <MudNavMenu Class="drawer-navigation">
+            <MudNavLink Href="/plataforma" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Painel</MudNavLink>
+            <MudNavLink Href="/plataforma/licencas" Icon="@Icons.Material.Filled.Paid">Licenças e pagamentos</MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+
+    <MudMainContent>
+        <main class="page-content">
+            @Body
+        </main>
+    </MudMainContent>
+</MudLayout>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Ocorreu um erro inesperado.
+    <a href=".">Recarregar</a>
+    <span class="dismiss">×</span>
+</div>

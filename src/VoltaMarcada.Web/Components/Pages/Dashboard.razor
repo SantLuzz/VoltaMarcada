@@ -29,7 +29,7 @@
 
 @if (isOwner && licenseAccess is { } currentLicense)
 {
-    <MudAlert Severity="@GetLicenseSeverity(currentLicense)" Variant="Variant.Outlined" Class="mt-4">
+    <MudAlert Severity="@GetLicenseSeverity(currentLicense)" Variant="Variant.Outlined" Class="mt-4" Style="cursor: pointer;" @onclick="NavigateToLicenseRenewal">
         <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
             <div>
                 <MudText Typo="Typo.subtitle2">@GetLicenseTitle(currentLicense)</MudText>
@@ -310,6 +310,8 @@
             isLoading = false;
         }
     }
+
+    private void NavigateToLicenseRenewal() => NavigationManager.NavigateTo("/licenca/renovar");
 
     private static string GetLicenseTitle(CompanyLicenseAccessDto license) => license.Status switch
     {

@@ -59,16 +59,18 @@
                 <MudNavLink Href="/empresa" Icon="@Icons.Material.Filled.Business">
                     Empresa
                 </MudNavLink>
-                <MudNavLink Href="/licenca/renovar" Icon="@Icons.Material.Filled.Paid">
-                    Licença
-                </MudNavLink>
             }
 
             <MudNavLink Href="/equipamentos" Icon="@Icons.Material.Filled.Hvac">
                 Equipamentos
             </MudNavLink>
 
-            
+            @if(isOwner)
+            {
+                <MudNavLink Href="/licenca/renovar" Icon="@Icons.Material.Filled.Paid">
+                    Licença
+                </MudNavLink>
+            }
             <MudNavLink Href="/profissionais" Icon="@Icons.Material.Filled.Engineering">
                 Profissionais
             </MudNavLink>

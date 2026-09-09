@@ -72,6 +72,16 @@ public sealed class OperationalLicenseAuthorizationTests
     }
 
     [Fact]
+    public async Task Platform_administrator_without_company_membership_is_redirected_from_tenant_pages()
+    {
+        await using var fixture = await TestApplication.StartPlatformAdministratorAsync();
+
+        var response = await fixture.Client.GetAsync("/company-member-read-test");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/plataforma", response.Headers.Location?.OriginalString);
+    }
+    [Fact]
     public async Task Restricted_owner_can_still_read_existing_tenant_data()
     {
         await using var fixture = await TestApplication.StartAsync(
