@@ -10,13 +10,16 @@
 @inject ISnackbar Snackbar
 @inject OverdueLicenseNotificationService OverdueNotifications
 
-<PageTitle>Pagamentos de licenças</PageTitle>
+<PageTitle>Licenças</PageTitle>
 
-<PageHeader Title="Pagamentos de licenças" Description="Revise comprovantes de renovação enviados pelas empresas." />
+<PageHeader Title="Licenças" Description="Acompanhe todas as empresas, o status das licenças e os comprovantes de renovação." />
 
-<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2"><MudDatePicker Label="Mês de referência" @bind-Date="selectedMonth" /><MudButton Color="Color.Primary" Variant="Variant.Outlined" Disabled="@sendingNotifications" OnClick="SendOverdueNotificationsAsync">Enviar avisos vencidos</MudButton></MudStack>
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+    <MudDatePicker Label="Mês do comprovante" @bind-Date="selectedMonth" Clearable="true" />
+    <MudButton Color="Color.Primary" Variant="Variant.Outlined" Disabled="@sendingNotifications" OnClick="SendOverdueNotificationsAsync">Enviar avisos vencidos</MudButton>
+</MudStack>
 
-<MudCheckBox @bind-Value="pendingOnly" Label="Somente pendentes" Color="Color.Warning" />
+<MudCheckBox @bind-Value="pendingOnly" Label="Somente comprovantes pendentes" Color="Color.Warning" />
 
 @if (loading)
 {
@@ -26,23 +29,41 @@ else
 {
     <MudTable Items="@FilteredPayments" Hover="true" Breakpoint="Breakpoint.Md" Class="servicesync-data-grid">
         <HeaderContent>
-            <MudTh>Empresa</MudTh><MudTh>Responsável</MudTh><MudTh>Vencimento</MudTh><MudTh>Valor</MudTh><MudTh>Enviado em</MudTh><MudTh>Status</MudTh><MudTh>Análise</MudTh><MudTh>Ações</MudTh>
+            <MudTh>Empresa</MudTh>
+            <MudTh>Responsável</MudTh>
+            <MudTh>Licença</MudTh>
+            <MudTh>Vencimento</MudTh>
+            <MudTh>Valor</MudTh>
+            <MudTh>Enviado em</MudTh>
+            <MudTh>Comprovante</MudTh>
+            <MudTh>Análise</MudTh>
+            <MudTh>Ações</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Empresa">@context.CompanyName</MudTd>
-            <MudTd DataLabel="Responsável">@(context.OwnerName ?? context.OwnerEmail)<br /><small>@context.OwnerEmail</small></MudTd><MudTd DataLabel="Vencimento">@(context.PaidUntilUtc?.ToLocalTime().ToString("dd/MM/yyyy") ?? "Trial")</MudTd>
-            <MudTd DataLabel="Valor">@context.Amount.ToString("C")</MudTd>
-            <MudTd DataLabel="Enviado em">@context.SubmittedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
-            <MudTd DataLabel="Status"><MudChip T="string" Color="@StatusColor(context.Status)">@StatusText(context.Status)</MudChip></MudTd><MudTd DataLabel="Análise">@(context.ReviewerName ?? "-")<br />@(context.DecidedAtUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</MudTd>
+            <MudTd DataLabel="Responsável">@(context.OwnerName ?? context.OwnerEmail)<br /><small>@context.OwnerEmail</small></MudTd>
+            <MudTd DataLabel="Licença"><MudChip T="string" Color="@LicenseStatusColor(context.LicenseStatus)">@LicenseStatusText(context.LicenseStatus)</MudChip></MudTd>
+            <MudTd DataLabel="Vencimento">@LicenseExpirationText(context)</MudTd>
+            <MudTd DataLabel="Valor">@(context.Id == Guid.Empty ? "—" : context.Amount.ToString("C"))</MudTd>
+            <MudTd DataLabel="Enviado em">@(context.Id == Guid.Empty ? "—" : context.SubmittedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm"))</MudTd>
+            <MudTd DataLabel="Comprovante"><MudChip T="string" Color="@StatusColor(context.Status)">@StatusText(context.Status)</MudChip></MudTd>
+            <MudTd DataLabel="Análise">@(context.ReviewerName ?? "-")<br />@(context.DecidedAtUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</MudTd>
             <MudTd DataLabel="Ações">
-                <MudStack Row="true" Spacing="1">
-                    <MudButton Href="@($"/platform/licenses/payments/{context.Id}/proof")" Target="_blank" Variant="Variant.Outlined">Comprovante</MudButton>
-                    @if (context.Status == LicensePaymentStatus.PendingReview)
-                    {
-                        <MudButton Color="Color.Success" Variant="Variant.Filled" Disabled="@processing" OnClick="@(() => DecideAsync(context, LicensePaymentReviewDecision.Approve))">Aprovar</MudButton>
-                        <MudButton Color="Color.Error" Variant="Variant.Outlined" Disabled="@processing" OnClick="@(() => SelectForRejection(context))">Rejeitar</MudButton>
-                    }
-                </MudStack>
+                @if (context.Id != Guid.Empty)
+                {
+                    <MudStack Row="true" Spacing="1">
+                        <MudButton Href="@($"/platform/licenses/payments/{context.Id}/proof")" Target="_blank" Variant="Variant.Outlined">Comprovante</MudButton>
+                        @if (context.Status == LicensePaymentStatus.PendingReview)
+                        {
+                            <MudButton Color="Color.Success" Variant="Variant.Filled" Disabled="@processing" OnClick="@(() => DecideAsync(context, LicensePaymentReviewDecision.Approve))">Aprovar</MudButton>
+                            <MudButton Color="Color.Error" Variant="Variant.Outlined" Disabled="@processing" OnClick="@(() => SelectForRejection(context))">Rejeitar</MudButton>
+                        }
+                    </MudStack>
+                }
+                else
+                {
+                    <MudText>—</MudText>
+                }
             </MudTd>
         </RowTemplate>
     </MudTable>
@@ -65,7 +86,7 @@ else
     private bool processing;
     private bool sendingNotifications;
 
-    private DateTime? selectedMonth = DateTime.Today;
+    private DateTime? selectedMonth;
     private bool pendingOnly;
 
     private IEnumerable<PlatformLicensePaymentDto> FilteredPayments =>
@@ -100,6 +121,13 @@ else
     private void SelectForRejection(PlatformLicensePaymentDto payment) { selectedForRejection = payment; rejectionReason = null; }
     private async Task RejectSelectedAsync() { await DecideAsync(selectedForRejection!, LicensePaymentReviewDecision.Reject, rejectionReason); selectedForRejection = null; rejectionReason = null; }
     private void CancelRejection() { selectedForRejection = null; rejectionReason = null; }
-    private static string StatusText(LicensePaymentStatus? status) => status switch { LicensePaymentStatus.PendingReview => "Pendente", LicensePaymentStatus.Approved => "Aprovado", LicensePaymentStatus.Rejected => "Rejeitado", _ => "Indisponível" };
+    private static string StatusText(LicensePaymentStatus? status) => status switch { LicensePaymentStatus.PendingReview => "Pendente", LicensePaymentStatus.Approved => "Aprovado", LicensePaymentStatus.Rejected => "Rejeitado", _ => "Sem comprovante" };
     private static Color StatusColor(LicensePaymentStatus? status) => status switch { LicensePaymentStatus.PendingReview => Color.Warning, LicensePaymentStatus.Approved => Color.Success, LicensePaymentStatus.Rejected => Color.Error, _ => Color.Default };
+    private static string LicenseStatusText(CompanyLicenseStatus? status) => status switch { CompanyLicenseStatus.Trial => "Trial", CompanyLicenseStatus.Paid => "Ativa", _ => "Não configurada" };
+    private static Color LicenseStatusColor(CompanyLicenseStatus? status) => status switch { CompanyLicenseStatus.Trial => Color.Info, CompanyLicenseStatus.Paid => Color.Success, _ => Color.Default };
+    private static string LicenseExpirationText(PlatformLicensePaymentDto license) => license.PaidUntilUtc is { } paidUntilUtc
+        ? paidUntilUtc.ToLocalTime().ToString("dd/MM/yyyy")
+        : license.TrialEndsAtUtc is { } trialEndsAtUtc
+            ? $"Trial até {trialEndsAtUtc.ToLocalTime():dd/MM/yyyy}"
+            : "—";
 }

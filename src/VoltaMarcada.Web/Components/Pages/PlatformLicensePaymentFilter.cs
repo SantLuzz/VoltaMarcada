@@ -16,6 +16,7 @@ public static class PlatformLicensePaymentFilter
         if (selectedMonth is { } month)
         {
             filteredPayments = filteredPayments.Where(payment =>
+                payment.Id != Guid.Empty &&
                 payment.SubmittedAtUtc.Year == month.Year &&
                 payment.SubmittedAtUtc.Month == month.Month);
         }
