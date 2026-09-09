@@ -78,6 +78,28 @@ public sealed class MaintenanceOpportunityManualEndpointsTests
         Assert.Empty(await fixture.GetStoredOpportunitiesAsync());
     }
 
+
+    [Fact]
+    public async Task Post_returns_generic_invalid_input_without_leaking_another_company_data()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        using var companyBOwnerClient = fixture.CreateClient(
+            CompanyUserRole.Owner,
+            CompanyLicenseAccessMode.Operational);
+
+        var response = await fixture.PostAsync(companyBOwnerClient, fixture.ValidRequest);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        var problem = await response.Content.ReadFromJsonAsync<ProblemResponse>();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Revise os dados da manuten\u00e7\u00e3o e tente novamente.", problem?.Title);
+        Assert.Empty(await fixture.GetStoredOpportunitiesAsync());
+        Assert.DoesNotContain(fixture.CustomerId.ToString(), responseBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(fixture.EquipmentId.ToString(), responseBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(fixture.ServiceId.ToString(), responseBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Maria Silva", responseBody, StringComparison.OrdinalIgnoreCase);
+    }
+
     private sealed record CreatedMaintenanceOpportunityResponse(Guid OpportunityId);
 
     private sealed record ProblemResponse(string Title);
