@@ -13,7 +13,9 @@
 
 <PageHeader Title="Pagamentos de licenças" Description="Revise comprovantes de renovação enviados pelas empresas." />
 
-<MudButton Color="Color.Primary" Variant="Variant.Outlined" Disabled="@sendingNotifications" OnClick="SendOverdueNotificationsAsync">Enviar avisos vencidos</MudButton>
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2"><MudDatePicker Label="Mês de referência" @bind-Date="selectedMonth" /><MudButton Color="Color.Primary" Variant="Variant.Outlined" Disabled="@sendingNotifications" OnClick="SendOverdueNotificationsAsync">Enviar avisos vencidos</MudButton></MudStack>
+
+<MudCheckBox @bind-Value="pendingOnly" Label="Somente pendentes" Color="Color.Warning" />
 
 @if (loading)
 {
@@ -62,7 +64,11 @@ else
     private bool processing;
     private bool sendingNotifications;
 
-    private IEnumerable<PlatformLicensePaymentDto> FilteredPayments => payments;
+    private DateTime? selectedMonth = DateTime.Today;
+    private bool pendingOnly;
+
+    private IEnumerable<PlatformLicensePaymentDto> FilteredPayments =>
+        PlatformLicensePaymentFilter.Apply(payments, selectedMonth, pendingOnly);
 
     protected override async Task OnInitializedAsync()
     {
