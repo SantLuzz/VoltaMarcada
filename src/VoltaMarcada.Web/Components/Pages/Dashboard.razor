@@ -1,20 +1,23 @@
 @page "/"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
 @using VoltaMarcada.Application.Dashboard
+@using VoltaMarcada.Application.Licensing
 @using VoltaMarcada.Application.Scheduling
 @using VoltaMarcada.Application.WorkOrders
+@using VoltaMarcada.Domain.Enums
 @using VoltaMarcada.Web.Formatting
 @inject IComponentOperationExecutor OperationExecutor
 @inject ISchedulingConfiguration SchedulingConfiguration
 @inject TimeProvider TimeProvider
 @inject IBrazilianDisplayFormatter DisplayFormatter
+@inject NavigationManager NavigationManager
 @inject ILogger<Dashboard> Logger
 
 <PageTitle>Painel | VoltaMarcada</PageTitle>
 
 <PageHeader Title="@(isOwner ? "Painel operacional" : "Minha agenda")" Description="@(isOwner ? "Acompanhe o que precisa de ação na sua operação." : "Veja onde precisa ir e o que precisa fazer.")">
     <Actions>
-        @if (isOwner || accessScope?.ProfessionalId is not null)
+        @if (licenseAccess?.AccessMode == CompanyLicenseAccessMode.Operational && (isOwner || accessScope?.ProfessionalId is not null))
         {
             <MudStack Row="true" Spacing="2">
                 <MudButton Href="/agenda?new=true" Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add">Novo agendamento</MudButton>
@@ -24,6 +27,25 @@
     </Actions>
 </PageHeader>
 
+@if (isOwner && licenseAccess is { } currentLicense)
+{
+    <MudAlert Severity="@GetLicenseSeverity(currentLicense)" Variant="Variant.Outlined" Class="mt-4" Style="cursor: pointer;" @onclick="NavigateToLicenseRenewal">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Spacing="2">
+            <div>
+                <MudText Typo="Typo.subtitle2">@GetLicenseTitle(currentLicense)</MudText>
+                <MudText Typo="Typo.body2">@GetLicensePeriodDescription(currentLicense)</MudText>
+                @if (currentLicense.AccessMode != CompanyLicenseAccessMode.Operational)
+                {
+                    <MudText Typo="Typo.caption">A conta está em modo somente leitura. Regularize a licença para voltar a operar.</MudText>
+                }
+            </div>
+            @if (currentLicense.Action != CompanyLicenseAction.None)
+            {
+                <MudButton Href="/licenca/renovar" Color="Color.Primary" Variant="Variant.Filled">@GetLicenseActionLabel(currentLicense.Action)</MudButton>
+            }
+        </MudStack>
+    </MudAlert>
+}
 @if (loadError is not null)
 {
     <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mt-4">@loadError</MudAlert>
@@ -186,6 +208,7 @@
     private int pendingBlockRequests;
     private Guid? selectedAppointmentId;
     private OwnerDashboardDto? ownerDashboard;
+    private CompanyLicenseAccessDto? licenseAccess;
     private string? loadError;
 
     protected override async Task OnInitializedAsync()
@@ -244,6 +267,15 @@
         pendingBlockRequests = 0;
         try
         {
+            licenseAccess = await OperationExecutor.ExecuteAsync(
+                (GetCurrentCompanyLicenseUseCase useCase, CancellationToken cancellationToken) =>
+                    useCase.ExecuteAsync(cancellationToken));
+            if (!isOwner && licenseAccess?.AccessMode != CompanyLicenseAccessMode.Operational)
+            {
+                NavigationManager.NavigateTo("/conta-bloqueada", forceLoad: true);
+                return;
+            }
+
             visibleStartDate = isOwner
                 ? currentDate.AddDays(-((int)(currentDate.DayOfWeek + 6) % 7))
                 : currentDate;
@@ -279,6 +311,49 @@
         }
     }
 
+    private void NavigateToLicenseRenewal() => NavigationManager.NavigateTo("/licenca/renovar");
+
+    private static string GetLicenseTitle(CompanyLicenseAccessDto license) => license.Status switch
+    {
+        CompanyLicenseStatus.Trial => "Período de teste",
+        CompanyLicenseStatus.Paid => "Licença ativa",
+        _ => "Licença"
+    };
+
+    private static string GetLicensePeriodDescription(CompanyLicenseAccessDto license)
+    {
+        if (license.DaysRemaining == 0)
+        {
+            return "Vence hoje.";
+        }
+
+        if (license.IsOverdue)
+        {
+            var overdueDays = Math.Abs(license.DaysRemaining);
+            return overdueDays == 1 ? "1 dia em atraso." : $"{overdueDays} dias em atraso.";
+        }
+
+        return license.DaysRemaining == 1
+            ? "1 dia restante."
+            : $"{license.DaysRemaining} dias restantes.";
+    }
+
+    private static string GetLicenseActionLabel(CompanyLicenseAction action) => action switch
+    {
+        CompanyLicenseAction.Join => "Aderir",
+        CompanyLicenseAction.Renew => "Renovar licença",
+        _ => string.Empty
+    };
+
+    private static Severity GetLicenseSeverity(CompanyLicenseAccessDto license)
+    {
+        if (license.AccessMode != CompanyLicenseAccessMode.Operational)
+        {
+            return Severity.Error;
+        }
+
+        return license.Action == CompanyLicenseAction.None ? Severity.Success : Severity.Warning;
+    }
     private static string GetOwnerActionCardClass(int count, string attentionClass) =>
         count == 0 ? "pa-3 dashboard-owner-action-card" : $"pa-3 dashboard-owner-action-card {attentionClass}";
 

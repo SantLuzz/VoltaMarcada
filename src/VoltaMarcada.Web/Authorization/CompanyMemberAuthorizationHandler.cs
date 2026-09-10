@@ -17,12 +17,6 @@ public sealed class CompanyMemberAuthorizationHandler(IDbContextFactory<AppDbCon
         AuthorizationHandlerContext context,
         CompanyMemberRequirement requirement)
     {
-        if (context.User.IsInRole(PlatformRoles.PlatformAdministrator))
-        {
-            context.Succeed(requirement);
-            return;
-        }
-
         var userIdValue = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdValue, out var userId))
         {

@@ -13,17 +13,17 @@ public static class WorkOrderEndpoints
     {
         var group = endpoints.MapGroup("/work-orders").RequireAuthorization(AuthorizationPolicies.CompanyMember);
         group.MapGet("/", async (string? search, GetWorkOrdersUseCase useCase, CancellationToken cancellationToken) => Results.Ok(await useCase.ExecuteAsync(new GetWorkOrdersQuery(search, null), cancellationToken)));
-        group.MapPost("/", CreateAsync);
+        group.MapPost("/", CreateAsync).RequireOperationalCompanyLicense();
         group.MapGet("/{workOrderId:guid}", async (Guid workOrderId, GetWorkOrderDetailsUseCase useCase, CancellationToken cancellationToken) =>
         {
             var detail = await useCase.ExecuteAsync(workOrderId, cancellationToken);
             return detail is null ? Results.NotFound() : Results.Ok(detail);
         });
-        group.MapPut("/{workOrderId:guid}", async (Guid workOrderId, UpdateWorkOrderCommand command, UpdateWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, command, cancellationToken)));
-        group.MapDelete("/{workOrderId:guid}", async (Guid workOrderId, CancelWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, cancellationToken)));
-        group.MapPost("/{workOrderId:guid}/start", async (Guid workOrderId, StartWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, cancellationToken)));
-        group.MapPut("/{workOrderId:guid}/checklist", async (Guid workOrderId, SaveWorkOrderChecklistProgressCommand command, SaveWorkOrderChecklistProgressUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, command, cancellationToken)));
-        group.MapPost("/{workOrderId:guid}/complete", async (Guid workOrderId, CompleteWorkOrderCommand? command, CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, command ?? new CompleteWorkOrderCommand(), cancellationToken)));
+        group.MapPut("/{workOrderId:guid}", async (Guid workOrderId, UpdateWorkOrderCommand command, UpdateWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, command, cancellationToken))).RequireOperationalCompanyLicense();
+        group.MapDelete("/{workOrderId:guid}", async (Guid workOrderId, CancelWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, cancellationToken))).RequireOperationalCompanyLicense();
+        group.MapPost("/{workOrderId:guid}/start", async (Guid workOrderId, StartWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, cancellationToken))).RequireOperationalCompanyLicense();
+        group.MapPut("/{workOrderId:guid}/checklist", async (Guid workOrderId, SaveWorkOrderChecklistProgressCommand command, SaveWorkOrderChecklistProgressUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, command, cancellationToken))).RequireOperationalCompanyLicense();
+        group.MapPost("/{workOrderId:guid}/complete", async (Guid workOrderId, CompleteWorkOrderCommand? command, CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, command ?? new CompleteWorkOrderCommand(), cancellationToken))).RequireOperationalCompanyLicense();
         group.MapPost("/{workOrderId:guid}/photos", async (Guid workOrderId, IFormFile file, [FromForm] WorkOrderPhotoType type, string? description, AddWorkOrderPhotoUseCase useCase, CancellationToken cancellationToken) =>
         {
             if (file.Length > 10 * 1024 * 1024)
@@ -35,25 +35,25 @@ public static class WorkOrderEndpoints
             await using var stream = file.OpenReadStream();
             var result = await useCase.ExecuteAsync(workOrderId, new WorkOrderPhotoUpload(stream, file.FileName, file.ContentType, file.Length, type, description), cancellationToken);
             return ToOperationHttpResult(result);
-        });
+        }).RequireOperationalCompanyLicense();
         group.MapGet("/{workOrderId:guid}/photos/{photoId:guid}/content", async (Guid workOrderId, Guid photoId, GetWorkOrderPhotoContentUseCase useCase, CancellationToken cancellationToken) =>
         {
             var content = await useCase.ExecuteAsync(workOrderId, photoId, cancellationToken);
             return content is null ? Results.NotFound() : Results.File(content.Content, content.ContentType);
         });
-        group.MapDelete("/{workOrderId:guid}/photos/{photoId:guid}", async (Guid workOrderId, Guid photoId, RemoveWorkOrderPhotoUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, photoId, cancellationToken)));
+        group.MapDelete("/{workOrderId:guid}/photos/{photoId:guid}", async (Guid workOrderId, Guid photoId, RemoveWorkOrderPhotoUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, photoId, cancellationToken))).RequireOperationalCompanyLicense();
         group.MapPost("/{workOrderId:guid}/attachments", async (Guid workOrderId, IFormFile file, string? description, AddWorkOrderAttachmentUseCase useCase, CancellationToken cancellationToken) =>
         {
             if (file.Length > 10 * 1024 * 1024) return OperationResultHttpExtensions.ValidationProblem(WorkOrderErrors.InvalidAttachment.Code, OperationErrorMessages.GetMessage(WorkOrderErrors.InvalidAttachment.Code));
             await using var stream = file.OpenReadStream();
             return ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, new WorkOrderAttachmentUpload(stream, file.FileName, file.ContentType, file.Length, description), cancellationToken));
-        });
+        }).RequireOperationalCompanyLicense();
         group.MapGet("/{workOrderId:guid}/attachments/{attachmentId:guid}/content", async (Guid workOrderId, Guid attachmentId, GetWorkOrderAttachmentContentUseCase useCase, CancellationToken cancellationToken) =>
         {
             var content = await useCase.ExecuteAsync(workOrderId, attachmentId, cancellationToken);
             return content is null ? Results.NotFound() : Results.File(content.Content, content.ContentType);
         });
-        group.MapDelete("/{workOrderId:guid}/attachments/{attachmentId:guid}", async (Guid workOrderId, Guid attachmentId, RemoveWorkOrderAttachmentUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, attachmentId, cancellationToken)));
+        group.MapDelete("/{workOrderId:guid}/attachments/{attachmentId:guid}", async (Guid workOrderId, Guid attachmentId, RemoveWorkOrderAttachmentUseCase useCase, CancellationToken cancellationToken) => ToOperationHttpResult(await useCase.ExecuteAsync(workOrderId, attachmentId, cancellationToken))).RequireOperationalCompanyLicense();
         return endpoints;
     }
 

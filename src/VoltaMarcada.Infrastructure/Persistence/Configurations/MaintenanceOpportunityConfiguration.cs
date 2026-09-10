@@ -14,7 +14,7 @@ public sealed class MaintenanceOpportunityConfiguration : IEntityTypeConfigurati
         builder.Property(x => x.CompanyId).IsRequired();
         builder.Property(x => x.CustomerId).IsRequired();
         builder.Property(x => x.EquipmentId).IsRequired();
-        builder.Property(x => x.PreviousWorkOrderId).IsRequired();
+        builder.Property(x => x.PreviousWorkOrderId).IsRequired(false);
         builder.Property(x => x.RecommendedServiceId).IsRequired();
         builder.Property(x => x.DueDate).IsRequired();
         builder.Property(x => x.Notes).HasMaxLength(2000).IsRequired();
@@ -38,7 +38,7 @@ public sealed class MaintenanceOpportunityConfiguration : IEntityTypeConfigurati
         builder.HasOne<Company>().WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Customer>().WithMany().HasForeignKey(x => new { x.CompanyId, x.CustomerId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Equipment>().WithMany().HasForeignKey(x => new { x.CompanyId, x.EquipmentId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne<WorkOrder>().WithMany().HasForeignKey(x => new { x.CompanyId, x.PreviousWorkOrderId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<WorkOrder>().WithMany().HasForeignKey(x => new { x.CompanyId, x.PreviousWorkOrderId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict).IsRequired(false);
         builder.HasOne<Service>().WithMany().HasForeignKey(x => new { x.CompanyId, x.RecommendedServiceId }).HasPrincipalKey(x => new { x.CompanyId, x.Id }).OnDelete(DeleteBehavior.Restrict);
     }
 }

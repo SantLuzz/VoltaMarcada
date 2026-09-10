@@ -1,0 +1,216 @@
+@page "/licenca/renovar"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwnerLicenseRenewal)]
+@using System.Text
+@using Microsoft.JSInterop
+@using QRCoder
+@using VoltaMarcada.Application.Abstractions.Storage
+@using VoltaMarcada.Application.Licensing
+@inject IComponentOperationExecutor OperationExecutor
+@inject IJSRuntime JsRuntime
+@inject ILogger<LicenseRenewal> Logger
+
+<PageTitle>Renovar licença | VoltaMarcada</PageTitle>
+
+<PageHeader Title="Renovar licença" Description="Mantenha o acesso da sua empresa enviando o comprovante do PIX." />
+
+@if (isLoading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+}
+else if (loadError is not null)
+{
+    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@loadError</MudAlert>
+}
+else if (renewal is not null)
+{
+    <MudGrid Spacing="3" Class="mt-2">
+        <MudItem xs="12" md="5">
+            <MudPaper Outlined="true" Class="pa-4">
+                <MudText Typo="Typo.overline">Mensalidade</MudText>
+                <MudText Typo="Typo.h4">@FormatPrice(renewal.MonthlyPrice)</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                    O pagamento é conferido por análise manual. A liberação ocorre após a aprovação do comprovante.
+                </MudText>
+
+                @if (qrCodeDataUrl is not null)
+                {
+                    <div class="d-flex justify-center mt-4">
+                        <img src="@qrCodeDataUrl" alt="QR Code PIX" width="240" height="240" />
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="7">
+            <MudPaper Outlined="true" Class="pa-4">
+                <MudText Typo="Typo.h6">PIX Copia e Cola</MudText>
+                <MudTextField T="string"
+                              Value="@renewal.Pix.CopyAndPasteCode"
+                              ReadOnly="true"
+                              Lines="4"
+                              Variant="Variant.Outlined"
+                              FullWidth="true"
+                              Class="mt-3" />
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.ContentCopy"
+                           OnClick="CopyPixAsync"
+                           Class="mt-2">
+                    Copiar código PIX
+                </MudButton>
+
+                @if (renewal.PendingPayment is { } pendingPayment)
+                {
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
+                        <MudText Typo="Typo.subtitle2">Comprovante enviado</MudText>
+                        <MudText Typo="Typo.body2">
+                            Recebemos seu comprovante e ele está aguardando análise manual.
+                        </MudText>
+                        <MudButton Href="@($"/license/payments/{pendingPayment.Id}/proof")"
+                                   Target="_blank"
+                                   Variant="Variant.Text"
+                                   Color="Color.Primary"
+                                   Class="mt-1">
+                            Ver comprovante
+                        </MudButton>
+                    </MudAlert>
+                }
+                else
+                {
+                    <div class="mt-4">
+                        <MudText Typo="Typo.subtitle2">Enviar comprovante</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                            Formatos aceitos: PDF, JPEG, PNG, WebP e HEIC.
+                        </MudText>
+                        <InputFile OnChange="SubmitProofAsync"
+                                   accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
+                                   disabled="@isSubmitting" />
+                        @if (isSubmitting)
+                        {
+                            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-2" />
+                        }
+                    </div>
+                }
+
+                @if (operationError is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mt-3">@operationError</MudAlert>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter]
+    public LicenseRenewalDto? InitialRenewal { get; set; }
+
+    private LicenseRenewalDto? renewal;
+    private string? qrCodeDataUrl;
+    private string? loadError;
+    private string? operationError;
+    private bool isLoading = true;
+    private bool isSubmitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (InitialRenewal is not null)
+        {
+            SetRenewal(InitialRenewal);
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            var result = await OperationExecutor.ExecuteAsync(
+                (GetLicenseRenewalUseCase useCase, CancellationToken cancellationToken) =>
+                    useCase.ExecuteAsync(cancellationToken));
+            if (!result.IsSuccess || result.Value is null)
+            {
+                loadError = "Não foi possível carregar os dados para renovação.";
+                return;
+            }
+
+            SetRenewal(result.Value);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to load license renewal data");
+            loadError = "Não foi possível carregar os dados para renovação.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SetRenewal(LicenseRenewalDto value)
+    {
+        renewal = value;
+        qrCodeDataUrl = BuildQrCodeDataUrl(value.Pix.CopyAndPasteCode);
+    }
+
+    private async Task CopyPixAsync()
+    {
+        if (renewal is not null)
+        {
+            await JsRuntime.InvokeVoidAsync("serviceSync.copyText", renewal.Pix.CopyAndPasteCode);
+        }
+    }
+
+    private async Task SubmitProofAsync(InputFileChangeEventArgs args)
+    {
+        if (renewal is null || renewal.PendingPayment is not null)
+        {
+            return;
+        }
+
+        var file = args.File;
+        if (file.Size is <= 0 || file.Size > renewal.MaximumProofSizeBytes)
+        {
+            operationError = "O comprovante excede o limite permitido ou está vazio.";
+            return;
+        }
+
+        operationError = null;
+        isSubmitting = true;
+        try
+        {
+            await using var content = file.OpenReadStream(renewal.MaximumProofSizeBytes);
+            var result = await OperationExecutor.ExecuteAsync(
+                (SubmitLicensePaymentUseCase useCase, CancellationToken cancellationToken) =>
+                    useCase.ExecuteAsync(
+                        new LicensePaymentProofUpload(
+                            new FileUpload(content, file.Name, file.ContentType, file.Size)),
+                        cancellationToken));
+            if (!result.IsSuccess || result.Value is null)
+            {
+                operationError = OperationErrorMessages.GetMessage(result.Error?.Code);
+                return;
+            }
+
+            renewal = renewal with { PendingPayment = result.Value };
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to submit a license payment proof");
+            operationError = "Não foi possível enviar o comprovante. Tente novamente.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private static string BuildQrCodeDataUrl(string payload)
+    {
+        using var qrCodeData = QRCodeGenerator.GenerateQrCode(payload, QRCodeGenerator.ECCLevel.M);
+        using var qrCode = new SvgQRCode(qrCodeData);
+        var svg = qrCode.GetGraphic(4);
+        return $"data:image/svg+xml;base64,{Convert.ToBase64String(Encoding.UTF8.GetBytes(svg))}";
+    }
+
+    private static string FormatPrice(decimal price) =>
+        price.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+}

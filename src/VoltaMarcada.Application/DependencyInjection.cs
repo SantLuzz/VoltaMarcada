@@ -43,9 +43,17 @@ public static class DependencyInjection
         services.AddScoped<DeleteServiceUseCase>();
         services.AddScoped<WorkOrderAuthorization>();
         services.AddScoped<MaintenanceOpportunityOwnerAuthorization>();
+        services.AddScoped<CreateManualMaintenanceOpportunityUseCase>();
         services.AddScoped<GetMaintenanceOpportunitiesUseCase>();
         services.AddScoped<GetMaintenanceOpportunitySummaryUseCase>();
         services.AddScoped<GetOwnerDashboardUseCase>();
+        services.AddScoped<Licensing.GetCurrentCompanyLicenseUseCase>();
+        services.AddScoped<Licensing.GetLicenseRenewalUseCase>();
+        services.AddScoped<Licensing.SubmitLicensePaymentUseCase>();
+        services.AddScoped<Licensing.GetLicensePaymentProofUseCase>();
+        services.AddScoped<Licensing.ReviewLicensePaymentUseCase>();
+        services.AddScoped<Licensing.GetPlatformLicensePaymentsUseCase>();
+        services.AddScoped<Licensing.GetPlatformLicensePaymentProofUseCase>();
         services.AddScoped<GetMaintenanceOpportunityForSchedulingUseCase>();
         services.AddScoped<GetMaintenanceOpportunityForQuoteUseCase>();
         services.AddScoped<PrepareMaintenanceOpportunityWhatsAppContactUseCase>();

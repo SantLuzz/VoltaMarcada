@@ -10,9 +10,9 @@ public static class ScheduleBlockRequestEndpoints
     {
         var requests = endpoints.MapGroup("/schedule-block-requests").RequireAuthorization(AuthorizationPolicies.CompanyMember);
         requests.MapGet("/", GetAsync);
-        requests.MapPost("/", CreateAsync);
-        requests.MapPut("/{requestId:guid}/approve", ApproveAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
-        requests.MapPut("/{requestId:guid}/reject", RejectAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner);
+        requests.MapPost("/", CreateAsync).RequireOperationalCompanyLicense();
+        requests.MapPut("/{requestId:guid}/approve", ApproveAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
+        requests.MapPut("/{requestId:guid}/reject", RejectAsync).RequireAuthorization(AuthorizationPolicies.CompanyOwner).RequireOperationalCompanyLicense();
         return endpoints;
     }
 

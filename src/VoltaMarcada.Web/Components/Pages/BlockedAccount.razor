@@ -1,0 +1,17 @@
+@page "/conta-bloqueada"
+@attribute [Authorize]
+
+<PageTitle>Conta bloqueada | VoltaMarcada</PageTitle>
+
+<section class="status-page" aria-labelledby="blocked-account-title">
+    <MudStack AlignItems="AlignItems.Center" Spacing="2">
+        <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Large" />
+        <MudText Typo="Typo.h4" id="blocked-account-title">Conta temporariamente bloqueada</MudText>
+        <MudText Typo="Typo.body1" Align="Align.Center">
+            A licença da empresa precisa ser regularizada pelo proprietário para liberar novamente o acesso operacional.
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+            Entre em contato com o proprietário da empresa para obter mais informações.
+        </MudText>
+    </MudStack>
+</section>

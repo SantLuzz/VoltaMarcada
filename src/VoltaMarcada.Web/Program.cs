@@ -1,6 +1,7 @@
 using MudBlazor.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
+using VoltaMarcada.Application.CompanyOnboarding;
 using VoltaMarcada.Application;
 using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Application.Abstractions.Routing;
@@ -20,6 +21,7 @@ using VoltaMarcada.Application.PublicBooking;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Components.Server;
+using VoltaMarcada.Application.Licensing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +51,20 @@ builder.Services.AddOptions<PublicBookingOptions>()
     .Validate(options => options.MaintenanceLinkLifetimeDays is > 0 and <= 365, "Maintenance link lifetime must be between 1 and 365 days.")
     .ValidateOnStart();
 builder.Services.AddSingleton<IPublicBookingConfiguration, PublicBookingConfiguration>();
+builder.Services.AddOptions<CompanyLicenseTrialOptions>()
+    .Bind(builder.Configuration.GetSection(CompanyLicenseTrialOptions.SectionName))
+    .Validate(options => options.FreeTrialDays > 0, "Free trial days must be positive.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<ICompanyLicenseTrialConfiguration, CompanyLicenseTrialConfiguration>();
+builder.Services.AddOptions<LicenseBillingOptions>()
+    .Bind(builder.Configuration.GetSection(LicenseBillingOptions.SectionName))
+    .Validate(options => options.MonthlyPrice > 0, "The license monthly price must be positive.")
+    .Validate(options => options.MaximumProofSizeBytes > 0, "The maximum proof size must be positive.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.PixKey), "The PIX key is required.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.BeneficiaryName), "The PIX beneficiary name is required.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.BeneficiaryCity), "The PIX beneficiary city is required.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<ILicenseBillingConfiguration, LicenseBillingConfiguration>();
 builder.Services.AddOptions<LoginRateLimitOptions>()
     .Bind(builder.Configuration.GetSection(LoginRateLimitOptions.SectionName))
     .Validate(options => options.PermitLimit > 0 && options.WindowSeconds > 0 && options.QueueLimit >= 0 && options.LockoutMinutes > 0 && options.MaxFailedAccessAttempts > 0, "Login rate limit settings must be positive.")
@@ -104,6 +120,7 @@ builder.Services.AddScoped<ICurrentDisplayTimeZone, CurrentDisplayTimeZone>();
 builder.Services.AddScoped<IBrazilianDisplayFormatter, BrazilianDisplayFormatter>();
 builder.Services.AddScoped<IAuthorizationHandler, CompanyMemberAuthorizationHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, CompanyOwnerAuthorizationHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, OperationalLicenseAuthorizationHandler>();
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, CompanyMemberAuthorizationResultHandler>();
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AuthorizationPolicies.CompanyMember, policy =>
@@ -115,6 +132,21 @@ builder.Services.AddAuthorizationBuilder()
     {
         policy.RequireAuthenticatedUser();
         policy.AddRequirements(new CompanyOwnerRequirement());
+    })
+    .AddPolicy(AuthorizationPolicies.CompanyOwnerLicenseRenewal, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(new CompanyOwnerRequirement());
+    })
+    .AddPolicy(AuthorizationPolicies.OperationalCompanyLicense, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(new OperationalLicenseRequirement());
+    })
+    .AddPolicy(AuthorizationPolicies.PlatformAdministrator, policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole(PlatformRoles.PlatformAdministrator);
     });
 
 var app = builder.Build();
@@ -184,6 +216,8 @@ app.MapMaintenanceOpportunityEndpoints();
 app.MapAppointmentEndpoints();
 app.MapScheduleBlockRequestEndpoints();
 app.MapQuoteEndpoints();
+app.MapLicenseEndpoints();
+app.MapPlatformLicenseEndpoints();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

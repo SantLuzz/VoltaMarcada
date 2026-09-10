@@ -28,7 +28,7 @@ public sealed class MaintenanceOpportunityAppointmentTests
         var equipment = Equipment.Create(companyId, customer.Id, "Air conditioner", null, null, null, null, null, null, null, Now);
         var service = Service.Create(companyId, "Maintenance", null, 60, ServicePriceType.Fixed, 150, true, false, false, [], Now);
         var professional = Professional.Create(companyId, Guid.NewGuid(), [service.Id], "America/Sao_Paulo", Now);
-        var opportunity = MaintenanceOpportunity.Create(companyId, customer.Id, equipment.Id, Guid.NewGuid(), service.Id, new DateOnly(2026, 9, 2), "Maintenance reminder", Now);
+        var opportunity = MaintenanceOpportunity.CreateManual(companyId, customer.Id, equipment.Id, service.Id, new DateOnly(2026, 9, 2), "Maintenance reminder", Now);
         opportunity.MarkAsAwaitingCustomer(Now);
         var appointments = new AppointmentRepositoryStub();
         var useCase = CreateUseCase(companyId, professional, customer, equipment, service, opportunity, appointments);
@@ -52,6 +52,7 @@ public sealed class MaintenanceOpportunityAppointmentTests
         Assert.Equal(MaintenanceOpportunityStatus.Converted, opportunity.Status);
         Assert.Equal(MaintenanceOpportunityConversionType.Appointment, opportunity.ConversionType);
         Assert.Equal(result.Value, opportunity.ConvertedEntityId);
+        Assert.Null(opportunity.PreviousWorkOrderId);
         Assert.Null(appointments.AddedAppointment.WorkOrderId);
     }
 

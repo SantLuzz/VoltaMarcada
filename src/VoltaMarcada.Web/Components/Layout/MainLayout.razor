@@ -65,7 +65,12 @@
                 Equipamentos
             </MudNavLink>
 
-            
+            @if(isOwner)
+            {
+                <MudNavLink Href="/licenca/renovar" Icon="@Icons.Material.Filled.Paid">
+                    Licença
+                </MudNavLink>
+            }
             <MudNavLink Href="/profissionais" Icon="@Icons.Material.Filled.Engineering">
                 Profissionais
             </MudNavLink>

@@ -1,0 +1,79 @@
+using VoltaMarcada.Domain.Entities;
+using VoltaMarcada.Domain.Enums;
+using Xunit;
+
+namespace VoltaMarcada.IntegrationTests.Licensing;
+
+public sealed class CompanyLicenseTests
+{
+    [Fact]
+    public void Returns_operational_during_trial_tolerance()
+    {
+        var license = CompanyLicense.Create(Guid.NewGuid(), new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), 14);
+
+        var accessMode = license.GetAccessMode(
+            new DateTimeOffset(2026, 9, 17, 0, 0, 0, TimeSpan.Zero),
+            LicenseLifecyclePolicy.Default);
+
+        Assert.Equal(CompanyLicenseAccessMode.Operational, accessMode);
+    }
+
+    [Fact]
+    public void Returns_read_only_after_trial_tolerance()
+    {
+        var license = CompanyLicense.Create(Guid.NewGuid(), new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), 14);
+
+        Assert.Equal(
+            CompanyLicenseAccessMode.OwnerReadOnly,
+            license.GetAccessMode(new DateTimeOffset(2026, 9, 19, 0, 0, 0, TimeSpan.Zero), LicenseLifecyclePolicy.Default));
+    }
+
+    [Fact]
+    public void Returns_terminated_on_tenth_day_after_trial_end()
+    {
+        var license = CompanyLicense.Create(Guid.NewGuid(), new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), 14);
+
+        var accessMode = license.GetAccessMode(
+            new DateTimeOffset(2026, 9, 25, 0, 0, 0, TimeSpan.Zero),
+            LicenseLifecyclePolicy.Default);
+
+        Assert.Equal(CompanyLicenseAccessMode.Terminated, accessMode);
+    }
+
+    [Fact]
+    public void Renew_preserves_unexpired_paid_days()
+    {
+        var license = CompanyLicense.Create(Guid.NewGuid(), new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), 14);
+
+        license.Renew(new DateTimeOffset(2026, 9, 2, 0, 0, 0, TimeSpan.Zero));
+        license.Renew(new DateTimeOffset(2026, 9, 15, 0, 0, 0, TimeSpan.Zero));
+
+        Assert.Equal(new DateTimeOffset(2026, 11, 2, 0, 0, 0, TimeSpan.Zero), license.PaidUntilUtc);
+    }
+
+    [Fact]
+    public void Returns_read_only_after_paid_overdue_threshold()
+    {
+        var license = CompanyLicense.Create(Guid.NewGuid(), new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), 14);
+        license.Renew(new DateTimeOffset(2026, 9, 2, 0, 0, 0, TimeSpan.Zero));
+
+        var accessMode = license.GetAccessMode(
+            new DateTimeOffset(2026, 10, 9, 0, 0, 0, TimeSpan.Zero),
+            LicenseLifecyclePolicy.Default);
+
+        Assert.Equal(CompanyLicenseAccessMode.OwnerReadOnly, accessMode);
+    }
+
+    [Fact]
+    public void Returns_terminated_on_twentieth_paid_overdue_day()
+    {
+        var license = CompanyLicense.Create(Guid.NewGuid(), new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), 14);
+        license.Renew(new DateTimeOffset(2026, 9, 2, 0, 0, 0, TimeSpan.Zero));
+
+        var accessMode = license.GetAccessMode(
+            new DateTimeOffset(2026, 10, 22, 0, 0, 0, TimeSpan.Zero),
+            LicenseLifecyclePolicy.Default);
+
+        Assert.Equal(CompanyLicenseAccessMode.Terminated, accessMode);
+    }
+}

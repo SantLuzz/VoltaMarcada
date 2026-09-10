@@ -10,6 +10,22 @@ public sealed class MaintenanceOpportunityLifecycleTests
     private static readonly DateTimeOffset Now = new(2026, 9, 2, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public void CreateManual_creates_pending_opportunity_without_previous_work_order()
+    {
+        var opportunity = MaintenanceOpportunity.CreateManual(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            new DateOnly(2026, 10, 1),
+            "Annual filter replacement",
+            Now);
+
+        Assert.Null(opportunity.PreviousWorkOrderId);
+        Assert.Equal(MaintenanceOpportunityStatus.Pending, opportunity.Status);
+    }
+
+    [Fact]
     public void Convert_WhenOpen_RecordsTheEntityReferenceAndMakesTheOpportunityTerminal()
     {
         var opportunity = CreateOpportunity();
@@ -35,7 +51,14 @@ public sealed class MaintenanceOpportunityLifecycleTests
     [Fact]
     public void CloseWithoutConversion_WhenReasonIsProvided_RecordsClosureTraceability()
     {
-        var opportunity = CreateOpportunity();
+        var opportunity = MaintenanceOpportunity.CreateManual(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            new DateOnly(2026, 10, 1),
+            "Maintenance reminder",
+            Now);
         var userId = Guid.NewGuid();
 
         opportunity.CloseWithoutConversion(userId, "Customer declined the offer.", Now);
@@ -44,6 +67,7 @@ public sealed class MaintenanceOpportunityLifecycleTests
         Assert.Equal(userId, opportunity.ClosedByUserId);
         Assert.Equal("Customer declined the offer.", opportunity.ClosureReason);
         Assert.Equal(Now, opportunity.ClosedAtUtc);
+        Assert.Null(opportunity.PreviousWorkOrderId);
     }
 
     private static MaintenanceOpportunity CreateOpportunity() => MaintenanceOpportunity.Create(

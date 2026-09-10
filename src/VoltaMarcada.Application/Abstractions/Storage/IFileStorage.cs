@@ -2,7 +2,17 @@ namespace VoltaMarcada.Application.Abstractions.Storage;
 
 public sealed record FileUpload(Stream Content, string FileName, string ContentType, long Length);
 
-public sealed record FileStorageUploadRequest(FileUpload File, string Folder);
+public enum FileStorageAccess
+{
+    Public,
+    Private
+}
+
+public sealed record FileStorageUploadRequest(
+    FileUpload File,
+    string Folder,
+    string? FileName = null,
+    FileStorageAccess Access = FileStorageAccess.Public);
 
 public sealed record FileStorageUploadResult(string Key);
 

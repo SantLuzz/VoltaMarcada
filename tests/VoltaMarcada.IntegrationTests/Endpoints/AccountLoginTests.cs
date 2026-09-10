@@ -58,6 +58,40 @@ public sealed class AccountLoginTests
         Assert.Equal("Conta bloqueada por excesso de tentativas. Tente novamente mais tarde.", query["error"].ToString());
     }
 
+    [Fact]
+    public async Task Login_RedirectsPlatformAdministratorToPlatformDashboard()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddHttpContextAccessor();
+        services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+        services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
+            .AddEntityFrameworkStores<AppDbContext>();
+
+        await using var serviceProvider = services.BuildServiceProvider();
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+        var signInManager = scope.ServiceProvider.GetRequiredService<SignInManager<ApplicationUser>>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = new ApplicationUser { UserName = "master@voltamarcada.test", Email = "master@voltamarcada.test" };
+
+        Assert.True((await roleManager.CreateAsync(new IdentityRole<Guid>(PlatformRoles.PlatformAdministrator))).Succeeded);
+        Assert.True((await userManager.CreateAsync(user, "ValidPassword123!")).Succeeded);
+        Assert.True((await userManager.AddToRoleAsync(user, PlatformRoles.PlatformAdministrator)).Succeeded);
+
+        var httpContext = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
+        scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext = httpContext;
+
+        var result = await InvokeLoginAsync(
+            new AccountEndpoints.LoginAccountRequest(user.Email, "ValidPassword123!", null),
+            signInManager,
+            dbContext);
+
+        await result.ExecuteAsync(httpContext);
+
+        Assert.Equal("/plataforma", httpContext.Response.Headers.Location.ToString());
+    }
     private static async Task<IResult> InvokeLoginAsync(
         AccountEndpoints.LoginAccountRequest request,
         SignInManager<ApplicationUser> signInManager,

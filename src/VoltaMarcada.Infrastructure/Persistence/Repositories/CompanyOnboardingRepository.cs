@@ -26,6 +26,7 @@ public sealed class CompanyOnboardingRepository(AppDbContext dbContext) : ICompa
     public async Task<CompanyOnboardingPersistenceOutcome> CreateCompanyAndOwnerAsync(
         Company company,
         CompanyUser ownerMembership,
+        CompanyLicense license,
         CancellationToken cancellationToken = default)
     {
         await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -34,6 +35,7 @@ public sealed class CompanyOnboardingRepository(AppDbContext dbContext) : ICompa
         {
             await dbContext.Companies.AddAsync(company, cancellationToken);
             await dbContext.CompanyUsers.AddAsync(ownerMembership, cancellationToken);
+            await dbContext.CompanyLicenses.AddAsync(license, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 

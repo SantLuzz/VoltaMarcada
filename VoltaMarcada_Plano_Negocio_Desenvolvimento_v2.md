@@ -1330,6 +1330,8 @@ comerciais.
 
 # Fase 11 --- Licença, PIX e baixa manual
 
+**Status: Concluída.**
+
 ## Licença da empresa
 
 Cada empresa possui uma licença própria, independente dos usuários.
@@ -1466,7 +1468,7 @@ permanece com status `Pending` até que um Owner confirme o recebimento.
 ## Cobrança via Pix
 
 Ao selecionar Pix, a cobrança deve ser gerada obrigatoriamente com o
-valor total da OS e disponibilizar:
+valor total da OS e disponibilizar caso tenha chave configurada na pagina empresa:
 
 - QR Code Pix para pagamento presencial;
 - Pix Copia e Cola;

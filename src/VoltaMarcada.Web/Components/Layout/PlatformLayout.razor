@@ -1,0 +1,70 @@
+@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<MudThemeProvider Theme="@VoltaMarcadaTheme.Instance" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0" Class="main-app-bar">
+        <MudTooltip Text="Abrir ou recolher menu">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" aria-label="Abrir ou recolher menu" OnClick="ToggleDrawer" />
+        </MudTooltip>
+        <MudSpacer />
+        <MudStack Spacing="0" AlignItems="AlignItems.End" Class="app-bar-account-summary">
+            <MudText Typo="Typo.body2" Class="app-bar-company-name">Administração VoltaMarcada</MudText>
+            <MudText Typo="Typo.caption" Class="app-bar-user-name">@accountSummary</MudText>
+        </MudStack>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="isDrawerOpen" Variant="DrawerVariant.Responsive" Breakpoint="Breakpoint.Md" Elevation="0" Width="348px" Class="main-drawer">
+        <div class="drawer-content">
+            <header class="drawer-brand">
+                <img src="/logos/icone.png" alt="VoltaMarcada" class="drawer-logo" />
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Inherit" Class="drawer-close-button" aria-label="Fechar menu" OnClick="ToggleDrawer" />
+            </header>
+            <div class="drawer-navigation-scroll">
+                <MudNavMenu Class="drawer-navigation">
+                    <MudNavLink Href="/plataforma" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">Painel</MudNavLink>
+                    <MudNavLink Href="/plataforma/licencas" Icon="@Icons.Material.Filled.Paid">Licenças e pagamentos</MudNavLink>
+                </MudNavMenu>
+            </div>
+
+            <footer class="drawer-footer">
+                <form method="post" action="/account/logout" class="logout-form">
+                    <AntiforgeryToken />
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Text" Color="Color.Default" StartIcon="@Icons.Material.Filled.Logout" aria-label="Sair da conta">
+                        <span data-loading-label>Sair</span>
+                        <MudProgressCircular data-loading-spinner Indeterminate="true" Size="Size.Small" aria-hidden="true" />
+                    </MudButton>
+                </form>
+            </footer>
+        </div>
+    </MudDrawer>
+
+    <MudMainContent>
+        <main class="page-content">
+            @Body
+        </main>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool isDrawerOpen = true;
+    private string accountSummary = "Administrador da plataforma";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        accountSummary = authenticationState.User.Identity?.Name ?? accountSummary;
+    }
+
+    private void ToggleDrawer() => isDrawerOpen = !isDrawerOpen;
+}
+
+<div id="blazor-error-ui" data-nosnippet>
+    Ocorreu um erro inesperado.
+    <a href=".">Recarregar</a>
+    <span class="dismiss">×</span>
+</div>

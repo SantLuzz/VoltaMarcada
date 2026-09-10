@@ -18,6 +18,9 @@ using VoltaMarcada.Infrastructure.Communication;
 using VoltaMarcada.Application.Abstractions.Documents;
 using VoltaMarcada.Infrastructure.Documents;
 using VoltaMarcada.Application.Dashboard;
+using VoltaMarcada.Application.Abstractions.Payments;
+using VoltaMarcada.Infrastructure.Payments;
+using VoltaMarcada.Infrastructure.Licensing;
 using QuestPDF.Infrastructure;
 
 namespace VoltaMarcada.Infrastructure;
@@ -45,10 +48,14 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(SmtpOptions.SectionName))
             .Validate(options => !options.Enabled || (!string.IsNullOrWhiteSpace(options.Host) && options.Port is > 0 and <= 65535 && !string.IsNullOrWhiteSpace(options.SenderEmail)), "SMTP host, port, and sender email are required when SMTP is enabled.");
         services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddSingleton<OverdueLicenseNotificationService>();
+        services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<OverdueLicenseNotificationService>());
         services.AddScoped<IPublicBookingNotificationSender, PublicBookingNotificationSender>();
 
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<ICompanyOnboardingRepository, CompanyOnboardingRepository>();
+        services.AddScoped<ILicenseRepository, LicenseRepository>();
+        services.AddSingleton<IPixPayloadGenerator, BrCodePixPayloadGenerator>();
         services.AddScoped<ICustomerRepository, CustomerRepository>();
         services.AddScoped<IEquipmentRepository, EquipmentRepository>();
         services.AddScoped<IWorkOrderRepository, WorkOrderRepository>();

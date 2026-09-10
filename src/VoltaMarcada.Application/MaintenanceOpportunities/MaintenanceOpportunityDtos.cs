@@ -1,3 +1,4 @@
+using VoltaMarcada.Application.WorkOrders;
 using VoltaMarcada.Domain.Enums;
 
 namespace VoltaMarcada.Application.MaintenanceOpportunities;
@@ -9,6 +10,11 @@ public enum MaintenanceOpportunityUrgency
     NextThirtyDays,
     Future
 }
+
+public sealed record CreateManualMaintenanceOpportunityCommand(
+    Guid CustomerId,
+    Guid EquipmentId,
+    MaintenanceRecommendationInput Recommendation);
 
 public sealed record GetMaintenanceOpportunitiesQuery(
     MaintenanceOpportunityStatus? Status,
@@ -25,7 +31,7 @@ public sealed record MaintenanceOpportunityListItem(
     string CustomerName,
     string CustomerWhatsApp,
     string EquipmentDescription,
-    DateTimeOffset PreviousWorkOrderCompletedAtUtc,
+    DateTimeOffset? PreviousWorkOrderCompletedAtUtc,
     string RecommendedServiceName,
     DateOnly DueDate,
     string Notes,

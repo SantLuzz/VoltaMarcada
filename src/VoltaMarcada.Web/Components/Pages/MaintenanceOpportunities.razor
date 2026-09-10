@@ -14,6 +14,7 @@
 
 <PageTitle>Manutenções | VoltaMarcada</PageTitle>
 <PageHeader Title="Oportunidades de retorno" Description="Acompanhe o momento recomendado para trazer cada cliente de volta." />
+<div class="mt-4"><ManualMaintenanceOpportunityForm OnCreated="LoadAsync" /></div>
 
 @if (isLoading)
 {
@@ -67,7 +68,14 @@ else
                                 <MudChip T="string" Size="Size.Small" Color="@GetUrgencyColor(item.Urgency)">@GetUrgencyName(item.Urgency)</MudChip>
                             </MudStack>
                             <MudText Typo="Typo.body2">@item.EquipmentDescription · @item.RecommendedServiceName</MudText>
-                            <MudText Typo="Typo.caption">Última manutenção: @FormatDate(item.PreviousWorkOrderCompletedAtUtc) · Recomendada: @item.DueDate.ToString("dd/MM/yyyy")</MudText>
+                            @if (item.PreviousWorkOrderCompletedAtUtc is { } completedAtUtc)
+                            {
+                                <MudText Typo="Typo.caption">Última manutenção: @FormatDate(completedAtUtc) · Recomendada: @item.DueDate.ToString("dd/MM/yyyy")</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption">Sem OS anterior · Recomendada: @item.DueDate.ToString("dd/MM/yyyy")</MudText>
+                            }
                             <MudStack Row="true" AlignItems="AlignItems.Center">
                                 <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(item.Status)">@GetStatusName(item.Status)</MudChip>
                                 <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => selectedOpportunity = item)">Detalhes</MudButton>
@@ -106,7 +114,14 @@ else
             <MudStack Spacing="2">
                 <MudText Typo="Typo.subtitle1">@item.CustomerName</MudText>
                 <MudText>@item.EquipmentDescription · @item.RecommendedServiceName</MudText>
-                <MudText Typo="Typo.body2">Última manutenção: @FormatDate(item.PreviousWorkOrderCompletedAtUtc)</MudText>
+                @if (item.PreviousWorkOrderCompletedAtUtc is { } completedAtUtc)
+                {
+                    <MudText Typo="Typo.body2">Última manutenção: @FormatDate(completedAtUtc)</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2">Sem OS anterior</MudText>
+                }
                 <MudText Typo="Typo.body2">Próxima recomendada: @item.DueDate.ToString("dd/MM/yyyy")</MudText>
                 @if (!string.IsNullOrWhiteSpace(item.Notes))
                 {

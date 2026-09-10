@@ -14,7 +14,7 @@ public sealed class MaintenanceOpportunity : ICompanyScopedEntity
     public Guid CompanyId { get; private set; }
     public Guid CustomerId { get; private set; }
     public Guid EquipmentId { get; private set; }
-    public Guid PreviousWorkOrderId { get; private set; }
+    public Guid? PreviousWorkOrderId { get; private set; }
     public Guid RecommendedServiceId { get; private set; }
     public DateOnly DueDate { get; private set; }
     public string Notes { get; private set; } = string.Empty;
@@ -40,7 +40,7 @@ public sealed class MaintenanceOpportunity : ICompanyScopedEntity
         Guid companyId,
         Guid customerId,
         Guid equipmentId,
-        Guid previousWorkOrderId,
+        Guid? previousWorkOrderId,
         Guid recommendedServiceId,
         DateOnly dueDate,
         string notes,
@@ -49,7 +49,10 @@ public sealed class MaintenanceOpportunity : ICompanyScopedEntity
         RequireId(companyId, "Company");
         RequireId(customerId, "Customer");
         RequireId(equipmentId, "Equipment");
-        RequireId(previousWorkOrderId, "Previous work order");
+        if (previousWorkOrderId is { } workOrderId)
+        {
+            RequireId(workOrderId, "Previous work order");
+        }
         RequireId(recommendedServiceId, "Recommended service");
         if (dueDate == DateOnly.MinValue)
         {
@@ -72,6 +75,16 @@ public sealed class MaintenanceOpportunity : ICompanyScopedEntity
             UpdatedAtUtc = utcNow
         };
     }
+
+    public static MaintenanceOpportunity CreateManual(
+        Guid companyId,
+        Guid customerId,
+        Guid equipmentId,
+        Guid recommendedServiceId,
+        DateOnly dueDate,
+        string notes,
+        DateTimeOffset now) =>
+        Create(companyId, customerId, equipmentId, null, recommendedServiceId, dueDate, notes, now);
 
     public void MarkAsContacted(DateTimeOffset now)
     {

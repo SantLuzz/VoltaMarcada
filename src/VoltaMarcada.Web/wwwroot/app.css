@@ -47,8 +47,6 @@ a { color: var(--servicesync-primary); }
 .public-service-option-copy .mud-typography { text-align: left; white-space: normal; }
 .public-service-option-check { flex: 0 0 auto; margin-left: auto; }
 .auth-logo { display: block; height: auto; margin: 0 auto 32px; max-width: 300px; width: min(300px, 100%); }
-.main-drawer .drawer-brand { align-items: center; box-sizing: border-box; display: flex; height: 170px; justify-content: center; overflow: hidden; padding: 20px 24px; }
-.main-drawer .drawer-logo { display: block; height: 130px; max-height: 130px; max-width: 100%; object-fit: contain; width: 130px; }
 .auth-page-header { margin-bottom: 24px; }
 .auth-form, .onboarding-form, .onboarding-section { display: grid; gap: 16px; }
 
@@ -316,4 +314,326 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 @media (max-width: 599.95px) {
     .dashboard-owner-action-grid, .dashboard-value-funnel-grid { grid-template-columns: minmax(0, 1fr); }
     .dashboard-value-funnel { padding: 16px; }
+}
+
+/* Shared application layouts */
+.main-app-bar {
+    border-bottom: 1px solid var(--servicesync-border);
+}
+
+
+/* =========================================================
+   DRAWER
+   ========================================================= */
+
+.main-drawer {
+    background-color: var(--servicesync-navy);
+    border-right: 1px solid var(--servicesync-border);
+    max-width: calc(100vw - 16px);
+
+    height: 100dvh;
+    max-height: 100dvh;
+
+    overflow: hidden;
+}
+
+.main-drawer .mud-drawer-content {
+    background-color: var(--servicesync-navy);
+
+    height: 100%;
+    min-height: 0;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   CONTAINER PRINCIPAL
+
+   LINHA 1 = LOGO
+   LINHA 2 = MENU COM SCROLL
+   LINHA 3 = SAIR
+   ========================================================= */
+
+.drawer-content {
+    background: var(--servicesync-navy);
+
+    display: grid;
+
+    grid-template-rows:
+        auto
+        minmax(0, 1fr)
+        auto;
+
+    height: 100%;
+    min-height: 0;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   LOGO
+   ========================================================= */
+
+.drawer-brand {
+    align-items: center;
+
+    background: var(--servicesync-navy);
+
+    border-bottom: 1px solid rgb(255 255 255 / 24%);
+
+    display: flex;
+    justify-content: center;
+
+    position: relative;
+
+    height: 170px;
+    min-height: 170px;
+
+    padding: 16px 24px;
+
+    overflow: hidden;
+}
+
+.drawer-close-button {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    z-index: 10;
+
+    color: #FFFFFF !important;
+}
+
+.drawer-logo {
+    display: block;
+
+    height: 130px;
+    max-height: 130px;
+
+    max-width: 100%;
+
+    object-fit: contain;
+
+    width: auto;
+}
+
+
+/* =========================================================
+   ÁREA DE SCROLL
+   ========================================================= */
+
+.drawer-navigation-scroll {
+    background: var(--servicesync-navy);
+
+    /*
+       Fundamental para permitir que a segunda linha
+       do grid fique menor que o conteúdo.
+    */
+    min-height: 0;
+
+    /*
+       ESTA DIV é quem rola.
+    */
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    overscroll-behavior: contain;
+
+    scrollbar-color:
+        rgb(255 255 255 / 45%)
+        var(--servicesync-navy);
+
+    scrollbar-gutter: stable;
+}
+
+
+/* Chrome / Edge */
+
+.drawer-navigation-scroll::-webkit-scrollbar {
+    width: 10px;
+}
+
+.drawer-navigation-scroll::-webkit-scrollbar-track {
+    background: var(--servicesync-navy);
+}
+
+.drawer-navigation-scroll::-webkit-scrollbar-thumb {
+    background-color: rgb(255 255 255 / 45%);
+
+    border: 3px solid var(--servicesync-navy);
+
+    border-radius: 999px;
+}
+
+
+/* =========================================================
+   MUD NAV MENU
+
+   Ele NÃO controla mais scroll.
+   ========================================================= */
+
+.drawer-navigation {
+    background: var(--servicesync-navy);
+
+    width: 100%;
+
+    padding: 8px;
+
+    overflow: visible;
+}
+
+
+/* =========================================================
+   LINKS
+   ========================================================= */
+
+.drawer-navigation .mud-nav-link {
+    color: #FFFFFF !important;
+}
+
+.drawer-navigation .mud-nav-link .mud-icon-root {
+    color: #FFFFFF !important;
+}
+
+.drawer-navigation .mud-nav-link.active {
+    background-color: rgb(255 255 255 / 18%);
+
+    color: #FFFFFF !important;
+
+    font-weight: 600;
+}
+
+.drawer-navigation .mud-nav-link.active .mud-icon-root {
+    color: #FFFFFF !important;
+}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.drawer-footer {
+    align-items: center;
+
+    background: var(--servicesync-navy);
+
+    border-top: 1px solid rgb(255 255 255 / 24%);
+
+    display: flex;
+
+    flex-shrink: 0;
+
+    min-height: 64px;
+
+    padding: 12px 16px;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+.logout-form {
+    margin: 0;
+
+    width: 100%;
+}
+
+.drawer-footer .mud-button-root {
+    color: #FFFFFF;
+
+    justify-content: flex-start;
+
+    width: 100%;
+}
+
+
+/* =========================================================
+   APP BAR
+   ========================================================= */
+
+.app-bar-company-name {
+    max-width: min(50vw, 360px);
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 599.95px) {
+
+    .drawer-brand {
+        height: 120px;
+        min-height: 120px;
+
+        padding: 10px 20px;
+    }
+
+    .drawer-logo {
+        height: 90px;
+        max-height: 90px;
+    }
+
+    .drawer-navigation-scroll {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .drawer-navigation {
+        padding: 8px;
+    }
+
+    .drawer-footer {
+        min-height: 60px;
+
+        padding: 10px 16px;
+    }
+
+    .app-bar-company-name {
+        max-width: 45vw;
+    }
+}
+
+
+/* =========================================================
+   BLAZOR ERROR
+   ========================================================= */
+
+#blazor-error-ui {
+    background: #fff7ed;
+
+    bottom: 0;
+
+    box-shadow: 0 -2px 8px rgb(23 32 51 / 12%);
+
+    color: var(--servicesync-text);
+
+    display: none;
+
+    left: 0;
+
+    padding: 12px 48px 12px 24px;
+
+    position: fixed;
+
+    right: 0;
+
+    z-index: 2000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+
+    position: absolute;
+
+    right: 24px;
 }

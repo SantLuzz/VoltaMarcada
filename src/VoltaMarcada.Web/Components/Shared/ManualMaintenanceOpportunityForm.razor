@@ -1,0 +1,101 @@
+@using VoltaMarcada.Application.Customers
+@using VoltaMarcada.Application.Equipment
+@using VoltaMarcada.Application.MaintenanceOpportunities
+@using VoltaMarcada.Application.Services
+@using VoltaMarcada.Application.WorkOrders
+@inject IComponentOperationExecutor OperationExecutor
+@inject ISnackbar Snackbar
+
+<MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">Nova oportunidade</MudButton>
+
+<MudDialog @bind-Visible="isDialogOpen" Options="dialogOptions">
+    <TitleContent><MudText Typo="Typo.h6">Nova oportunidade de manutenção</MudText></TitleContent>
+    <DialogContent>
+        @if (isLoadingOptions)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else
+        {
+            <MudGrid>
+                <MudItem xs="12"><MudSelect T="Guid?" Label="Cliente" Placeholder="Selecione um cliente" Required="true" Clearable="true" @bind-Value="customerId" @bind-Value:after="LoadEquipmentAsync" Disabled="@isCreating">@foreach (var customer in customers) { <MudSelectItem Value="@((Guid?)customer.Id)">@customer.Name</MudSelectItem> }</MudSelect></MudItem>
+                <MudItem xs="12"><MudSelect T="Guid?" Label="Equipamento" Placeholder="Selecione um equipamento" Required="true" Clearable="true" @bind-Value="equipmentId" Disabled="@(isCreating || customerId is null)">@foreach (var item in equipment) { <MudSelectItem Value="@((Guid?)item.Id)">@GetEquipmentDescription(item)</MudSelectItem> }</MudSelect></MudItem>
+                <MudItem xs="12"><MudSelect T="Guid?" Label="Serviço recomendado" Placeholder="Selecione um serviço" Required="true" Clearable="true" @bind-Value="recommendedServiceId" Disabled="@isCreating">@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect></MudItem>
+                <MudItem xs="12" sm="6"><MudSelect T="string" Label="Data recomendada" Required="true" @bind-Value="recommendationPeriod" @bind-Value:after="ClearOtherRecommendationStrategy" Disabled="@isCreating"><MudSelectItem Value="@("30")">Em 30 dias</MudSelectItem><MudSelectItem Value="@("60")">Em 60 dias</MudSelectItem><MudSelectItem Value="@("90")">Em 90 dias</MudSelectItem><MudSelectItem Value="@("180")">Em 180 dias</MudSelectItem><MudSelectItem Value="@("custom")">Intervalo personalizado</MudSelectItem><MudSelectItem Value="@("date")">Data específica</MudSelectItem></MudSelect></MudItem>
+                @if (recommendationPeriod == "custom") { <MudItem xs="12" sm="6"><MudNumericField T="int?" Label="Intervalo em dias" Required="true" Min="1" @bind-Value="customIntervalDays" Disabled="@isCreating" /></MudItem> }
+                @if (recommendationPeriod == "date") { <MudItem xs="12" sm="6"><MudDatePicker Label="Data recomendada" Required="true" DateFormat="dd/MM/yyyy" @bind-Date="recommendedDueDate" Disabled="@isCreating" /></MudItem> }
+                <MudItem xs="12"><MudTextField Label="Observações da recomendação" Required="true" Lines="3" @bind-Value="notes" Disabled="@isCreating" /></MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions><MudButton Variant="Variant.Text" OnClick="CloseDialog" Disabled="@isCreating">Cancelar</MudButton><MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateAsync" Disabled="@(isCreating || isLoadingOptions)">@(isCreating ? "Criando..." : "Criar oportunidade")</MudButton></DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public EventCallback OnCreated { get; set; }
+    private readonly DialogOptions dialogOptions = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    private IReadOnlyList<CustomerDto> customers = [];
+    private IReadOnlyList<EquipmentDto> equipment = [];
+    private IReadOnlyList<ServiceDto> services = [];
+    private Guid? customerId;
+    private Guid? equipmentId;
+    private Guid? recommendedServiceId;
+    private string recommendationPeriod = "90";
+    private int? customIntervalDays;
+    private DateTime? recommendedDueDate;
+    private string? notes;
+    private bool isDialogOpen;
+    private bool isLoadingOptions;
+    private bool isCreating;
+
+    private async Task OpenCreateDialog()
+    {
+        ResetForm();
+        isDialogOpen = true;
+        isLoadingOptions = true;
+        try
+        {
+            customers = (await OperationExecutor.ExecuteAsync((GetCustomersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken))).Where(customer => customer.IsActive).ToArray();
+            services = (await OperationExecutor.ExecuteAsync((GetServicesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken))).Where(service => service.IsActive).ToArray();
+        }
+        finally { isLoadingOptions = false; }
+    }
+
+    private async Task LoadEquipmentAsync()
+    {
+        equipmentId = null;
+        equipment = customerId is { } selectedCustomerId
+            ? (await OperationExecutor.ExecuteAsync((GetCustomerEquipmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(selectedCustomerId, cancellationToken))).Where(item => item.IsActive).ToArray()
+            : [];
+    }
+
+    private void ClearOtherRecommendationStrategy() { customIntervalDays = null; recommendedDueDate = null; }
+
+    private async Task CreateAsync()
+    {
+        var intervalDays = GetIntervalDays();
+        DateOnly? dueDate = recommendationPeriod == "date" && recommendedDueDate is { } date ? DateOnly.FromDateTime(date) : null;
+        if (customerId is null || equipmentId is null || recommendedServiceId is null || string.IsNullOrWhiteSpace(notes) || (intervalDays is null) == (dueDate is null) || intervalDays is <= 0)
+        {
+            Snackbar.Add("Informe cliente, equipamento, serviço, data recomendada e observações.", Severity.Warning);
+            return;
+        }
+
+        isCreating = true;
+        try
+        {
+            var command = new CreateManualMaintenanceOpportunityCommand(customerId.Value, equipmentId.Value, new MaintenanceRecommendationInput(intervalDays, dueDate, recommendedServiceId.Value, notes));
+            var result = await OperationExecutor.ExecuteAsync((CreateManualMaintenanceOpportunityUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(command, cancellationToken));
+            if (!result.IsSuccess) { Snackbar.Add(OperationErrorMessages.GetMessage(result.Error?.Code), Severity.Warning); return; }
+            isDialogOpen = false;
+            Snackbar.Add("Oportunidade de manutenção criada.", Severity.Success);
+            await OnCreated.InvokeAsync();
+        }
+        finally { isCreating = false; }
+    }
+
+    private int? GetIntervalDays() => recommendationPeriod switch { "30" => 30, "60" => 60, "90" => 90, "180" => 180, "custom" => customIntervalDays, _ => null };
+    private void CloseDialog() => isDialogOpen = false;
+    private void ResetForm() { customerId = null; equipmentId = null; recommendedServiceId = null; equipment = []; recommendationPeriod = "90"; customIntervalDays = null; recommendedDueDate = null; notes = null; }
+    private static string GetEquipmentDescription(EquipmentDto item) => string.Join(" · ", new[] { item.Type, item.Manufacturer, item.Model }.Where(value => !string.IsNullOrWhiteSpace(value)));
+}
