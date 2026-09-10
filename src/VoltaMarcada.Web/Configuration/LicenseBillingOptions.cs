@@ -9,6 +9,8 @@ public sealed class LicenseBillingOptions
 
     public decimal MonthlyPrice { get; init; }
 
+    public int ManualReleaseDefaultValidityDays { get; init; } = 30;
+
     public string PixKey { get; init; } = string.Empty;
 
     public string BeneficiaryName { get; init; } = string.Empty;

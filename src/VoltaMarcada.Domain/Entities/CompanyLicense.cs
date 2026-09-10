@@ -79,6 +79,19 @@ public sealed class CompanyLicense
         UpdatedAtUtc = utcApprovedAt;
     }
 
+    public void GrantManualAccess(DateTimeOffset paidUntilUtc, DateTimeOffset grantedAtUtc)
+    {
+        var utcPaidUntil = paidUntilUtc.ToUniversalTime();
+        var utcGrantedAt = grantedAtUtc.ToUniversalTime();
+        if (utcPaidUntil <= utcGrantedAt)
+        {
+            throw new DomainException("The license expiration must be in the future.");
+        }
+
+        PaidUntilUtc = utcPaidUntil;
+        Status = CompanyLicenseStatus.Paid;
+        UpdatedAtUtc = utcGrantedAt;
+    }
     private CompanyLicenseAccessMode GetTrialAccessMode(DateTimeOffset now, LicenseLifecyclePolicy policy)
     {
         if (now >= TrialEndsAtUtc.AddDays(policy.TrialTerminationDays))

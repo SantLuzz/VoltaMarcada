@@ -59,6 +59,7 @@ builder.Services.AddSingleton<ICompanyLicenseTrialConfiguration, CompanyLicenseT
 builder.Services.AddOptions<LicenseBillingOptions>()
     .Bind(builder.Configuration.GetSection(LicenseBillingOptions.SectionName))
     .Validate(options => options.MonthlyPrice > 0, "The license monthly price must be positive.")
+    .Validate(options => options.ManualReleaseDefaultValidityDays > 0, "The manual release validity must be positive.")
     .Validate(options => options.MaximumProofSizeBytes > 0, "The maximum proof size must be positive.")
     .Validate(options => !string.IsNullOrWhiteSpace(options.PixKey), "The PIX key is required.")
     .Validate(options => !string.IsNullOrWhiteSpace(options.BeneficiaryName), "The PIX beneficiary name is required.")

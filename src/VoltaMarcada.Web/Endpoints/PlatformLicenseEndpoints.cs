@@ -30,6 +30,11 @@ public static class PlatformLicenseEndpoints
             var proof = await useCase.ExecuteAsync(paymentId, cancellationToken);
             return proof is null ? Results.NotFound() : Results.File(proof.Content, proof.ContentType);
         });
+        group.MapPost("/manual-release", async (
+            ManualLicenseReleaseCommand command,
+            ReleaseCompanyLicenseManuallyUseCase useCase,
+            CancellationToken cancellationToken) =>
+            (await useCase.ExecuteAsync(command, cancellationToken)).ToHttpResult(() => Results.NoContent()));
         group.MapPost("/{paymentId:guid}/review", async (
             Guid paymentId,
             LicensePaymentReviewCommand command,

@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<Licensing.SubmitLicensePaymentUseCase>();
         services.AddScoped<Licensing.GetLicensePaymentProofUseCase>();
         services.AddScoped<Licensing.ReviewLicensePaymentUseCase>();
+        services.AddScoped<Licensing.ReleaseCompanyLicenseManuallyUseCase>();
         services.AddScoped<Licensing.GetPlatformLicensePaymentsUseCase>();
         services.AddScoped<Licensing.GetPlatformLicensePaymentProofUseCase>();
         services.AddScoped<GetMaintenanceOpportunityForSchedulingUseCase>();

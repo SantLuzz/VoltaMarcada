@@ -1,11 +1,33 @@
 using VoltaMarcada.Domain.Entities;
 using VoltaMarcada.Domain.Enums;
+using VoltaMarcada.Domain.Exceptions;
 using Xunit;
 
 namespace VoltaMarcada.IntegrationTests.Licensing;
 
 public sealed class CompanyLicenseTests
 {
+    [Fact]
+    public void GrantManualAccess_sets_the_exact_expiration_selected_by_the_administrator()
+    {
+        var now = new DateTimeOffset(2026, 9, 10, 12, 0, 0, TimeSpan.Zero);
+        var license = CompanyLicense.Create(Guid.NewGuid(), now, 14);
+        var expiration = new DateTimeOffset(2026, 12, 25, 18, 0, 0, TimeSpan.FromHours(-3));
+
+        license.GrantManualAccess(expiration, now);
+
+        Assert.Equal(CompanyLicenseStatus.Paid, license.Status);
+        Assert.Equal(expiration.ToUniversalTime(), license.PaidUntilUtc);
+    }
+
+    [Fact]
+    public void GrantManualAccess_rejects_an_expiration_that_has_already_passed()
+    {
+        var now = new DateTimeOffset(2026, 9, 10, 12, 0, 0, TimeSpan.Zero);
+        var license = CompanyLicense.Create(Guid.NewGuid(), now, 14);
+
+        Assert.Throws<DomainException>(() => license.GrantManualAccess(now, now));
+    }
     [Fact]
     public void Returns_operational_during_trial_tolerance()
     {

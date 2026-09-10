@@ -15,4 +15,5 @@ public sealed record PlatformLicensePaymentDto(
     string? OwnerName = null,
     string? ReviewerName = null,
     CompanyLicenseStatus? LicenseStatus = null,
-    DateTimeOffset? TrialEndsAtUtc = null);
+    DateTimeOffset? TrialEndsAtUtc = null,
+    Guid CompanyId = default);

@@ -25,6 +25,9 @@ public interface ILicenseRepository
         Guid userId,
         CancellationToken cancellationToken = default);
 
+    Task<bool> GrantManualAccessAsync(Guid companyId, DateTimeOffset paidUntilUtc, DateTimeOffset grantedAtUtc, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
     Task<CompanyLicense?> GetForCompanyAsync(
         Guid companyId,
         CancellationToken cancellationToken = default);

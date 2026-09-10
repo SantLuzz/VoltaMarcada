@@ -20,6 +20,24 @@ public sealed class LicenseRepository(AppDbContext dbContext) : ILicenseReposito
          select new CompanyLicenseMembership(membership.Role, license))
         .SingleOrDefaultAsync(cancellationToken);
 
+    public async Task<bool> GrantManualAccessAsync(
+        Guid companyId,
+        DateTimeOffset paidUntilUtc,
+        DateTimeOffset grantedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var license = await dbContext.CompanyLicenses.SingleOrDefaultAsync(
+            candidate => candidate.CompanyId == companyId,
+            cancellationToken);
+        if (license is null)
+        {
+            return false;
+        }
+
+        license.GrantManualAccess(paidUntilUtc, grantedAtUtc);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
     public Task<CompanyLicense?> GetForCompanyAsync(
         Guid companyId,
         CancellationToken cancellationToken = default) =>
@@ -185,7 +203,8 @@ public sealed class LicenseRepository(AppDbContext dbContext) : ILicenseReposito
                     company.OwnerName,
                     payment?.ReviewerName,
                     company.LicenseStatus,
-                    company.TrialEndsAtUtc);
+                    company.TrialEndsAtUtc,
+                    company.Id);
             })
             .OrderBy(company => company.CompanyName)
             .ToList();

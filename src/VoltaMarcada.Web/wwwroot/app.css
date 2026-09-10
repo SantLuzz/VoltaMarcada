@@ -195,12 +195,11 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 }
 
 .servicesync-data-grid .mud-table-root {
-    table-layout: fixed;
-    width: 100%;
+    table-layout: fixed;`r`n    width: 100%;
 }
 
 .servicesync-data-grid .mud-table-container {
-    overflow-x: hidden;
+    overflow-x: auto;
 }
 
 .grid-text-cell {
@@ -420,7 +419,7 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 
 
 /* =========================================================
-   ÁREA DE SCROLL
+   ÃƒÆ’Ã‚ÂREA DE SCROLL
    ========================================================= */
 
 .drawer-navigation-scroll {
@@ -428,14 +427,14 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 
     /*
        Fundamental para permitir que a segunda linha
-       do grid fique menor que o conteúdo.
+       do grid fique menor que o conteÃƒÆ’Ã‚Âºdo.
     */
     min-height: 0;
 
     /*
-       ESTA DIV é quem rola.
+       ESTA DIV ÃƒÆ’Ã‚Â© quem rola.
     */
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: auto;
 
     overscroll-behavior: contain;
@@ -470,7 +469,7 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 /* =========================================================
    MUD NAV MENU
 
-   Ele NÃO controla mais scroll.
+   Ele NÃƒÆ’Ã†â€™O controla mais scroll.
    ========================================================= */
 
 .drawer-navigation {
