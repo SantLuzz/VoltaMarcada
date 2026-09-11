@@ -7,7 +7,7 @@ using VoltaMarcada.Domain.Entities;
 
 namespace VoltaMarcada.Application.WorkOrders;
 
-public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IAppointmentRepository appointmentRepository, IServiceRepository serviceRepository, IProfessionalRepository professionalRepository, IMaintenanceOpportunityRepository maintenanceOpportunityRepository, WorkOrderAuthorization authorization, ICurrentUser currentUser, ISchedulingConfiguration schedulingConfiguration, TimeProvider timeProvider)
+public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IAppointmentRepository appointmentRepository, IServiceRepository serviceRepository, IProfessionalRepository professionalRepository, IMaintenanceOpportunityRepository maintenanceOpportunityRepository, ICompanyRepository companyRepository, IWorkOrderChargeRepository chargeRepository, WorkOrderAuthorization authorization, ICurrentUser currentUser, ISchedulingConfiguration schedulingConfiguration, TimeProvider timeProvider)
 {
     public async Task<OperationResult<WorkOrderOperationValue>> ExecuteAsync(Guid workOrderId, CompleteWorkOrderCommand command, CancellationToken cancellationToken = default)
     {
@@ -26,6 +26,37 @@ public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IA
         if (service.RequireAfterPhotos && order.Photos.All(photo => photo.Type != global::VoltaMarcada.Domain.Enums.WorkOrderPhotoType.After)) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.AfterPhotoRequired);
 
         var now = timeProvider.GetUtcNow();
+        var company = await companyRepository.GetByIdAsync(scope.CompanyId, cancellationToken);
+        if (company is null) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.NotFound);
+
+        if (company.PaymentControlEnabled && order.TotalAmount > 0)
+        {
+            var paymentDecision = command.PaymentDecision;
+            var hasInstallments = paymentDecision?.Installments is { Count: > 0 };
+            var hasNoChargeReason = !string.IsNullOrWhiteSpace(paymentDecision?.NoChargeReason);
+            if (paymentDecision is null || hasInstallments == hasNoChargeReason)
+            {
+                return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
+            }
+
+            if (hasNoChargeReason)
+            {
+                order.RecordNoCharge(paymentDecision!.NoChargeReason!, currentUser.UserId, now);
+            }
+            else
+            {
+                if (await chargeRepository.GetForWorkOrderAsync(scope.CompanyId, order.Id, cancellationToken) is not null) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidStatus);
+                try
+                {
+                    await chargeRepository.AddAsync(WorkOrderCharge.Create(scope.CompanyId, order.Id, order.TotalAmount, paymentDecision!.Installments!, now), cancellationToken);
+                }
+                catch (global::VoltaMarcada.Domain.Exceptions.DomainException)
+                {
+                    return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
+                }
+            }
+        }
+
         var recommendation = command.MaintenanceRecommendation;
         if (recommendation is null)
         {

@@ -1,7 +1,8 @@
-@page "/empresa"
+﻿@page "/empresa"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
 @using VoltaMarcada.Application.EmployeeInvitations
 @using VoltaMarcada.Application.CompanySettings
+@using VoltaMarcada.Application.Payments
 @using VoltaMarcada.Web.Authorization
 @using Microsoft.JSInterop
 @using VoltaMarcada.Domain.Enums
@@ -164,6 +165,35 @@ else if (overview is not null)
                     }
                 </MudPaper>
             </MudTabPanel>
+            <MudTabPanel Text="Cobrança">
+                <MudPaper Class="company-section" Elevation="0" Outlined="true">
+                    <header class="company-section-header">
+                        <MudText Typo="Typo.h6">Controle de pagamentos</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Ao ativar, uma OS com valor deverá ter uma cobrança ou um motivo de não cobrança antes da conclusão.</MudText>
+                    </header>
+                    @if (paymentSettings is not null)
+                    {
+                        <MudSwitch @bind-Value="paymentSettings.PaymentControlEnabled" Color="Color.Primary" Disabled="@isSavingPaymentSettings">Exigir definição de cobrança ao concluir uma OS</MudSwitch>
+                        <MudDivider Class="my-4" />
+                        <MudText Typo="Typo.subtitle1">Pix</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">A chave será usada para apresentar e copiar o pagamento Pix durante a cobrança.</MudText>
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" sm="4">
+                                <MudSelect T="PixKeyType?" @bind-Value="paymentSettings.PixKeyType" Label="Tipo de chave" Variant="Variant.Outlined" Disabled="@isSavingPaymentSettings" Clearable="true">
+                                    @foreach (var pixKeyType in Enum.GetValues<PixKeyType>())
+                                    {
+                                        <MudSelectItem T="PixKeyType?" Value="@((PixKeyType?)pixKeyType)">@GetPixKeyTypeLabel(pixKeyType)</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" sm="8">
+                                <MudTextField @bind-Value="paymentSettings.PixKey" Label="Chave Pix" Variant="Variant.Outlined" FullWidth="true" Disabled="@isSavingPaymentSettings" />
+                            </MudItem>
+                        </MudGrid>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="SavePaymentSettingsAsync" Disabled="@isSavingPaymentSettings">@(isSavingPaymentSettings ? "Salvando..." : "Salvar cobrança")</MudButton>
+                    }
+                </MudPaper>
+            </MudTabPanel>
         </MudTabs>
     </div>
 
@@ -215,6 +245,8 @@ else if (overview is not null)
     private string? profileError;
     private PublicSettingsFormModel? publicSettings;
     private bool isSavingPublicSettings;
+    private PaymentSettingsFormModel? paymentSettings;
+    private bool isSavingPaymentSettings;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -237,6 +269,13 @@ else if (overview is not null)
             {
                 var ownerEmail = overview.Employees.FirstOrDefault(employee => employee.Role == CompanyUserRole.Owner)?.Email;
                 publicSettings = new PublicSettingsFormModel(settings.Slug, settings.PublicDescription, settings.PublicPhone, settings.NotificationEmail ?? ownerEmail, settings.PublicRequestIntervalMinutes, settings.BusinessHours);
+            }
+
+            var savedPaymentSettings = await OperationExecutor.ExecuteAsync(
+                (GetCompanyPaymentSettingsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(cancellationToken));
+            if (savedPaymentSettings is not null)
+            {
+                paymentSettings = new PaymentSettingsFormModel(savedPaymentSettings.PaymentControlEnabled, savedPaymentSettings.PixKey, savedPaymentSettings.PixKeyType);
             }
         }
         catch (Exception exception)
@@ -476,6 +515,38 @@ else if (overview is not null)
         finally { isSavingPublicSettings = false; }
     }
 
+    private async Task SavePaymentSettingsAsync()
+    {
+        if (paymentSettings is null) return;
+        isSavingPaymentSettings = true;
+        operationError = null;
+        try
+        {
+            var result = await OperationExecutor.ExecuteAsync(
+                (UpdateCompanyPaymentSettingsUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    new UpdateCompanyPaymentSettingsCommand(paymentSettings.PaymentControlEnabled, paymentSettings.PixKey, paymentSettings.PixKeyType),
+                    cancellationToken));
+            if (!result.IsSuccess) operationError = OperationErrorMessages.GetMessage(result.Error?.Code);
+            else Snackbar.Add("Configurações de cobrança salvas.", Severity.Success);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unable to update company payment settings");
+            operationError = "Não foi possível salvar as configurações de cobrança.";
+        }
+        finally { isSavingPaymentSettings = false; }
+    }
+
+    private static string GetPixKeyTypeLabel(PixKeyType pixKeyType) => pixKeyType switch
+    {
+        PixKeyType.Cpf => "CPF",
+        PixKeyType.Cnpj => "CNPJ",
+        PixKeyType.Email => "E-mail",
+        PixKeyType.Phone => "Telefone",
+        PixKeyType.Random => "Chave aleatória",
+        _ => string.Empty
+    };
+
     private static IEnumerable<string> ValidateOptionalEmail(string? email) =>
         !string.IsNullOrWhiteSpace(email) && !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email)
             ? ["Informe um e-mail válido."]
@@ -560,6 +631,13 @@ else if (overview is not null)
         public string? NotificationEmail { get; set; } = notificationEmail;
         public int PublicRequestIntervalMinutes { get; set; } = publicRequestIntervalMinutes;
         public List<BusinessHoursFormModel> BusinessHours { get; } = businessHours.Select(item => new BusinessHoursFormModel(item.DayOfWeek, item.IsOpen, item.StartTime?.ToTimeSpan(), item.EndTime?.ToTimeSpan())).ToList();
+    }
+
+    private sealed class PaymentSettingsFormModel(bool paymentControlEnabled, string? pixKey, PixKeyType? pixKeyType)
+    {
+        public bool PaymentControlEnabled { get; set; } = paymentControlEnabled;
+        public string? PixKey { get; set; } = pixKey;
+        public PixKeyType? PixKeyType { get; set; } = pixKeyType;
     }
 
     private sealed class BusinessHoursFormModel(DayOfWeek dayOfWeek, bool isOpen, TimeSpan? startTime, TimeSpan? endTime)
