@@ -7,4 +7,6 @@ RUN sed -i 's/listen       80;/listen       8080;/' /etc/nginx/conf.d/default.co
 COPY --chown=nginx:nginx landing/ /usr/share/nginx/html/
 
 USER nginx
-EXPOSE 8080ENTRYPOINT ["nginx", "-g", "daemon off;"]
+EXPOSE 8080
+
+ENTRYPOINT ["nginx", "-g", "daemon off;"]

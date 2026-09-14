@@ -27,6 +27,7 @@ public sealed class ProductionDeploymentSourceTests
         var repositoryRoot = FindRepositoryRoot();
         var compose = File.ReadAllText(Path.Combine(repositoryRoot, "deploy", "compose.production.yml"));
         var webDockerfile = File.ReadAllText(Path.Combine(repositoryRoot, "deploy", "Dockerfile.web"));
+        var landingDockerfile = File.ReadAllText(Path.Combine(repositoryRoot, "deploy", "Dockerfile.landing"));
 
         Assert.Contains("caddy:", compose);
         Assert.Contains("landing:", compose);
@@ -37,9 +38,24 @@ public sealed class ProductionDeploymentSourceTests
         Assert.Contains("http://localhost:8080/health", compose);
         Assert.Contains("pg_isready", compose);
         Assert.Contains("USER app", webDockerfile);
+        Assert.Matches(@"EXPOSE 8080\r?\n(?:\r?\n)?ENTRYPOINT \[\""nginx\"", \""-g\"", \""daemon off;\""\]", landingDockerfile);
 
-        var postgresService = compose.Substring(compose.IndexOf("  postgres:", StringComparison.Ordinal));
-        Assert.DoesNotContain("ports:", postgresService);
+        foreach (var serviceName in new[] { "landing", "web", "postgres" })
+        {
+            Assert.DoesNotContain("ports:", GetServiceBlock(compose, serviceName));
+        }
+    }
+
+    private static string GetServiceBlock(string compose, string serviceName)
+    {
+        var serviceMarker = $"  {serviceName}:";
+        var serviceStart = compose.IndexOf(serviceMarker, StringComparison.Ordinal);
+        Assert.NotEqual(-1, serviceStart);
+
+        var nextServiceStart = compose.IndexOf("\n  ", serviceStart + serviceMarker.Length, StringComparison.Ordinal);
+        return nextServiceStart == -1
+            ? compose[serviceStart..]
+            : compose[serviceStart..nextServiceStart];
     }
 
     private static string FindRepositoryRoot()
