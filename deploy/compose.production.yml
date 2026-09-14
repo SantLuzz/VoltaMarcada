@@ -35,26 +35,25 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      AppUrls__Public: ${APP_PUBLIC_URL}
+      ConnectionStrings__DefaultConnection: ${EXTERNAL_DATABASE_CONNECTION_STRING}
+      ApplicationUrls__ApplicationBaseUrl: ${APPLICATION_BASE_URL}
+      ApplicationUrls__LandingPageUrl: ${LANDING_PAGE_URL}
       Cloudinary__CloudName: ${CLOUDINARY_CLOUD_NAME}
       Cloudinary__ApiKey: ${CLOUDINARY_API_KEY}
       Cloudinary__ApiSecret: ${CLOUDINARY_API_SECRET}
+      Smtp__Enabled: ${SMTP_ENABLED}
       Smtp__Host: ${SMTP_HOST}
       Smtp__Port: ${SMTP_PORT}
-      Smtp__UserName: ${SMTP_USERNAME}
+      Smtp__UseTls: ${SMTP_USE_TLS}
+      Smtp__SenderEmail: ${SMTP_SENDER_EMAIL}
+      Smtp__SenderName: ${SMTP_SENDER_NAME}
+      Smtp__Username: ${SMTP_USERNAME}
       Smtp__Password: ${SMTP_PASSWORD}
-      Smtp__FromAddress: ${SMTP_FROM_ADDRESS}
-      Smtp__FromName: ${SMTP_FROM_NAME}
       LicenseBilling__PixKey: ${LICENSE_BILLING_PIX_KEY}
-      PlatformBootstrap__Email: ${PLATFORM_BOOTSTRAP_EMAIL}
-      PlatformBootstrap__Password: ${PLATFORM_BOOTSTRAP_PASSWORD}
-    depends_on:
-      postgres:
-        condition: service_healthy
+      PlatformAdministrator__Email: ${PLATFORM_ADMINISTRATOR_EMAIL}
+      PlatformAdministrator__Password: ${PLATFORM_ADMINISTRATOR_PASSWORD}
     networks:
       - edge
-      - backend
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health | grep -qx Healthy"]
       interval: 30s
@@ -62,30 +61,9 @@ services:
       retries: 3
       start_period: 20s
 
-  postgres:
-    image: postgres:17-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - backend
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
 networks:
   edge:
-  backend:
-    internal: true
 
 volumes:
-  postgres-data:
   caddy-data:
   caddy-config:
