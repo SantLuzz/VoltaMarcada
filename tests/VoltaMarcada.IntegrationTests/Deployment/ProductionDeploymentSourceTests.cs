@@ -49,13 +49,59 @@ public sealed class ProductionDeploymentSourceTests
     private static string GetServiceBlock(string compose, string serviceName)
     {
         var serviceMarker = $"  {serviceName}:";
-        var serviceStart = compose.IndexOf(serviceMarker, StringComparison.Ordinal);
+        var lines = compose.Split('\n');
+        var serviceStart = Array.FindIndex(lines, line => line.TrimEnd('\r') == serviceMarker);
         Assert.NotEqual(-1, serviceStart);
 
-        var nextServiceStart = compose.IndexOf("\n  ", serviceStart + serviceMarker.Length, StringComparison.Ordinal);
-        return nextServiceStart == -1
-            ? compose[serviceStart..]
-            : compose[serviceStart..nextServiceStart];
+        var serviceLines = new List<string> { lines[serviceStart].TrimEnd('\r') };
+        for (var index = serviceStart + 1; index < lines.Length; index++)
+        {
+            var line = lines[index].TrimEnd('\r');
+            if (IsComposeServiceHeader(line) || IsComposeTopLevelSection(line))
+            {
+                break;
+            }
+
+            serviceLines.Add(line);
+        }
+
+        return string.Join('\n', serviceLines);
+    }
+
+    private static bool IsComposeServiceHeader(string line)
+    {
+        return line.Length > 3
+            && line.StartsWith("  ", StringComparison.Ordinal)
+            && !char.IsWhiteSpace(line[2])
+            && line.EndsWith(':')
+            && line.IndexOf(':') == line.Length - 1;
+    }
+
+    private static bool IsComposeTopLevelSection(string line)
+    {
+        return line.Length > 0
+            && !char.IsWhiteSpace(line[0])
+            && line.EndsWith(':');
+    }
+
+    [Fact]
+    public void GetServiceBlock_ShouldIncludeNestedPropertiesUntilTheNextServiceHeader()
+    {
+        const string compose = """
+            services:
+              landing:
+                image: voltamarcada-landing:0.0.0
+                ports:
+                  - "8080:8080"
+              web:
+                image: voltamarcada-web:0.0.0
+            """;
+
+        var landingService = GetServiceBlock(compose, "landing");
+
+        Assert.Contains("image: voltamarcada-landing:0.0.0", landingService);
+        Assert.Contains("ports:", landingService);
+        Assert.DoesNotContain("web:", landingService);
     }
 
     private static string FindRepositoryRoot()
