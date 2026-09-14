@@ -220,6 +220,8 @@ app.MapQuoteEndpoints();
 app.MapLicenseEndpoints();
 app.MapPlatformLicenseEndpoints();
 
+app.MapGet("/health", () => Results.Text("Healthy"));
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .RequireRateLimiting("public-booking");
