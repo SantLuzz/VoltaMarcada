@@ -76,3 +76,29 @@ contract verification.)
 Docker is unavailable in this environment. Therefore the requested landing
 image build and HTTP container smoke test were not run and are not claimed as
 verified. The focused xUnit source test and solution build were run locally.
+
+## Review round 1 follow-up
+
+Addressed the landing review findings in a second TDD cycle:
+
+- Reveal elements are visible by default. Animation-only opacity and transforms
+  are now scoped to `.js [data-reveal]`, and `landing.js` enables that class.
+  Visitors without JavaScript retain all content.
+- The three mockup-only controls are now inert `span.mock-button` elements.
+  The mobile navigation toggle is the only HTML button. Browser, phone, and
+  reminder mockups are consistently `aria-hidden="true"`; the gallery wrapper
+  uses the valid `role="group"` for its accessible label.
+- Added six isolated `<picture>/<img>` slots for the documented screenshot
+  names, with explicit dimensions. The hero is eager and high priority; the
+  five below-fold images are lazy. An image load error hides its picture and
+  exposes the adjacent readable CSS mockup. CSS explicitly preserves the
+  `hidden` fallback state.
+- Added `LandingPageReviewSourceTests` and expanded it to cover progressive
+  enhancement, the single real button, decorative accessibility treatment,
+  all six media filenames, loading priority, explicit hero dimensions, and
+  the safe missing-image fallback.
+
+TDD evidence: the new review contract initially failed for the missing JS
+reveal gate, decorative buttons, and absent media slots. A later focused run
+also failed for the missing CSS hidden-image rule; after adding that rule, all
+six focused landing source tests passed.

@@ -51,18 +51,22 @@
             <li>14 dias grátis</li><li>Sem cartão de crédito</li><li>Pronto para usar</li>
           </ul>
         </div>
-        <div class="browser-frame hero-preview" data-reveal aria-label="Exemplo demonstrativo de painel de operações">
+        <div class="media-slot hero-media" data-reveal>
+          <picture class="replaceable-media">
+            <img src="assets/hero-dashboard.webp" alt="Painel demonstrativo com agenda, manutenções próximas e orçamentos" width="1600" height="1000" loading="eager" fetchpriority="high" decoding="async" onerror="this.closest('picture').hidden = true">
+          </picture>
+          <div class="browser-frame hero-preview" aria-hidden="true">
           <div class="browser-bar"><span></span><span></span><span></span><small>app.voltamarcada.com.br</small></div>
           <div class="app-preview">
             <aside><b>VM</b><i></i><i></i><i></i><i></i></aside>
             <div class="preview-content">
-              <div class="preview-heading"><div><small>Bom dia, equipe</small><strong>Operação de hoje</strong></div><button type="button">+ Novo serviço</button></div>
+              <div class="preview-heading"><div><small>Bom dia, equipe</small><strong>Operação de hoje</strong></div><span class="mock-button">+ Novo serviço</span></div>
               <div class="metric-row"><div><small>Agenda hoje</small><strong>08</strong><em>+2 confirmados</em></div><div><small>Manutenções próximas</small><strong>24</strong><em>8 para contatar</em></div><div><small>Em orçamento</small><strong>05</strong><em>R$ 4.280</em></div></div>
               <div class="preview-panels"><div class="preview-calendar"><b>Agenda · terça-feira</b><span><i></i>08:00 · Higienização</span><span><i></i>10:30 · Instalação</span><span><i></i>14:00 · Preventiva</span></div><div class="preview-reminders"><b>Próximas manutenções</b><span>Clínica Vida <em>Hoje</em></span><span>Residencial Aurora <em>Em 2 dias</em></span><span>Mercado Central <em>Em 4 dias</em></span></div></div>
             </div>
           </div>
         </div>
-      </div>
+        </div>      </div>
     </section>
 
     <section class="section problem-section">
@@ -93,7 +97,12 @@
 
     <section class="section public-request-section">
       <div class="container split-grid">
-        <div class="phone-frame" data-reveal aria-label="Exemplo demonstrativo de solicitação pública no celular"><div class="phone-speaker"></div><div class="phone-screen"><div class="public-brand">VoltaMarcada</div><p>Olá, Marina!</p><strong>Agende sua manutenção</strong><label>Qual dia funciona melhor?<span>Terça, 24 de setembro</span></label><label>Escolha um horário<span>10:00</span></label><button type="button">Enviar preferência</button><small>A empresa confirmará o horário.</small></div></div>
+        <div class="media-slot public-request-media" data-reveal>
+          <picture class="replaceable-media">
+            <img src="assets/public-request-mobile.webp" alt="Página pública demonstrativa para solicitar manutenção pelo celular" width="750" height="1334" loading="lazy" decoding="async" onerror="this.closest('picture').hidden = true">
+          </picture>
+          <div class="phone-frame" aria-hidden="true"><div class="phone-speaker"></div><div class="phone-screen"><div class="public-brand">VoltaMarcada</div><p>Olá, Marina!</p><strong>Agende sua manutenção</strong><label>Qual dia funciona melhor?<span>Terça, 24 de setembro</span></label><label>Escolha um horário<span>10:00</span></label><span class="mock-button">Enviar preferência</span><small>A empresa confirmará o horário.</small></div></div>
+        </div>
         <div class="section-intro" data-reveal><p class="eyebrow">Página pública</p><h2>Seu cliente pede atendimento sem instalar outro aplicativo.</h2><p>Compartilhe uma página profissional pelo WhatsApp. Ele escolhe o melhor dia e horário, e sua equipe confirma a visita com segurança.</p><ul class="check-list"><li>Serviços disponíveis para agendamento</li><li>Preferência de data e horário</li><li>Confirmação feita pela sua equipe</li></ul><a class="text-link" href="https://app.voltamarcada.com.br/account/register">Criar minha página pública <span aria-hidden="true">→</span></a></div>
       </div>
     </section>
@@ -108,11 +117,16 @@
           <article class="card feature-card" data-reveal><span class="feature-icon" aria-hidden="true">✓</span><h3>Checklists e evidências</h3><p>Padronize a execução e guarde fotos do serviço.</p></article>
           <article class="card feature-card featured" data-reveal><span class="feature-icon" aria-hidden="true">↻</span><p class="card-kicker">O diferencial</p><h3>Próximas manutenções</h3><p>Saiba quem contatar, quando e por qual equipamento — antes que o cliente esqueça de você.</p></article>
         </div>
+        <div class="showcase-grid" role="group" aria-label="Pré-visualizações demonstrativas do produto">
+          <div class="media-slot showcase-slot"><picture class="replaceable-media"><img src="assets/schedule.webp" alt="Agenda demonstrativa de atendimentos" width="1440" height="960" loading="lazy" decoding="async" onerror="this.closest('picture').hidden = true"></picture><div class="mockup-fallback" aria-hidden="true"><small>Agenda</small><strong>Visitas da semana</strong><span>08:00 · Higienização</span><span>10:30 · Instalação</span></div></div>
+          <div class="media-slot showcase-slot"><picture class="replaceable-media"><img src="assets/work-order.webp" alt="Ordem de serviço demonstrativa preenchida" width="1440" height="960" loading="lazy" decoding="async" onerror="this.closest('picture').hidden = true"></picture><div class="mockup-fallback" aria-hidden="true"><small>Ordem de serviço</small><strong>Higienização concluída</strong><span>Cliente · Equipamento · Evidências</span></div></div>
+          <div class="media-slot showcase-slot"><picture class="replaceable-media"><img src="assets/quote.webp" alt="Orçamento demonstrativo preenchido" width="1440" height="960" loading="lazy" decoding="async" onerror="this.closest('picture').hidden = true"></picture><div class="mockup-fallback" aria-hidden="true"><small>Orçamento</small><strong>Proposta enviada</strong><span>Serviços, materiais e validade</span></div></div>
+        </div>
       </div>
     </section>
 
     <section class="recurrence-section section">
-      <div class="container recurrence-grid"><div data-reveal><p class="eyebrow">Receita recorrente começa na rotina</p><h2>O próximo cliente pode ser alguém que você já atendeu muito bem.</h2><p>Transforme cada manutenção concluída em um lembrete acionável para a sua equipe. A VoltaMarcada mostra quem está perto da próxima revisão para que o contato aconteça no melhor momento.</p><a class="button button-light" href="https://app.voltamarcada.com.br/account/register">Começar grátis</a></div><div class="reminder-stack" data-reveal><div class="reminder-card"><span>Vence hoje</span><strong>Clínica Vida</strong><small>Higienização de 4 aparelhos</small><button type="button">Enviar link</button></div><div class="reminder-card muted"><span>Em 2 dias</span><strong>Residencial Aurora</strong><small>Preventiva do sistema split</small></div><div class="reminder-card muted"><span>Em 4 dias</span><strong>Mercado Central</strong><small>Revisão de câmara fria</small></div></div></div>
+      <div class="container recurrence-grid"><div data-reveal><p class="eyebrow">Receita recorrente começa na rotina</p><h2>O próximo cliente pode ser alguém que você já atendeu muito bem.</h2><p>Transforme cada manutenção concluída em um lembrete acionável para a sua equipe. A VoltaMarcada mostra quem está perto da próxima revisão para que o contato aconteça no melhor momento.</p><a class="button button-light" href="https://app.voltamarcada.com.br/account/register">Começar grátis</a></div><div class="media-slot reminder-media" data-reveal><picture class="replaceable-media"><img src="assets/maintenance-reminders.webp" alt="Painel demonstrativo de próximas manutenções" width="1440" height="960" loading="lazy" decoding="async" onerror="this.closest('picture').hidden = true"></picture><div class="reminder-stack" aria-hidden="true"><div class="reminder-card"><span>Vence hoje</span><strong>Clínica Vida</strong><small>Higienização de 4 aparelhos</small><span class="mock-button">Enviar link</span></div><div class="reminder-card muted"><span>Em 2 dias</span><strong>Residencial Aurora</strong><small>Preventiva do sistema split</small></div><div class="reminder-card muted"><span>Em 4 dias</span><strong>Mercado Central</strong><small>Revisão de câmara fria</small></div></div></div></div>
     </section>
 
     <section class="section context-section"><div class="container"><div class="section-intro centered" data-reveal><p class="eyebrow">Tudo conectado</p><h2>Atenda com contexto, não com memória.</h2><p>Solicitação, orçamento, serviço, histórico e próxima manutenção conversam entre si para a sua equipe agir com segurança.</p></div><div class="connection-map" data-reveal><span>Solicitação</span><i aria-hidden="true">→</i><span>Orçamento</span><i aria-hidden="true">→</i><span>Serviço</span><i aria-hidden="true">→</i><span>Histórico</span><i aria-hidden="true">→</i><strong>Próxima manutenção</strong></div><p class="context-copy">Feita para empresas de climatização e refrigeração — e também para qualquer equipe que instala, repara, inspeciona ou mantém equipamentos e quer construir relações que voltam.</p></div></section>

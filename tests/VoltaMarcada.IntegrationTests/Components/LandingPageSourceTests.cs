@@ -12,7 +12,7 @@ public sealed class LandingPageSourceTests
         var html = ReadLandingFile("index.html");
 
         Assert.Contains("<h1>O serviço termina. O cliente não.</h1>", html);
-        Assert.Equal(1, Regex.Matches(html, "<h1", RegexOptions.CultureInvariant).Count);
+        Assert.Single(Regex.Matches(html, "<h1", RegexOptions.CultureInvariant).Cast<Match>());
         Assert.Contains("<main", html);
         Assert.Contains("id=\"inicio\"", html);
         Assert.Contains("id=\"como-funciona\"", html);
