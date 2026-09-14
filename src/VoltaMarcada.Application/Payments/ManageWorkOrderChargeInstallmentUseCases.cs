@@ -12,14 +12,21 @@ public sealed record UpdateWorkOrderChargeInstallmentCommand(decimal Amount, Pay
 
 public sealed class ConfirmWorkOrderChargeInstallmentUseCase(MaintenanceOpportunityOwnerAuthorization authorization, IWorkOrderChargeRepository chargeRepository, ICurrentUser currentUser, TimeProvider timeProvider)
 {
-    public async Task<OperationResult> ExecuteAsync(Guid installmentId, CancellationToken cancellationToken = default)
+    public Task<OperationResult> ExecuteAsync(Guid installmentId, CancellationToken cancellationToken = default) =>
+        ExecuteAsync(installmentId, null, cancellationToken);
+
+    public async Task<OperationResult> ExecuteAsync(Guid installmentId, ConfirmCashEntryCommand? command, CancellationToken cancellationToken = default)
     {
         var companyId = await authorization.GetOwnerCompanyIdAsync(cancellationToken);
         if (companyId is null) return OperationResult.Failure(WorkOrderErrors.Forbidden);
         var installment = await chargeRepository.GetInstallmentAsync(companyId.Value, installmentId, cancellationToken);
         if (installment is null) return OperationResult.Failure(WorkOrderErrors.NotFound);
-        try { installment.Confirm(currentUser.UserId, timeProvider.GetUtcNow()); }
-        catch (DomainException) { return OperationResult.Failure(WorkOrderErrors.InvalidStatus); }
+        try
+        {
+            if (command is null) installment.Confirm(currentUser.UserId, timeProvider.GetUtcNow());
+            else installment.Confirm(currentUser.UserId, command.PaymentMethod, command.OtherPaymentMethodDescription, timeProvider.GetUtcNow());
+        }
+        catch (DomainException) { return OperationResult.Failure(WorkOrderErrors.InvalidInput); }
         await chargeRepository.SaveChangesAsync(cancellationToken);
         return OperationResult.Success();
     }

@@ -1,0 +1,213 @@
+@page "/caixa"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
+@using VoltaMarcada.Application.Payments
+@using VoltaMarcada.Application.Scheduling
+@using VoltaMarcada.Application.WorkOrders
+@using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Web.Formatting
+@inject IComponentOperationExecutor OperationExecutor
+@inject ISchedulingConfiguration SchedulingConfiguration
+@inject TimeProvider TimeProvider
+@inject IBrazilianDisplayFormatter DisplayFormatter
+@inject ISnackbar Snackbar
+
+<PageTitle>Caixa | VoltaMarcada</PageTitle>
+
+<PageHeader Title="Caixa" Description="Registre, confirme e acompanhe os pagamentos da empresa." />
+
+<MudPaper Outlined="true" Class="pa-4 mt-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
+        <MudDatePicker Label="Dia" Date="@selectedDate.ToDateTime(TimeOnly.MinValue)" DateChanged="OnDateChangedAsync" Disabled="@pendingOnly" Variant="Variant.Outlined" />
+        <MudSwitch Value="@pendingOnly" ValueChanged="@((bool value) => OnPendingOnlyChangedAsync(value))" Color="Color.Primary">A confirmar</MudSwitch>
+        @if (pendingOnly)
+        {
+            <MudText Color="Color.Secondary">Exibindo pendências de todos os dias.</MudText>
+        }
+        else
+        {
+            <MudText Color="Color.Secondary">Data selecionada: @selectedDate.ToString("dd/MM/yyyy")</MudText>
+        }
+        <MudSpacer />
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenManualEntryDialog">Informar pagamento manual</MudButton>
+    </MudStack>
+</MudPaper>
+
+@if (isLoading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mt-4" />
+}
+else if (cash is { } currentCash)
+{
+    <MudGrid Class="mt-4">
+        <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-4"><MudText Typo="Typo.caption">Total @GetSummaryPeriodLabel()</MudText><MudText Typo="Typo.h5">@DisplayFormatter.FormatCurrency(currentCash.Summary.TotalAmount)</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-4"><MudText Typo="Typo.caption">Total a confirmar</MudText><MudText Typo="Typo.h5" Color="Color.Warning">@DisplayFormatter.FormatCurrency(currentCash.Summary.PendingAmount)</MudText></MudPaper></MudItem>
+        <MudItem xs="12" sm="4"><MudPaper Outlined="true" Class="pa-4"><MudText Typo="Typo.caption">Total confirmado</MudText><MudText Typo="Typo.h5" Color="Color.Success">@DisplayFormatter.FormatCurrency(currentCash.Summary.ConfirmedAmount)</MudText></MudPaper></MudItem>
+    </MudGrid>
+
+    <MudPaper Outlined="true" Class="pa-4 mt-4">
+        @if (currentCash.Entries.Count == 0)
+        {
+            <MudText Color="Color.Secondary">Nenhum pagamento para este filtro.</MudText>
+        }
+        else
+        {
+            <MudTable Items="currentCash.Entries" Dense="true" Hover="true">
+                <HeaderContent><MudTh>Data</MudTh><MudTh>OS</MudTh><MudTh>Forma</MudTh><MudTh>Valor</MudTh><MudTh>Status</MudTh><MudTh></MudTh></HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.BusinessDate.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd>@(context.WorkOrderId is null ? "Avulso" : $"OS {context.WorkOrderId.Value.ToString()[..8]}")</MudTd>
+                    <MudTd>@GetPaymentMethodLabel(context.PaymentMethod, context.OtherPaymentMethodDescription)</MudTd>
+                    <MudTd>@DisplayFormatter.FormatCurrency(context.Amount)</MudTd>
+                    <MudTd><MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@GetStatusLabel(context.Status)</MudChip></MudTd>
+                    <MudTd>
+                        @if (context.Status == WorkOrderChargeInstallmentStatus.Pending)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" AriaLabel="Confirmar pagamento" OnClick="@(() => OpenConfirmDialog(context))" />
+                        }
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" AriaLabel="Editar pagamento" OnClick="@(() => OpenEditDialog(context))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Excluir pagamento" OnClick="@(() => DeleteAsync(context.Id))" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudPaper>
+}
+
+<MudDialog @bind-Visible="isManualEntryDialogOpen" Options="dialogOptions">
+    <TitleContent><MudText Typo="Typo.h6">Informar pagamento manual</MudText></TitleContent>
+    <DialogContent>
+        <MudSelect T="Guid?" Label="Vincular a uma OS (opcional)" Variant="Variant.Outlined" @bind-Value="manualWorkOrderId" FullWidth="true">
+            <MudSelectItem Value="@((Guid?)null)">Sem vínculo</MudSelectItem>
+            @foreach (var workOrder in workOrders) { <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem> }
+        </MudSelect>
+        <BrazilianCurrencyInput Id="manual-cash-amount" Name="manual-cash-amount" Label="Valor" Required="true" Value="@manualAmount" ValueChanged="@(value => manualAmount = value)" />
+        <MudSelect T="PaymentMethod" Label="Forma de pagamento" Variant="Variant.Outlined" @bind-Value="manualPaymentMethod" FullWidth="true" Class="mt-3">
+            @foreach (var method in Enum.GetValues<PaymentMethod>()) { <MudSelectItem Value="@method">@GetPaymentMethodLabel(method, null)</MudSelectItem> }
+        </MudSelect>
+        @if (manualPaymentMethod == PaymentMethod.Other) { <MudTextField Label="Descreva a forma" Variant="Variant.Outlined" Required="true" @bind-Value="manualOtherDescription" Class="mt-3" /> }
+    </DialogContent>
+    <DialogActions><MudButton OnClick="CloseManualEntryDialog">Cancelar</MudButton><MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CreateManualEntryAsync">Registrar</MudButton></DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="isConfirmDialogOpen" Options="dialogOptions">
+    <TitleContent><MudText Typo="Typo.h6">Confirmar pagamento</MudText></TitleContent>
+    <DialogContent>
+        <MudSelect T="PaymentMethod" Label="Forma de pagamento" Variant="Variant.Outlined" @bind-Value="editPaymentMethod" FullWidth="true">
+            @foreach (var method in Enum.GetValues<PaymentMethod>()) { <MudSelectItem Value="@method">@GetPaymentMethodLabel(method, null)</MudSelectItem> }
+        </MudSelect>
+        @if (editPaymentMethod == PaymentMethod.Other) { <MudTextField Label="Descreva a forma" Variant="Variant.Outlined" Required="true" @bind-Value="editOtherDescription" Class="mt-3" /> }
+    </DialogContent>
+    <DialogActions><MudButton OnClick="CloseConfirmDialog">Cancelar</MudButton><MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="ConfirmAsync">Confirmar</MudButton></DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="isEditDialogOpen" Options="dialogOptions">
+    <TitleContent><MudText Typo="Typo.h6">Editar pagamento</MudText></TitleContent>
+    <DialogContent>
+        <BrazilianCurrencyInput Id="edit-cash-amount" Name="edit-cash-amount" Label="Valor" Required="true" Value="@editAmount" ValueChanged="@(value => editAmount = value)" />
+        <MudSelect T="PaymentMethod" Label="Forma de pagamento" Variant="Variant.Outlined" @bind-Value="editPaymentMethod" FullWidth="true" Class="mt-3">
+            @foreach (var method in Enum.GetValues<PaymentMethod>()) { <MudSelectItem Value="@method">@GetPaymentMethodLabel(method, null)</MudSelectItem> }
+        </MudSelect>
+        @if (editPaymentMethod == PaymentMethod.Other) { <MudTextField Label="Descreva a forma" Variant="Variant.Outlined" Required="true" @bind-Value="editOtherDescription" Class="mt-3" /> }
+    </DialogContent>
+    <DialogActions><MudButton OnClick="CloseEditDialog">Cancelar</MudButton><MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveEditAsync">Salvar</MudButton></DialogActions>
+</MudDialog>
+
+@code {
+    [SupplyParameterFromQuery(Name = "date")] public string? DateQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "mode")] public string? ModeQuery { get; set; }
+
+    private readonly DialogOptions dialogOptions = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    private IReadOnlyList<WorkOrderListItem> workOrders = [];
+    private CashEntriesDto? cash;
+    private DateOnly selectedDate;
+    private bool pendingOnly;
+    private bool isLoading;
+    private bool isManualEntryDialogOpen;
+    private bool isConfirmDialogOpen;
+    private bool isEditDialogOpen;
+    private Guid? selectedEntryId;
+    private Guid? manualWorkOrderId;
+    private decimal? manualAmount;
+    private PaymentMethod manualPaymentMethod = PaymentMethod.Pix;
+    private string? manualOtherDescription;
+    private decimal? editAmount;
+    private PaymentMethod editPaymentMethod = PaymentMethod.Pix;
+    private string? editOtherDescription;
+    private string? loadedQuery;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var query = $"{DateQuery}|{ModeQuery}";
+        if (query == loadedQuery) return;
+        loadedQuery = query;
+        var timeZone = TimeZoneInfo.FindSystemTimeZoneById(SchedulingConfiguration.DefaultTimeZoneId);
+        selectedDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(TimeProvider.GetUtcNow(), timeZone).DateTime);
+        if (DateOnly.TryParse(DateQuery, out var parsedDate)) selectedDate = parsedDate;
+        pendingOnly = string.Equals(ModeQuery, "pending", StringComparison.OrdinalIgnoreCase);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var result = await OperationExecutor.ExecuteAsync((GetCashEntriesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new GetCashEntriesQuery(selectedDate, pendingOnly), cancellationToken));
+            if (!result.IsSuccess || result.Value is null) { Snackbar.Add("Não foi possível carregar o Caixa.", Severity.Warning); return; }
+            cash = result.Value;
+            workOrders = await OperationExecutor.ExecuteAsync((GetWorkOrdersUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new GetWorkOrdersQuery(null, null), cancellationToken));
+        }
+        finally { isLoading = false; }
+    }
+
+    private async Task OnDateChangedAsync(DateTime? value)
+    {
+        if (value is null) return;
+        selectedDate = DateOnly.FromDateTime(value.Value);
+        pendingOnly = false;
+        await LoadAsync();
+    }
+
+    private async Task OnPendingOnlyChangedAsync(bool value) { pendingOnly = value; await LoadAsync(); }
+    private void OpenManualEntryDialog() { manualWorkOrderId = null; manualAmount = null; manualPaymentMethod = PaymentMethod.Pix; manualOtherDescription = null; isManualEntryDialogOpen = true; }
+    private void CloseManualEntryDialog() => isManualEntryDialogOpen = false;
+    private async Task CreateManualEntryAsync()
+    {
+        if (manualAmount is not > 0) { Snackbar.Add("Informe um valor válido.", Severity.Warning); return; }
+        var result = await OperationExecutor.ExecuteAsync((CreateManualCashEntryUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateManualCashEntryCommand(manualWorkOrderId, manualAmount.Value, manualPaymentMethod, manualOtherDescription, selectedDate), cancellationToken));
+        if (!result.IsSuccess) { Snackbar.Add("Não foi possível registrar o pagamento.", Severity.Warning); return; }
+        isManualEntryDialogOpen = false; Snackbar.Add("Pagamento registrado.", Severity.Success); await LoadAsync();
+    }
+
+    private void OpenConfirmDialog(CashEntryDto entry) { selectedEntryId = entry.Id; editPaymentMethod = entry.PaymentMethod ?? PaymentMethod.Pix; editOtherDescription = entry.OtherPaymentMethodDescription; isConfirmDialogOpen = true; }
+    private void CloseConfirmDialog() => isConfirmDialogOpen = false;
+    private async Task ConfirmAsync()
+    {
+        if (selectedEntryId is not { } entryId) return;
+        var result = await OperationExecutor.ExecuteAsync((ConfirmWorkOrderChargeInstallmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(entryId, new ConfirmCashEntryCommand(editPaymentMethod, editOtherDescription), cancellationToken));
+        if (!result.IsSuccess) { Snackbar.Add("Não foi possível confirmar o pagamento.", Severity.Warning); return; }
+        isConfirmDialogOpen = false; Snackbar.Add("Pagamento confirmado.", Severity.Success); await LoadAsync();
+    }
+
+    private void OpenEditDialog(CashEntryDto entry) { selectedEntryId = entry.Id; editAmount = entry.Amount; editPaymentMethod = entry.PaymentMethod ?? PaymentMethod.Pix; editOtherDescription = entry.OtherPaymentMethodDescription; isEditDialogOpen = true; }
+    private void CloseEditDialog() => isEditDialogOpen = false;
+    private async Task SaveEditAsync()
+    {
+        if (selectedEntryId is not { } entryId || editAmount is not > 0) { Snackbar.Add("Informe um valor válido.", Severity.Warning); return; }
+        var result = await OperationExecutor.ExecuteAsync((UpdateWorkOrderChargeInstallmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(entryId, new UpdateWorkOrderChargeInstallmentCommand(editAmount.Value, editPaymentMethod, editOtherDescription), cancellationToken));
+        if (!result.IsSuccess) { Snackbar.Add("Não foi possível atualizar o pagamento.", Severity.Warning); return; }
+        isEditDialogOpen = false; Snackbar.Add("Pagamento atualizado.", Severity.Success); await LoadAsync();
+    }
+
+    private async Task DeleteAsync(Guid entryId)
+    {
+        var result = await OperationExecutor.ExecuteAsync((DeleteWorkOrderChargeInstallmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(entryId, cancellationToken));
+        if (!result.IsSuccess) { Snackbar.Add("Não foi possível excluir o pagamento.", Severity.Warning); return; }
+        Snackbar.Add("Pagamento excluído.", Severity.Success); await LoadAsync();
+    }
+
+    private string GetSummaryPeriodLabel() => pendingOnly ? "em aberto" : $"de {selectedDate:dd/MM/yyyy}";
+    private static string GetPaymentMethodLabel(PaymentMethod? method, string? otherDescription) => method switch { PaymentMethod.Pix => "Pix", PaymentMethod.Cash => "Dinheiro", PaymentMethod.DebitCard => "Cartão de débito", PaymentMethod.CreditCard => "Cartão de crédito", PaymentMethod.BankTransfer => "Transferência bancária", PaymentMethod.Other => otherDescription ?? "Outro", _ => "A informar" };
+    private static string GetStatusLabel(WorkOrderChargeInstallmentStatus status) => status == WorkOrderChargeInstallmentStatus.Paid ? "Confirmado" : "A confirmar";
+    private static Color GetStatusColor(WorkOrderChargeInstallmentStatus status) => status == WorkOrderChargeInstallmentStatus.Paid ? Color.Success : Color.Warning;
+}

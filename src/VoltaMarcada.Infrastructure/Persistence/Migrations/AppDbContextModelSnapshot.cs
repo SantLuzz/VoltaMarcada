@@ -1789,24 +1789,37 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<DateOnly>("BusinessDate")
+                        .HasColumnType("date");
+
                     b.Property<Guid>("CompanyId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsManualEntry")
+                        .HasColumnType("boolean");
+
                     b.Property<decimal>("TotalAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<Guid>("WorkOrderId")
+                    b.Property<Guid?>("WorkOrderId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("WorkOrderId")
                         .IsUnique()
-                        .HasDatabaseName("UX_WorkOrderCharges_WorkOrderId");
+                        .HasDatabaseName("UX_WorkOrderCharges_WorkOrderId")
+                        .HasFilter("\"WorkOrderId\" IS NOT NULL");
+
+                    b.HasIndex("CompanyId", "BusinessDate")
+                        .HasDatabaseName("IX_WorkOrderCharges_CompanyId_BusinessDate");
 
                     b.HasIndex("CompanyId", "WorkOrderId");
 
@@ -1847,7 +1860,7 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("PaidAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("PaymentMethod")
+                    b.Property<int?>("PaymentMethod")
                         .HasColumnType("integer");
 
                     b.Property<int>("Status")
@@ -2673,8 +2686,7 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("CompanyId", "WorkOrderId")
                         .HasPrincipalKey("CompanyId", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrderChargeInstallment", b =>

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using VoltaMarcada.Domain.Entities;
 
@@ -13,7 +13,7 @@ public sealed class WorkOrderChargeInstallmentConfiguration : IEntityTypeConfigu
         builder.Property(installment => installment.Id).ValueGeneratedNever();
         builder.Property(installment => installment.CompanyId).IsRequired();
         builder.Property(installment => installment.WorkOrderChargeId).IsRequired();
-        builder.Property(installment => installment.PaymentMethod).IsRequired();
+        builder.Property(installment => installment.PaymentMethod).IsRequired(false);
         builder.Property(installment => installment.Amount).HasPrecision(18, 2).IsRequired();
         builder.Property(installment => installment.OtherPaymentMethodDescription).HasMaxLength(200).IsRequired(false);
         builder.Property(installment => installment.Status).IsRequired();
@@ -28,4 +28,3 @@ public sealed class WorkOrderChargeInstallmentConfiguration : IEntityTypeConfigu
         builder.HasOne<Company>().WithMany().HasForeignKey(installment => installment.CompanyId).OnDelete(DeleteBehavior.Restrict);
     }
 }
-

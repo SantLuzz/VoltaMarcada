@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 
 namespace VoltaMarcada.IntegrationTests.Components;
 
@@ -31,7 +31,7 @@ public sealed class MobileCameraReliabilityTests
         var panelSource = ReadSource("Components/Shared/WorkOrderExecutionPanel.razor");
 
         Assert.Contains("?type=${encodeURIComponent(photoType)}", stagingSource, StringComparison.Ordinal);
-        Assert.Contains("showPreview(previewId, file)", stagingSource, StringComparison.Ordinal);
+        Assert.Contains("showPreview(previewId, file, async () =>", stagingSource, StringComparison.Ordinal);
         Assert.Contains("work-order-photo-preview", panelSource, StringComparison.Ordinal);
     }
 

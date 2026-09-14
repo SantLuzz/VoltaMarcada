@@ -1,4 +1,4 @@
-﻿using VoltaMarcada.Domain.Abstractions.Tenancy;
+using VoltaMarcada.Domain.Abstractions.Tenancy;
 using VoltaMarcada.Domain.Enums;
 using VoltaMarcada.Domain.Exceptions;
 
@@ -13,7 +13,7 @@ public sealed class WorkOrderChargeInstallment : ICompanyScopedEntity
     public Guid Id { get; private set; }
     public Guid CompanyId { get; private set; }
     public Guid WorkOrderChargeId { get; private set; }
-    public PaymentMethod PaymentMethod { get; private set; }
+    public PaymentMethod? PaymentMethod { get; private set; }
     public decimal Amount { get; private set; }
     public string? OtherPaymentMethodDescription { get; private set; }
     public WorkOrderChargeInstallmentStatus Status { get; private set; }
@@ -26,20 +26,28 @@ public sealed class WorkOrderChargeInstallment : ICompanyScopedEntity
     public DateTimeOffset? DeletedAtUtc { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
 
-    public static WorkOrderChargeInstallment Create(Guid companyId, Guid workOrderChargeId, Guid id, PaymentMethod paymentMethod, decimal amount, string? otherPaymentMethodDescription, DateTimeOffset now)
+    public static WorkOrderChargeInstallment Create(Guid companyId, Guid workOrderChargeId, Guid id, PaymentMethod? paymentMethod, decimal amount, string? otherPaymentMethodDescription, DateTimeOffset now)
     {
         if (companyId == Guid.Empty || workOrderChargeId == Guid.Empty || id == Guid.Empty) throw new DomainException("Charge installment identifiers are required.");
-        if (!Enum.IsDefined(paymentMethod)) throw new DomainException("Payment method is invalid.");
+        if (paymentMethod is { } method && !Enum.IsDefined(method)) throw new DomainException("Payment method is invalid.");
         if (amount <= 0) throw new DomainException("Charge installment amount must be positive.");
         var description = string.IsNullOrWhiteSpace(otherPaymentMethodDescription) ? null : otherPaymentMethodDescription.Trim();
-        if (paymentMethod == PaymentMethod.Other && description is null) throw new DomainException("Other payment method description is required.");
+        if (paymentMethod == global::VoltaMarcada.Domain.Enums.PaymentMethod.Other && description is null) throw new DomainException("Other payment method description is required.");
+        if (paymentMethod is not global::VoltaMarcada.Domain.Enums.PaymentMethod.Other && description is not null) description = null;
         return new WorkOrderChargeInstallment { Id = id, CompanyId = companyId, WorkOrderChargeId = workOrderChargeId, PaymentMethod = paymentMethod, Amount = amount, OtherPaymentMethodDescription = description, Status = WorkOrderChargeInstallmentStatus.Pending, CreatedAtUtc = now.ToUniversalTime() };
     }
 
     public void Confirm(Guid confirmedByUserId, DateTimeOffset now)
     {
+        if (PaymentMethod is not { } paymentMethod) throw new DomainException("Payment method is required before confirmation.");
+        Confirm(confirmedByUserId, paymentMethod, OtherPaymentMethodDescription, now);
+    }
+
+    public void Confirm(Guid confirmedByUserId, PaymentMethod paymentMethod, string? otherPaymentMethodDescription, DateTimeOffset now)
+    {
         if (confirmedByUserId == Guid.Empty) throw new DomainException("Confirmation user ID is required.");
         if (Status != WorkOrderChargeInstallmentStatus.Pending) throw new DomainException("Only a pending charge installment can be confirmed.");
+        ApplyPaymentDetails(paymentMethod, otherPaymentMethodDescription);
         Status = WorkOrderChargeInstallmentStatus.Paid;
         ConfirmedByUserId = confirmedByUserId;
         ConfirmationType = PaymentConfirmationType.Manual;
@@ -50,13 +58,9 @@ public sealed class WorkOrderChargeInstallment : ICompanyScopedEntity
     {
         if (Status == WorkOrderChargeInstallmentStatus.Deleted) throw new DomainException("A deleted charge installment cannot be updated.");
         if (updatedByUserId == Guid.Empty) throw new DomainException("Update user ID is required.");
-        if (!Enum.IsDefined(paymentMethod)) throw new DomainException("Payment method is invalid.");
         if (amount <= 0) throw new DomainException("Charge installment amount must be positive.");
-        var description = string.IsNullOrWhiteSpace(otherPaymentMethodDescription) ? null : otherPaymentMethodDescription.Trim();
-        if (paymentMethod == PaymentMethod.Other && description is null) throw new DomainException("Other payment method description is required.");
+        ApplyPaymentDetails(paymentMethod, otherPaymentMethodDescription);
         Amount = amount;
-        PaymentMethod = paymentMethod;
-        OtherPaymentMethodDescription = description;
         UpdatedByUserId = updatedByUserId;
         UpdatedAtUtc = now.ToUniversalTime();
     }
@@ -69,6 +73,13 @@ public sealed class WorkOrderChargeInstallment : ICompanyScopedEntity
         DeletedByUserId = deletedByUserId;
         DeletedAtUtc = now.ToUniversalTime();
     }
+
+    private void ApplyPaymentDetails(PaymentMethod paymentMethod, string? otherPaymentMethodDescription)
+    {
+        if (!Enum.IsDefined(paymentMethod)) throw new DomainException("Payment method is invalid.");
+        var description = string.IsNullOrWhiteSpace(otherPaymentMethodDescription) ? null : otherPaymentMethodDescription.Trim();
+        if (paymentMethod == global::VoltaMarcada.Domain.Enums.PaymentMethod.Other && description is null) throw new DomainException("Other payment method description is required.");
+        PaymentMethod = paymentMethod;
+        OtherPaymentMethodDescription = paymentMethod == global::VoltaMarcada.Domain.Enums.PaymentMethod.Other ? description : null;
+    }
 }
-
-

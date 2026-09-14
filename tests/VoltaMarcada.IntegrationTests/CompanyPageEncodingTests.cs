@@ -24,7 +24,7 @@ public sealed class PortugueseUiEncodingTests
 
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "VoltaMarcada.slnx")))
+            if (File.Exists(Path.Combine(directory.FullName, "VoltaMarcada.sln")))
             {
                 return directory.FullName;
             }

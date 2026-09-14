@@ -31,29 +31,23 @@ public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IA
 
         if (company.PaymentControlEnabled && order.TotalAmount > 0)
         {
-            var paymentDecision = command.PaymentDecision;
-            var hasInstallments = paymentDecision?.Installments is { Count: > 0 };
-            var hasNoChargeReason = !string.IsNullOrWhiteSpace(paymentDecision?.NoChargeReason);
-            if (paymentDecision is null || hasInstallments == hasNoChargeReason)
+            var noChargeReason = command.PaymentDecision?.NoChargeReason;
+            if (!string.IsNullOrWhiteSpace(noChargeReason))
             {
-                return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
-            }
-
-            if (hasNoChargeReason)
-            {
-                order.RecordNoCharge(paymentDecision!.NoChargeReason!, currentUser.UserId, now);
+                order.RecordNoCharge(noChargeReason, currentUser.UserId, now);
             }
             else
             {
-                if (await chargeRepository.GetForWorkOrderAsync(scope.CompanyId, order.Id, cancellationToken) is not null) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidStatus);
-                try
+                if (await chargeRepository.GetForWorkOrderAsync(scope.CompanyId, order.Id, cancellationToken) is not null)
                 {
-                    await chargeRepository.AddAsync(WorkOrderCharge.Create(scope.CompanyId, order.Id, order.TotalAmount, paymentDecision!.Installments!, now), cancellationToken);
+                    return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidStatus);
                 }
-                catch (global::VoltaMarcada.Domain.Exceptions.DomainException)
-                {
-                    return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
-                }
+
+                var timeZone = TimeZoneInfo.FindSystemTimeZoneById(schedulingConfiguration.DefaultTimeZoneId);
+                var businessDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, timeZone).DateTime);
+                await chargeRepository.AddAsync(
+                    WorkOrderCharge.CreateAutomatic(scope.CompanyId, order.Id, order.TotalAmount, businessDate, now),
+                    cancellationToken);
             }
         }
 

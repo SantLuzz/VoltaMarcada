@@ -32,6 +32,19 @@ public sealed class WorkOrderEnhancementsComponentTests
     }
 
 
+    [Fact]
+    public void WorkOrderScreen_ShouldKeepNoChargeDecisionAndMovePaymentManagementToCash()
+    {
+        var executionSource = ReadSource("Components/Shared/WorkOrderExecutionPanel.razor");
+        var cashSource = ReadSource("Components/Pages/Cash.razor");
+
+        Assert.Contains("Este atendimento não terá cobrança", executionSource, StringComparison.Ordinal);
+        Assert.Contains("!HasIncompleteRequiredChecklistItems", executionSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Cobrança da OS", executionSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("PaymentInstallmentFormModel", executionSource, StringComparison.Ordinal);
+        Assert.Contains("<BrazilianCurrencyInput", cashSource, StringComparison.Ordinal);
+        Assert.Contains("A confirmar", cashSource, StringComparison.Ordinal);
+    }
     private static string FindRepositoryRoot()
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)

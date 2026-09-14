@@ -3,6 +3,6 @@ using VoltaMarcada.Domain.Enums;
 namespace VoltaMarcada.Domain.ValueObjects;
 
 public sealed record WorkOrderChargeInstallmentDefinition(
-    PaymentMethod PaymentMethod,
+    PaymentMethod? PaymentMethod,
     decimal Amount,
     string? OtherPaymentMethodDescription);

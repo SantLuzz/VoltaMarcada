@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using VoltaMarcada.Application.Customers;
 using Microsoft.Extensions.DependencyInjection;
 using VoltaMarcada.Application.CompanyOnboarding;
@@ -116,6 +116,8 @@ public static class DependencyInjection
         services.AddScoped<UpdateCompanyPublicSettingsUseCase>();
         services.AddScoped<Payments.GetCompanyPaymentSettingsUseCase>();
         services.AddScoped<Payments.UpdateCompanyPaymentSettingsUseCase>();
+        services.AddScoped<Payments.GetCashEntriesUseCase>();
+        services.AddScoped<Payments.CreateManualCashEntryUseCase>();
         services.AddScoped<Payments.ConfirmWorkOrderChargeInstallmentUseCase>();
         services.AddScoped<Payments.UpdateWorkOrderChargeInstallmentUseCase>();
         services.AddScoped<Payments.DeleteWorkOrderChargeInstallmentUseCase>();
