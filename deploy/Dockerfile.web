@@ -1,0 +1,24 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS restore
+WORKDIR /src
+
+COPY ["src/VoltaMarcada.Domain/VoltaMarcada.Domain.csproj", "src/VoltaMarcada.Domain/"]
+COPY ["src/VoltaMarcada.Application/VoltaMarcada.Application.csproj", "src/VoltaMarcada.Application/"]
+COPY ["src/VoltaMarcada.Infrastructure/VoltaMarcada.Infrastructure.csproj", "src/VoltaMarcada.Infrastructure/"]
+COPY ["src/VoltaMarcada.Web/VoltaMarcada.Web.csproj", "src/VoltaMarcada.Web/"]
+RUN dotnet restore "src/VoltaMarcada.Web/VoltaMarcada.Web.csproj"
+
+FROM restore AS publish
+COPY . .
+RUN dotnet publish "src/VoltaMarcada.Web/VoltaMarcada.Web.csproj" -c Release -o /app/publish --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+
+ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_ENVIRONMENT=Production
+
+COPY --from=publish --chown=app:app /app/publish .
+
+USER app
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "VoltaMarcada.Web.dll"]

@@ -1,0 +1,69 @@
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:2019/config/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  landing:
+    image: ${LANDING_IMAGE}
+    restart: unless-stopped
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    image: ${WEB_IMAGE}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: ${EXTERNAL_DATABASE_CONNECTION_STRING}
+      ApplicationUrls__ApplicationBaseUrl: ${APPLICATION_BASE_URL}
+      ApplicationUrls__LandingPageUrl: ${LANDING_PAGE_URL}
+      Cloudinary__CloudName: ${CLOUDINARY_CLOUD_NAME}
+      Cloudinary__ApiKey: ${CLOUDINARY_API_KEY}
+      Cloudinary__ApiSecret: ${CLOUDINARY_API_SECRET}
+      Smtp__Enabled: ${SMTP_ENABLED}
+      Smtp__Host: ${SMTP_HOST}
+      Smtp__Port: ${SMTP_PORT}
+      Smtp__UseTls: ${SMTP_USE_TLS}
+      Smtp__SenderEmail: ${SMTP_SENDER_EMAIL}
+      Smtp__SenderName: ${SMTP_SENDER_NAME}
+      Smtp__Username: ${SMTP_USERNAME}
+      Smtp__Password: ${SMTP_PASSWORD}
+      LicenseBilling__PixKey: ${LICENSE_BILLING_PIX_KEY}
+      PlatformAdministrator__Email: ${PLATFORM_ADMINISTRATOR_EMAIL}
+      PlatformAdministrator__Password: ${PLATFORM_ADMINISTRATOR_PASSWORD}
+    networks:
+      - edge
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health | grep -qx Healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+networks:
+  edge:
+
+volumes:
+  caddy-data:
+  caddy-config:
