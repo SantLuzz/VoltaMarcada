@@ -22,30 +22,70 @@ public sealed class ProductionDeploymentSourceTests
     }
 
     [Fact]
-    public void ProductionTopology_ShouldExposeOnlyCaddyAndUsePrivatePostgreSql()
+    public void ProductionTopology_ShouldExposeOnlyCaddyAndUseManagedPostgreSql()
     {
         var repositoryRoot = FindRepositoryRoot();
         var compose = File.ReadAllText(Path.Combine(repositoryRoot, "deploy", "compose.production.yml"));
+        var environmentExample = File.ReadAllText(Path.Combine(repositoryRoot, "deploy", ".env.production.example"));
         var webDockerfile = File.ReadAllText(Path.Combine(repositoryRoot, "deploy", "Dockerfile.web"));
         var landingDockerfile = File.ReadAllText(Path.Combine(repositoryRoot, "deploy", "Dockerfile.landing"));
 
-        Assert.Contains("caddy:", compose);
-        Assert.Contains("landing:", compose);
-        Assert.Contains("web:", compose);
-        Assert.Contains("postgres:", compose);
+        Assert.Equal(["caddy", "landing", "web"], GetComposeServiceNames(compose));
         Assert.Contains("\"80:80\"", compose);
         Assert.Contains("\"443:443\"", compose);
         Assert.Contains("http://localhost:8080/health", compose);
-        Assert.Contains("pg_isready", compose);
+        Assert.Contains("ConnectionStrings__DefaultConnection: ${EXTERNAL_DATABASE_CONNECTION_STRING}", compose);
+        Assert.Contains("ApplicationUrls__ApplicationBaseUrl: ${APPLICATION_BASE_URL}", compose);
+        Assert.Contains("ApplicationUrls__LandingPageUrl: ${LANDING_PAGE_URL}", compose);
+        Assert.Contains("Cloudinary__CloudName: ${CLOUDINARY_CLOUD_NAME}", compose);
+        Assert.Contains("Cloudinary__ApiKey: ${CLOUDINARY_API_KEY}", compose);
+        Assert.Contains("Cloudinary__ApiSecret: ${CLOUDINARY_API_SECRET}", compose);
+        Assert.Contains("Smtp__SenderEmail: ${SMTP_SENDER_EMAIL}", compose);
+        Assert.Contains("Smtp__SenderName: ${SMTP_SENDER_NAME}", compose);
+        Assert.Contains("Smtp__Username: ${SMTP_USERNAME}", compose);
+        Assert.Contains("PlatformAdministrator__Email: ${PLATFORM_ADMINISTRATOR_EMAIL}", compose);
+        Assert.Contains("PlatformAdministrator__Password: ${PLATFORM_ADMINISTRATOR_PASSWORD}", compose);
+        Assert.DoesNotContain("AppUrls__Public", compose);
+        Assert.Contains("EXTERNAL_DATABASE_CONNECTION_STRING=", environmentExample);
+        Assert.Contains("TLS", environmentExample);
+        Assert.DoesNotContain("POSTGRES_", environmentExample);
+        Assert.DoesNotContain("Host=", environmentExample);
+        Assert.DoesNotContain("POSTGRES_", compose);
+        Assert.DoesNotContain("postgres", compose.ToLowerInvariant());
+        Assert.DoesNotContain("depends_on:", GetServiceBlock(compose, "web"));
         Assert.Contains("USER app", webDockerfile);
         Assert.Matches(@"EXPOSE 8080\r?\n(?:\r?\n)?ENTRYPOINT \[\""nginx\"", \""-g\"", \""daemon off;\""\]", landingDockerfile);
 
-        foreach (var serviceName in new[] { "landing", "web", "postgres" })
+        Assert.Contains("ports:", GetServiceBlock(compose, "caddy"));
+        foreach (var serviceName in new[] { "landing", "web" })
         {
             Assert.DoesNotContain("ports:", GetServiceBlock(compose, serviceName));
         }
     }
 
+    private static string[] GetComposeServiceNames(string compose)
+    {
+        var lines = compose.Split('\n');
+        var servicesStart = Array.FindIndex(lines, line => line.TrimEnd('\r') == "services:");
+        Assert.NotEqual(-1, servicesStart);
+
+        var serviceNames = new List<string>();
+        for (var index = servicesStart + 1; index < lines.Length; index++)
+        {
+            var line = lines[index].TrimEnd('\r');
+            if (IsComposeTopLevelSection(line))
+            {
+                break;
+            }
+
+            if (IsComposeServiceHeader(line))
+            {
+                serviceNames.Add(line.Trim().TrimEnd(':'));
+            }
+        }
+
+        return [.. serviceNames];
+    }
     private static string GetServiceBlock(string compose, string serviceName)
     {
         var serviceMarker = $"  {serviceName}:";
