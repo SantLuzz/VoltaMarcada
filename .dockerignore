@@ -10,5 +10,7 @@ user-secrets.txt
 secrets.json
 .env
 .env.*
+deploy/.env.production
+deploy/backups
 appsettings.Local.json
 appsettings.*.Local.json
