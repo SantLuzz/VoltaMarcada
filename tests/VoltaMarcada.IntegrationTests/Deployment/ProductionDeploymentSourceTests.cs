@@ -40,9 +40,14 @@ public sealed class ProductionDeploymentSourceTests
         Assert.Contains("Cloudinary__CloudName: ${CLOUDINARY_CLOUD_NAME}", compose);
         Assert.Contains("Cloudinary__ApiKey: ${CLOUDINARY_API_KEY}", compose);
         Assert.Contains("Cloudinary__ApiSecret: ${CLOUDINARY_API_SECRET}", compose);
+        Assert.Contains("Smtp__Enabled: ${SMTP_ENABLED}", compose);
+        Assert.Contains("Smtp__Host: ${SMTP_HOST}", compose);
+        Assert.Contains("Smtp__Port: ${SMTP_PORT}", compose);
+        Assert.Contains("Smtp__UseTls: ${SMTP_USE_TLS}", compose);
         Assert.Contains("Smtp__SenderEmail: ${SMTP_SENDER_EMAIL}", compose);
         Assert.Contains("Smtp__SenderName: ${SMTP_SENDER_NAME}", compose);
         Assert.Contains("Smtp__Username: ${SMTP_USERNAME}", compose);
+        Assert.Contains("Smtp__Password: ${SMTP_PASSWORD}", compose);
         Assert.Contains("PlatformAdministrator__Email: ${PLATFORM_ADMINISTRATOR_EMAIL}", compose);
         Assert.Contains("PlatformAdministrator__Password: ${PLATFORM_ADMINISTRATOR_PASSWORD}", compose);
         Assert.DoesNotContain("AppUrls__Public", compose);
@@ -52,14 +57,16 @@ public sealed class ProductionDeploymentSourceTests
         Assert.DoesNotContain("Host=", environmentExample);
         Assert.DoesNotContain("POSTGRES_", compose);
         Assert.DoesNotContain("postgres", compose.ToLowerInvariant());
-        Assert.DoesNotContain("depends_on:", GetServiceBlock(compose, "web"));
+        Assert.DoesNotContain("depends_on:", compose);
+        Assert.DoesNotContain("backend:", compose);
+        Assert.DoesNotContain("postgres-data", compose);
         Assert.Contains("USER app", webDockerfile);
         Assert.Matches(@"EXPOSE 8080\r?\n(?:\r?\n)?ENTRYPOINT \[\""nginx\"", \""-g\"", \""daemon off;\""\]", landingDockerfile);
 
-        Assert.Contains("ports:", GetServiceBlock(compose, "caddy"));
+        Assert.Equal(["80:80", "443:443"], GetPortMappings(GetServiceBlock(compose, "caddy")));
         foreach (var serviceName in new[] { "landing", "web" })
         {
-            Assert.DoesNotContain("ports:", GetServiceBlock(compose, serviceName));
+            Assert.Empty(GetPortMappings(GetServiceBlock(compose, serviceName)));
         }
     }
 
@@ -108,6 +115,34 @@ public sealed class ProductionDeploymentSourceTests
         return string.Join('\n', serviceLines);
     }
 
+    private static string[] GetPortMappings(string serviceBlock)
+    {
+        var portMappings = new List<string>();
+        var isInPortsBlock = false;
+
+        foreach (var line in serviceBlock.Split('\n'))
+        {
+            var trimmedLine = line.Trim();
+            if (!isInPortsBlock)
+            {
+                isInPortsBlock = trimmedLine == "ports:";
+                continue;
+            }
+
+            if (trimmedLine.StartsWith("- ", StringComparison.Ordinal))
+            {
+                portMappings.Add(trimmedLine[2..].Trim('"'));
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(trimmedLine))
+            {
+                break;
+            }
+        }
+
+        return [.. portMappings];
+    }
     private static bool IsComposeServiceHeader(string line)
     {
         return line.Length > 3
@@ -144,6 +179,20 @@ public sealed class ProductionDeploymentSourceTests
         Assert.DoesNotContain("web:", landingService);
     }
 
+    [Fact]
+    public void GetPortMappings_ShouldReturnOnlyPortItemsForTheService()
+    {
+        const string service = """
+              caddy:
+                ports:
+                  - "80:80"
+                  - "443:443"
+                volumes:
+                  - caddy-data:/data
+            """;
+
+        Assert.Equal(["80:80", "443:443"], GetPortMappings(service));
+    }
     private static string FindRepositoryRoot()
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
