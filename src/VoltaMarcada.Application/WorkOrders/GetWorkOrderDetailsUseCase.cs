@@ -3,7 +3,7 @@ using VoltaMarcada.Domain.Enums;
 
 namespace VoltaMarcada.Application.WorkOrders;
 
-public sealed class GetWorkOrderDetailsUseCase(IWorkOrderRepository repository, WorkOrderAuthorization authorization, IServiceRepository serviceRepository)
+public sealed class GetWorkOrderDetailsUseCase(IWorkOrderRepository repository, WorkOrderAuthorization authorization, IServiceRepository serviceRepository, ICustomerRepository customerRepository)
 {
     public async Task<WorkOrderDetailDto?> ExecuteAsync(Guid workOrderId, CancellationToken cancellationToken = default)
     {
@@ -15,6 +15,8 @@ public sealed class GetWorkOrderDetailsUseCase(IWorkOrderRepository repository, 
         var canEdit = workOrder.Status == WorkOrderStatus.Pending;
         var canExecute = workOrder.Status == WorkOrderStatus.InProgress;
         var canManageAdditionalItems = workOrder.Status is not (WorkOrderStatus.Completed or WorkOrderStatus.Cancelled);
+        var customer = await customerRepository.GetForCompanyAsync(workOrder.CustomerId, scope.CompanyId, cancellationToken);
+        if (customer is null) return null;
         var actorNames = await repository.GetHistoryActorNamesAsync(scope.CompanyId, workOrder.HistoryEntries.Where(entry => entry.ActorUserId is not null).Select(entry => entry.ActorUserId!.Value).Distinct().ToArray(), cancellationToken);
         return new WorkOrderDetailDto(workOrder.Id, workOrder.CustomerId, workOrder.EquipmentId, workOrder.ServiceId, workOrder.ProfessionalId, workOrder.Status, workOrder.Priority, workOrder.ReportedProblem, workOrder.ExecutionNotes, service.RequireBeforePhotos, service.RequireAfterPhotos, workOrder.DiscountAmount, workOrder.TotalAmount,
             workOrder.Items.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderItemDto(x.Id, x.Description, x.Quantity, x.UnitPrice, x.Type, x.TotalAmount, x.DisplayOrder)).ToArray(),
@@ -25,3 +27,8 @@ public sealed class GetWorkOrderDetailsUseCase(IWorkOrderRepository repository, 
             new WorkOrderCapabilities(canEdit, scope.IsOwner && canEdit, workOrder.Status == WorkOrderStatus.Pending && workOrder.ProfessionalId is not null, canExecute, canManageAdditionalItems));
     }
 }
+
+
+
+
+

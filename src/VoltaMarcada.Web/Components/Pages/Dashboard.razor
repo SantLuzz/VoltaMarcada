@@ -1,4 +1,4 @@
-@page "/"
+﻿@page "/"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
 @using VoltaMarcada.Application.Dashboard
 @using VoltaMarcada.Application.Licensing
@@ -97,6 +97,15 @@
             </div>
         </section>
 
+        <section class="dashboard-owner-actions mt-4" aria-labelledby="cash-title">
+            <MudText Typo="Typo.h6" id="cash-title">Caixa</MudText>
+            <div class="dashboard-owner-action-grid">
+                <a class="dashboard-owner-action-link" href="@($"/caixa?date={today:yyyy-MM-dd}")" aria-label="Abrir Caixa de hoje"><MudPaper Outlined="true" Class="pa-3 dashboard-owner-action-card"><MudText Typo="Typo.caption">Caixa hoje</MudText><MudText Typo="Typo.h5">@DisplayFormatter.FormatCurrency(dashboard.Cash.TodayTotal)</MudText></MudPaper></a>
+                <a class="dashboard-owner-action-link" href="@($"/caixa?date={today:yyyy-MM-dd}")" aria-label="Abrir confirmados de hoje no Caixa"><MudPaper Outlined="true" Class="pa-3 dashboard-owner-action-card"><MudText Typo="Typo.caption">Confirmado hoje</MudText><MudText Typo="Typo.h5" Color="Color.Success">@DisplayFormatter.FormatCurrency(dashboard.Cash.TodayConfirmedTotal)</MudText></MudPaper></a>
+                <a class="dashboard-owner-action-link" href="/caixa?mode=pending" aria-label="Abrir pagamentos a confirmar no Caixa"><MudPaper Outlined="true" Class="pa-3 dashboard-owner-action-card dashboard-owner-action-card-warning"><MudText Typo="Typo.caption">Caixa a confirmar</MudText><MudText Typo="Typo.h5" Color="Color.Warning">@DisplayFormatter.FormatCurrency(dashboard.Cash.AllPendingTotal)</MudText></MudPaper></a>
+                <a class="dashboard-owner-action-link" href="@($"/caixa?date={today:yyyy-MM-dd}")" aria-label="Abrir Caixa do mês atual"><MudPaper Outlined="true" Class="pa-3 dashboard-owner-action-card"><MudText Typo="Typo.caption">Confirmado no mês</MudText><MudText Typo="Typo.h5" Color="Color.Success">@DisplayFormatter.FormatCurrency(dashboard.Cash.MonthConfirmedTotal)</MudText></MudPaper></a>
+            </div>
+        </section>
         <section class="dashboard-value-funnel" aria-labelledby="value-funnel-title">
             <MudText Typo="Typo.h6" id="value-funnel-title">Resultados das manutenções neste mês</MudText>
             <MudText Typo="Typo.body2" Color="Color.Secondary">Acompanhe as oportunidades de retorno identificadas e convertidas no mês atual.</MudText>

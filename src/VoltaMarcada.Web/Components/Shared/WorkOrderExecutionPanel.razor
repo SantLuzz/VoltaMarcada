@@ -29,7 +29,7 @@ else
         <MudText Typo="Typo.h6">Fotos antes @(WorkOrder.RequireBeforePhotos ? "(obrigatória)" : string.Empty)</MudText>
         @if (CanExecute)
         {
-            <input id="@GetPhotoInputId(WorkOrderPhotoType.Before)" class="native-file-input" type="file" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
+            <input id="@GetPhotoInputId(WorkOrderPhotoType.Before)" class="native-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
             <MudText id="@GetPhotoStatusId(WorkOrderPhotoType.Before)" Typo="Typo.caption" Color="Color.Secondary" />
         }
         <div id="@GetPhotoPreviewId(WorkOrderPhotoType.Before)" class="work-order-photo-grid">
@@ -63,7 +63,7 @@ else
         <MudText Typo="Typo.h6">Fotos depois @(WorkOrder.RequireAfterPhotos ? "(obrigatória)" : string.Empty)</MudText>
         @if (CanExecute)
         {
-            <input id="@GetPhotoInputId(WorkOrderPhotoType.After)" class="native-file-input" type="file" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
+            <input id="@GetPhotoInputId(WorkOrderPhotoType.After)" class="native-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
             <MudText id="@GetPhotoStatusId(WorkOrderPhotoType.After)" Typo="Typo.caption" Color="Color.Secondary" />
         }
         <div id="@GetPhotoPreviewId(WorkOrderPhotoType.After)" class="work-order-photo-grid">
@@ -82,7 +82,7 @@ else
         <MudText Typo="Typo.h6">Outras fotos</MudText>
         @if (CanExecute)
         {
-            <input id="@GetPhotoInputId(WorkOrderPhotoType.Other)" class="native-file-input" type="file" accept="image/*" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
+            <input id="@GetPhotoInputId(WorkOrderPhotoType.Other)" class="native-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic" capture="environment" disabled="@(isSaving || isUploadingPhoto)" />
             <MudText id="@GetPhotoStatusId(WorkOrderPhotoType.Other)" Typo="Typo.caption" Color="Color.Secondary" />
         }
         <div id="@GetPhotoPreviewId(WorkOrderPhotoType.Other)" class="work-order-photo-grid">
@@ -147,9 +147,24 @@ else
                     </MudGrid>
                 }
             </MudPaper>
+            <MudDialog @bind-Visible="isCompletionDialogOpen" Options="completionDialogOptions">
+                <TitleContent><MudText Typo="Typo.h6">Concluir serviço</MudText></TitleContent>
+                <DialogContent>
+                    <MudSwitch @bind-Value="isNoCharge" Color="Color.Primary">Este atendimento não terá cobrança</MudSwitch>
+                    @if (isNoCharge)
+                    {
+                        <MudTextField @bind-Value="noChargeReason" Label="Motivo de não cobrança" Required="true" Lines="3" Variant="Variant.Outlined" Class="mt-3" />
+                    }
+                    else if (WorkOrder.TotalAmount > 0)
+                    {
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">Será criada uma pendência de @WorkOrder.TotalAmount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) no Caixa para confirmação posterior.</MudAlert>
+                    }
+                </DialogContent>
+                <DialogActions><MudButton OnClick="CloseCompletionDialog">Cancelar</MudButton><MudButton OnClick="CompleteAsync" Color="Color.Success" Variant="Variant.Filled">Concluir serviço</MudButton></DialogActions>
+            </MudDialog>
             <MudStack Row="true">
                 <MudButton OnClick="SaveAsync" Variant="Variant.Outlined" Disabled="@(isSaving || isUploadingPhoto)">Salvar progresso</MudButton>
-                <MudButton OnClick="CompleteAsync" Color="Color.Success" Variant="Variant.Filled" Disabled="@(!CanComplete)">Concluir serviço</MudButton>
+                <MudButton OnClick="OpenCompletionDialog" Color="Color.Success" Variant="Variant.Filled" Disabled="@(!CanComplete)">Concluir serviço</MudButton>
             </MudStack>
         }
     </MudStack>
@@ -184,6 +199,10 @@ else
     private long savedChangeVersion;
     private IReadOnlyList<ServiceDto> services = [];
     private bool shouldRecommendMaintenance;
+    private readonly DialogOptions completionDialogOptions = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    private bool isCompletionDialogOpen;
+    private bool isNoCharge;
+    private string? noChargeReason;
     private string? recommendationPeriod;
     private int? customIntervalDays;
     private DateTime? recommendedDueDate;
@@ -193,7 +212,8 @@ else
 
     private bool CanExecute => WorkOrder.Status == WorkOrderStatus.InProgress && WorkOrder.Capabilities.CanExecute;
     private bool IsRemovingPhoto => photoPendingRemoval is not null;
-    private bool CanComplete => CanExecute && !isSaving && !isUploadingPhoto && !HasMissingRequiredPhotos && !IsCompletionBlockedByPhotoRemoval;
+    private bool CanComplete => CanExecute && !isSaving && !isUploadingPhoto && !HasIncompleteRequiredChecklistItems && !HasMissingRequiredPhotos && !IsCompletionBlockedByPhotoRemoval;
+    private bool HasIncompleteRequiredChecklistItems => WorkOrder.ChecklistItems.Any(item => item.IsRequired && !progress.GetValueOrDefault(item.Id));
     private bool HasMissingRequiredPhotos =>
         (WorkOrder.RequireBeforePhotos && !HasPhotoOfType(WorkOrderPhotoType.Before)) ||
         (WorkOrder.RequireAfterPhotos && !HasPhotoOfType(WorkOrderPhotoType.After));
@@ -238,8 +258,11 @@ else
         recommendedServiceId = WorkOrder.ServiceId;
     }
 
-    protected override async Task OnInitializedAsync() => services = (await OperationExecutor.ExecuteAsync(
+    protected override async Task OnInitializedAsync()
+    {
+        services = (await OperationExecutor.ExecuteAsync(
         (GetServicesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken))).Where(service => service.IsActive).ToArray();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -248,15 +271,21 @@ else
             return;
         }
 
-        var module = await GetPhotoStagingModuleAsync();
-        foreach (var type in Enum.GetValues<WorkOrderPhotoType>())
+        try
         {
-            await module.InvokeVoidAsync("initializePhotoInput", GetPhotoInputId(type), GetPhotoPreviewId(type), GetPhotoStatusId(type), WorkOrder.Id, type);
-            await module.InvokeVoidAsync("restoreAndUploadStagedPhoto", WorkOrder.Id, type);
-        }
-        restoredStagedPhotosForWorkOrderId = WorkOrder.Id;
-    }
+            var module = await GetPhotoStagingModuleAsync();
+            foreach (var type in Enum.GetValues<WorkOrderPhotoType>())
+            {
+                await module.InvokeVoidAsync("initializePhotoInput", GetPhotoInputId(type), GetPhotoPreviewId(type), GetPhotoStatusId(type), WorkOrder.Id, type);
+                await module.InvokeVoidAsync("restoreAndUploadStagedPhoto", WorkOrder.Id, type);
+            }
 
+            restoredStagedPhotosForWorkOrderId = WorkOrder.Id;
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
     private async Task StartAsync()
     {
         var result = await OperationExecutor.ExecuteAsync(
@@ -394,6 +423,10 @@ else
         }
     }
 
+    private void OpenCompletionDialog() => isCompletionDialogOpen = true;
+
+    private void CloseCompletionDialog() => isCompletionDialogOpen = false;
+
     private async Task CompleteAsync()
     {
         if (!await FlushProgressAsync(false))
@@ -404,14 +437,27 @@ else
         MaintenanceRecommendationInput? recommendation = null;
         if (shouldRecommendMaintenance && !TryCreateRecommendation(out recommendation))
         {
-            Snackbar.Add("Preencha os dados da proxima manutencao.", Severity.Warning);
+            Snackbar.Add("Preencha os dados da próxima manutenção.", Severity.Warning);
             return;
         }
 
+        WorkOrderPaymentDecisionInput? paymentDecision = null;
+        if (isNoCharge)
+        {
+            if (string.IsNullOrWhiteSpace(noChargeReason))
+            {
+                Snackbar.Add("Informe o motivo de não cobrança.", Severity.Warning);
+                return;
+            }
+
+            paymentDecision = new WorkOrderPaymentDecisionInput(null, noChargeReason);
+        }
+
         var result = await OperationExecutor.ExecuteAsync(
-            (CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrder.Id, new CompleteWorkOrderCommand(recommendation), cancellationToken));
+            (CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrder.Id, new CompleteWorkOrderCommand(recommendation, paymentDecision), cancellationToken));
         if (result.IsSuccess)
         {
+            isCompletionDialogOpen = false;
             Snackbar.Add("Serviço concluído.", Severity.Success);
             await OnChanged.InvokeAsync();
             return;
@@ -419,7 +465,6 @@ else
 
         ShowOperationError(result.Error?.Code);
     }
-
     private bool TryCreateRecommendation(out MaintenanceRecommendationInput? recommendation)
     {
         recommendation = null;
@@ -620,7 +665,7 @@ else
 
         try
         {
-            var result = await OperationExecutor.ExecuteAsync(
+        var result = await OperationExecutor.ExecuteAsync(
                 (RemoveWorkOrderPhotoUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrder.Id, photoId, cancellationToken));
             if (result.IsSuccess)
             {
@@ -650,6 +695,7 @@ else
     {
         Snackbar.Add(OperationErrorMessages.GetMessage(code), Severity.Warning);
     }
+
 
     private sealed record StagedWorkOrderPhoto(string FileName, string ContentType, string ContentBase64);
 

@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
@@ -26,6 +26,8 @@ public sealed class PlatformLicenseEndpointsTests
         builder.Services.AddRouting();
         builder.Services.AddScoped<GetPlatformLicensePaymentsUseCase>(_ => null!);
         builder.Services.AddScoped<GetPlatformLicensePaymentProofUseCase>(_ => null!);
+        builder.Services.AddScoped<ReleaseCompanyLicenseManuallyUseCase>(_ => null!);
+        builder.Services.AddSingleton<VoltaMarcada.Infrastructure.Licensing.OverdueLicenseNotificationService>(_ => null!);
         builder.Services.AddScoped<ReviewLicensePaymentUseCase>(_ => null!);
         builder.Services.AddAuthentication(TestAuthenticationHandler.SchemeName)
             .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(TestAuthenticationHandler.SchemeName, _ => { });

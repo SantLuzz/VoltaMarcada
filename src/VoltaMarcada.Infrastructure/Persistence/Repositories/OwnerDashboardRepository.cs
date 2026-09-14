@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using VoltaMarcada.Application.Dashboard;
 using VoltaMarcada.Domain.Enums;
 
@@ -90,6 +90,19 @@ public sealed class OwnerDashboardRepository(AppDbContext dbContext) : IOwnerDas
             await openOpportunities.CountAsync(cancellationToken),
             potentialRevenue);
 
-        return new OwnerDashboardDto(actions, valueFunnel);
+        var cashEntries = await (
+            from installment in dbContext.WorkOrderChargeInstallments.AsNoTracking()
+            join charge in dbContext.WorkOrderCharges.AsNoTracking() on installment.WorkOrderChargeId equals charge.Id
+            where installment.CompanyId == companyId && charge.CompanyId == companyId && installment.Status != WorkOrderChargeInstallmentStatus.Deleted
+            select new { charge.BusinessDate, installment.Amount, installment.Status }).ToArrayAsync(cancellationToken);
+        var monthStart = new DateOnly(period.BusinessDate.Year, period.BusinessDate.Month, 1);
+        var nextMonthStart = monthStart.AddMonths(1);
+        var cash = new OwnerDashboardCash(
+            cashEntries.Where(entry => entry.BusinessDate == period.BusinessDate).Sum(entry => entry.Amount),
+            cashEntries.Where(entry => entry.BusinessDate == period.BusinessDate && entry.Status == WorkOrderChargeInstallmentStatus.Paid).Sum(entry => entry.Amount),
+            cashEntries.Where(entry => entry.Status == WorkOrderChargeInstallmentStatus.Pending).Sum(entry => entry.Amount),
+            cashEntries.Where(entry => entry.BusinessDate >= monthStart && entry.BusinessDate < nextMonthStart && entry.Status == WorkOrderChargeInstallmentStatus.Paid).Sum(entry => entry.Amount));
+
+        return new OwnerDashboardDto(actions, valueFunnel, cash);
     }
 }

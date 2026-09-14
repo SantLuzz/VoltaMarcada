@@ -20,6 +20,22 @@ public sealed class WorkOrderPhotoStagingModuleTests
         Assert.Contains("transaction.oncomplete", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Module_ShouldRejectUnsupportedFilesAndDiscardCachedFilesAfterAnUploadFailure()
+    {
+        var modulePath = Path.Combine(FindRepositoryRoot(), "src", "VoltaMarcada.Web", "wwwroot", "js", "work-order-photo-staging.js");
+
+        var source = File.ReadAllText(modulePath);
+
+        Assert.Contains("const supportedContentTypes", source, StringComparison.Ordinal);
+        Assert.Contains("export async function discardStagedPhoto", source, StringComparison.Ordinal);
+        Assert.Contains("if (!response.ok) { await clearStagedPhoto(workOrderId, photoType);", source, StringComparison.Ordinal);
+        Assert.Contains("function showValidationToast", source, StringComparison.Ordinal);
+        Assert.Contains("showValidationToast(\"Selecione uma foto JPEG, PNG, WebP ou HEIC de até 10 MB.\")", source, StringComparison.Ordinal);
+        Assert.Contains("input.value = \"\";", source, StringComparison.Ordinal);
+        Assert.Contains("window.setTimeout(() => toast.remove(), 8000);", source, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)

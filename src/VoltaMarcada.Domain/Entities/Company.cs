@@ -1,3 +1,4 @@
+using VoltaMarcada.Domain.Enums;
 using VoltaMarcada.Domain.Exceptions;
 using VoltaMarcada.Domain.ValueObjects;
 
@@ -39,6 +40,12 @@ public sealed class Company
     public string? NotificationEmail { get; private set; }
 
     public int PublicRequestIntervalMinutes { get; private set; } = 60;
+
+    public bool PaymentControlEnabled { get; private set; }
+
+    public string? PixKey { get; private set; }
+
+    public PixKeyType? PixKeyType { get; private set; }
 
     public IReadOnlyCollection<CompanyBusinessHours> BusinessHours => businessHours.AsReadOnly();
 
@@ -105,6 +112,21 @@ public sealed class Company
         PublicDescription = NormalizeOptionalText(publicDescription, 2000, "Public description");
         PublicPhone = NormalizeOptionalText(publicPhone, 20, "Public phone");
         NotificationEmail = NormalizeEmail(notificationEmail);
+        UpdatedAtUtc = now.ToUniversalTime();
+    }
+
+    public void UpdatePaymentSettings(bool paymentControlEnabled, string? pixKey, PixKeyType? pixKeyType, DateTimeOffset now)
+    {
+        var normalizedPixKey = NormalizeOptionalText(pixKey, 255, "Pix key");
+        if ((normalizedPixKey is null) != (pixKeyType is null))
+        {
+            throw new DomainException("Pix key and key type must be provided together.");
+        }
+
+        if (pixKeyType is { } type && !Enum.IsDefined(type)) throw new DomainException("Pix key type is invalid.");
+        PaymentControlEnabled = paymentControlEnabled;
+        PixKey = normalizedPixKey;
+        PixKeyType = pixKeyType;
         UpdatedAtUtc = now.ToUniversalTime();
     }
 

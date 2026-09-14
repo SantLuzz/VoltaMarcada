@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
     --servicesync-primary: #0969F0;
@@ -419,7 +419,7 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 
 
 /* =========================================================
-   ÃƒÆ’Ã‚ÂREA DE SCROLL
+   ÁREA DE SCROLL
    ========================================================= */
 
 .drawer-navigation-scroll {
@@ -427,12 +427,12 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 
     /*
        Fundamental para permitir que a segunda linha
-       do grid fique menor que o conteÃƒÆ’Ã‚Âºdo.
+       do grid fique menor que o conteúdo.
     */
     min-height: 0;
 
     /*
-       ESTA DIV ÃƒÆ’Ã‚Â© quem rola.
+       ESTA DIV É quem rola.
     */
     overflow-x: auto;
     overflow-y: auto;
@@ -469,7 +469,7 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 /* =========================================================
    MUD NAV MENU
 
-   Ele NÃƒÆ’Ã†â€™O controla mais scroll.
+   Ele NÃO controla mais scroll.
    ========================================================= */
 
 .drawer-navigation {

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Application.Abstractions.Persistence;
 using VoltaMarcada.Application.Abstractions.Tenancy;
@@ -112,6 +112,41 @@ public sealed class OwnerDashboardTests
         Assert.Equal(300m, dashboard.ValueFunnel.EstimatedPotentialRevenue);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_ForOwner_ReturnsOnlyCurrentMonthConfirmedCashForCurrentCompany()
+    {
+        var companyId = Guid.NewGuid();
+        var secondCompanyId = Guid.NewGuid();
+        var confirmedByUserId = Guid.NewGuid();
+        var businessDate = new DateOnly(2026, 9, 2);
+
+        var currentMonthCharge = WorkOrderCharge.CreateManual(companyId, null, 125m, PaymentMethod.Cash, null, businessDate, confirmedByUserId, Now);
+        var currentMonthInstallment = WorkOrderChargeInstallment.Create(companyId, currentMonthCharge.Id, Guid.NewGuid(), PaymentMethod.Cash, 125m, null, Now);
+        currentMonthInstallment.Confirm(confirmedByUserId, Now);
+
+        var pendingCharge = WorkOrderCharge.CreateManual(companyId, null, 75m, PaymentMethod.Pix, null, businessDate, confirmedByUserId, Now);
+        var pendingInstallment = WorkOrderChargeInstallment.Create(companyId, pendingCharge.Id, Guid.NewGuid(), PaymentMethod.Pix, 75m, null, Now);
+
+        var previousMonthCharge = WorkOrderCharge.CreateManual(companyId, null, 250m, PaymentMethod.Cash, null, new DateOnly(2026, 8, 31), confirmedByUserId, Now);
+        var previousMonthInstallment = WorkOrderChargeInstallment.Create(companyId, previousMonthCharge.Id, Guid.NewGuid(), PaymentMethod.Cash, 250m, null, Now);
+        previousMonthInstallment.Confirm(confirmedByUserId, Now);
+
+        var secondCompanyCharge = WorkOrderCharge.CreateManual(secondCompanyId, null, 500m, PaymentMethod.Cash, null, businessDate, confirmedByUserId, Now);
+        var secondCompanyInstallment = WorkOrderChargeInstallment.Create(secondCompanyId, secondCompanyCharge.Id, Guid.NewGuid(), PaymentMethod.Cash, 500m, null, Now);
+        secondCompanyInstallment.Confirm(confirmedByUserId, Now);
+
+        await using var dbContext = CreateDbContext();
+        dbContext.AddRange(
+            currentMonthCharge, pendingCharge, previousMonthCharge, secondCompanyCharge,
+            currentMonthInstallment, pendingInstallment, previousMonthInstallment, secondCompanyInstallment);
+        await dbContext.SaveChangesAsync();
+
+        var result = await CreateUseCase(companyId, true, dbContext).ExecuteAsync();
+
+        Assert.True(result.IsSuccess);
+        var dashboard = Assert.IsType<OwnerDashboardDto>(result.Value);
+        Assert.Equal(125m, dashboard.Cash.MonthConfirmedTotal);
+    }
     [Fact]
     public async Task ExecuteAsync_ForEmployee_ReturnsForbidden()
     {

@@ -114,6 +114,13 @@ public static class DependencyInjection
         services.AddScoped<UpdateCompanyMemberProfileUseCase>();
         services.AddScoped<GetCompanyPublicSettingsUseCase>();
         services.AddScoped<UpdateCompanyPublicSettingsUseCase>();
+        services.AddScoped<Payments.GetCompanyPaymentSettingsUseCase>();
+        services.AddScoped<Payments.UpdateCompanyPaymentSettingsUseCase>();
+        services.AddScoped<Payments.GetCashEntriesUseCase>();
+        services.AddScoped<Payments.CreateManualCashEntryUseCase>();
+        services.AddScoped<Payments.ConfirmWorkOrderChargeInstallmentUseCase>();
+        services.AddScoped<Payments.UpdateWorkOrderChargeInstallmentUseCase>();
+        services.AddScoped<Payments.DeleteWorkOrderChargeInstallmentUseCase>();
         services.AddScoped<GetPublicCompanyPageUseCase>();
         services.AddScoped<GetPublicAvailableSlotsUseCase>();
         services.AddScoped<SubmitPublicAppointmentRequestUseCase>();
@@ -145,3 +152,5 @@ public static class DependencyInjection
         return services;
     }
 }
+
+

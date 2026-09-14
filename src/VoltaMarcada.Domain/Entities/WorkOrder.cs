@@ -33,6 +33,10 @@ public sealed class WorkOrder : ICompanyScopedEntity
     public DateTimeOffset UpdatedAtUtc { get; private set; }
     public DateTimeOffset? StartedAtUtc { get; private set; }
     public DateTimeOffset? CompletedAtUtc { get; private set; }
+    public string? NoChargeReason { get; private set; }
+    public DateTimeOffset? NoChargeRecordedAtUtc { get; private set; }
+    public Guid? NoChargeRecordedByUserId { get; private set; }
+
     public IReadOnlyCollection<WorkOrderItem> Items => _items;
     public IReadOnlyCollection<WorkOrderChecklistItem> ChecklistItems => _checklistItems;
     public IReadOnlyCollection<WorkOrderPhoto> Photos => _photos;
@@ -146,6 +150,17 @@ public sealed class WorkOrder : ICompanyScopedEntity
 
     public void RecordHistory(WorkOrderHistoryEventType eventType, Guid? actorUserId, string description, DateTimeOffset now) =>
         _historyEntries.Add(WorkOrderHistoryEntry.Create(CompanyId, Id, eventType, actorUserId, description, now));
+
+    public void RecordNoCharge(string reason, Guid recordedByUserId, DateTimeOffset now)
+    {
+        if (string.IsNullOrWhiteSpace(reason)) throw new DomainException("No charge reason is required.");
+        if (reason.Trim().Length > 1000) throw new DomainException("No charge reason cannot exceed 1000 characters.");
+        if (recordedByUserId == Guid.Empty) throw new DomainException("No charge user ID is required.");
+        NoChargeReason = reason.Trim();
+        NoChargeRecordedByUserId = recordedByUserId;
+        NoChargeRecordedAtUtc = now.ToUniversalTime();
+        UpdatedAtUtc = NoChargeRecordedAtUtc.Value;
+    }
 
     public void Complete(bool requireBeforePhotos, bool requireAfterPhotos, DateTimeOffset now)
     {

@@ -12,3 +12,7 @@ public sealed record WorkOrderCapabilities(bool CanEdit, bool CanAssignProfessio
 public sealed record WorkOrderDetailDto(Guid Id, Guid CustomerId, Guid EquipmentId, Guid ServiceId, Guid? ProfessionalId, WorkOrderStatus Status, WorkOrderPriority Priority, string? ReportedProblem, string? ExecutionNotes, bool RequireBeforePhotos, bool RequireAfterPhotos, decimal DiscountAmount, decimal TotalAmount, IReadOnlyList<WorkOrderItemDto> Items, IReadOnlyList<WorkOrderChecklistItemDto> ChecklistItems, IReadOnlyList<WorkOrderPhotoDto> Photos, IReadOnlyList<WorkOrderAttachmentDto> Attachments, IReadOnlyList<WorkOrderHistoryEntryDto> HistoryEntries, WorkOrderCapabilities Capabilities);
 public sealed record WorkOrderOption(Guid Id, string Name);
 public sealed record WorkOrderFormOptionsDto(IReadOnlyList<WorkOrderOption> Customers, IReadOnlyList<WorkOrderOption> Equipment, IReadOnlyList<WorkOrderOption> Services, IReadOnlyList<WorkOrderOption> Professionals);
+
+
+
+

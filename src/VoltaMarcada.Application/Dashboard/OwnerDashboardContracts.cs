@@ -1,8 +1,9 @@
-namespace VoltaMarcada.Application.Dashboard;
+﻿namespace VoltaMarcada.Application.Dashboard;
 
 public sealed record OwnerDashboardDto(
     OwnerDashboardActionCounts Actions,
-    OwnerMaintenanceValueFunnel ValueFunnel);
+    OwnerMaintenanceValueFunnel ValueFunnel,
+    OwnerDashboardCash Cash);
 
 public sealed record OwnerDashboardActionCounts(
     int TodayAppointmentCount,
@@ -21,6 +22,8 @@ public sealed record OwnerMaintenanceValueFunnel(
     decimal RecoveredRevenue,
     int OpenOpportunityCount,
     decimal EstimatedPotentialRevenue);
+
+public sealed record OwnerDashboardCash(decimal TodayTotal, decimal TodayConfirmedTotal, decimal AllPendingTotal, decimal MonthConfirmedTotal);
 
 public sealed record OwnerDashboardPeriod(
     DateTimeOffset TodayStartAtUtc,

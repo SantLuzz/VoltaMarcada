@@ -1,0 +1,21 @@
+@using QRCoder
+
+<img src="@DataUrl" alt="QR Code Pix" width="@Size" height="@Size" />
+
+@code {
+    [Parameter, EditorRequired]
+    public string Payload { get; set; } = string.Empty;
+
+    [Parameter]
+    public int Size { get; set; } = 110;
+
+    private string DataUrl
+    {
+        get
+        {
+            using var data = QRCodeGenerator.GenerateQrCode(Payload, QRCodeGenerator.ECCLevel.M);
+            using var qrCode = new SvgQRCode(data);
+            return $"data:image/svg+xml;base64,{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(qrCode.GetGraphic(4)))}";
+        }
+    }
+}
