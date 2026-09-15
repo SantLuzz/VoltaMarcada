@@ -105,7 +105,16 @@ p { color: var(--muted); }
 @media (min-width: 48rem) and (max-width: 63.999rem) { .menu-toggle { display: inline-grid; }.nav-links { display: none; }.recurrence-cycle { grid-template-columns: 1fr; gap: 1.35rem; }.recurrence-cycle::before { display: block; }.recurrence-cycle li { min-height: 5.25rem; padding: 1rem 1rem 1rem 4.25rem; border-top: 0; border-left: 0; }.recurrence-cycle span { top: .95rem; left: -.8rem; }.recurrence-cycle h3 { font-size: 1.2rem; }.recurrence-cycle p { font-size: .9rem; } }
 @media (min-width: 64rem) { .recurrence-cycle { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
 
-/* Narrow viewport overflow safeguards */
-.hero-copy, .hero-actions, .confidence-list { min-width: 0; max-width: 100%; }
-.hero-copy h1 { overflow-wrap: anywhere; }
-.hero-actions > * { min-width: 0; max-width: 100%; }
+/* Extra-small screens */
+@media (max-width: 23rem) {
+  .hero-grid { grid-template-columns: minmax(0, 1fr); }
+  .hero-copy { width: 100%; min-width: 0; }
+  .container { width: min(100% - 3rem, 72rem); }
+  .hero { padding-top: 2.5rem; }
+  h1 { font-size: clamp(2rem, 9vw, 2.35rem); }
+  .hero-actions { display: grid; gap: .75rem; }
+  .hero-actions .button { width: 100%; }
+  .hero-actions .text-link { justify-content: center; }
+}
+
+.section[id] { scroll-margin-top: 5.5rem; }

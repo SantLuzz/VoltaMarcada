@@ -93,9 +93,12 @@ public sealed class LandingPageReviewSourceTests
     {
         var styles = ReadLandingFile("styles.css");
 
-        Assert.Contains(".hero-copy, .hero-actions, .confidence-list { min-width: 0; max-width: 100%; }", styles);
-        Assert.Contains(".hero-copy h1 { overflow-wrap: anywhere; }", styles);
-        Assert.Contains(".hero-actions > * { min-width: 0; max-width: 100%; }", styles);
+        Assert.Contains("@media (max-width: 23rem)", styles);
+        Assert.Contains(".hero-actions { display: grid; gap: .75rem; }", styles);
+        Assert.Contains(".hero-grid { grid-template-columns: minmax(0, 1fr); }", styles);
+        Assert.Contains(".hero-actions .button { width: 100%; }", styles);
+        Assert.Contains(".section[id] { scroll-margin-top: 5.5rem; }", styles);
+        Assert.Contains(".container { width: min(100% - 3rem, 72rem); }", styles);
     }
 
     private static string ReadLandingFile(string fileName) =>
