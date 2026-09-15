@@ -36,6 +36,8 @@ a { color: var(--servicesync-primary); }
 .public-brand-footer { margin: 24px 0 8px; text-align: center; }
 .public-brand-footer a { align-items: center; color: var(--servicesync-text-secondary); display: inline-flex; font-size: .8125rem; gap: 8px; text-decoration: none; }
 .public-brand-icon { height: 20px; object-fit: contain; width: 20px; }
+.public-company-header { min-width: 0; }
+.public-company-header > * { min-width: 0; }
 .public-company-logo { border-radius: 12px; display: block; height: 88px; object-fit: contain; width: 160px; }
 .public-booking-section { border-radius: 12px; margin-top: 24px; padding: 24px; }
 .public-service-menu { margin-inline: -4px; }
@@ -124,6 +126,9 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
     .auth-layout, .status-page { align-items: flex-start; padding: 16px; }
     .public-layout { padding: 16px; }
     .public-booking-section { padding: 16px; }
+    .public-company-header { align-items: stretch; flex-direction: column; }
+    .public-company-header .public-company-logo { height: 72px; max-width: 100%; width: 140px; }
+    .public-company-header .mud-typography { overflow-wrap: anywhere; }
     .auth-card, .status-surface { margin-top: 24px; padding: 24px; }
     .page-content { padding: 24px 16px; }
     .page-header { flex-direction: column; }
@@ -255,7 +260,7 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
     }
 }
 
-.work-order-photo-preview-pending { height: 120px; object-fit: cover; width: 160px; }
+.work-order-photo-preview-pending > img { height: 120px; object-fit: cover; width: 160px; }
 
 .equipment-history-drawer {
     max-width: 100vw;

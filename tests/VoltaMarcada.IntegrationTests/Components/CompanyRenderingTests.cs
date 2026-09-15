@@ -92,6 +92,28 @@ public sealed class CompanyRenderingTests
         Assert.All(pickerAttributes, attributes => Assert.DoesNotContain(attributes, frame => frame.AttributeName == "FullWidth"));
     }
 
+    [Fact]
+    public void PublicCompanyHeader_ShouldUseTheResponsiveHeaderContainer()
+    {
+        var publicCompany = new PublicCompany();
+        SetField(publicCompany, "isLoading", false);
+        SetField(publicCompany, "company", new PublicCompanyPageDto(
+            "Test Company",
+            null,
+            null,
+            "11999999999",
+            null,
+            []));
+
+        var headerAttributes = FindComponentAttributes(Render(publicCompany), typeof(MudStack))
+            .Single(attributes => attributes.Any(frame =>
+                frame.AttributeName == "Class" &&
+                string.Equals(frame.AttributeValue as string, "public-company-header", StringComparison.Ordinal)));
+
+        Assert.Contains(headerAttributes, frame =>
+            frame.AttributeName == "Class" &&
+            string.Equals(frame.AttributeValue as string, "public-company-header", StringComparison.Ordinal));
+    }
     private static void SetPublicSettings(Company component)
     {
         typeof(Company).GetProperty("ApplicationUrlBuilder", BindingFlags.Instance | BindingFlags.NonPublic)!

@@ -36,6 +36,14 @@ public sealed class MobileCameraReliabilityTests
     }
 
     [Fact]
+    public void CameraCapture_ShouldConstrainThePendingPhotoPreviewImage()
+    {
+        var styles = ReadSource("wwwroot/app.css");
+
+        Assert.Contains(".work-order-photo-preview-pending > img { height: 120px; object-fit: cover; width: 160px; }", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Routes_ShouldShowCircularAuthorizationLoadingIndicator()
     {
         Assert.Contains("MudProgressCircular", ReadSource("Components/Routes.razor"), StringComparison.Ordinal);
