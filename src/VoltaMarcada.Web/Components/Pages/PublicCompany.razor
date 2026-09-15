@@ -25,7 +25,7 @@ else if (company is null)
 else
 {
     <MudPaper Class="public-booking-section" Elevation="0" Outlined="true">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="public-company-header">
             @if (companyLogoDataUrl is not null)
             {
                 <img src="@companyLogoDataUrl" alt="Logo da @company.TradeName" class="public-company-logo" />

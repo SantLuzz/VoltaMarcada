@@ -42,12 +42,12 @@ public sealed class LandingPageReviewSourceTests
 
         foreach (var asset in new[]
                  {
-                     "hero-dashboard.webp",
-                     "maintenance-reminders.webp",
-                     "public-request-mobile.webp",
-                     "schedule.webp",
-                     "work-order.webp",
-                     "quote.webp"
+                     "hero-dashboard.png",
+                     "maintenance-reminders.png",
+                     "public-request-mobile.png",
+                     "schedule.png",
+                     "work-order.png",
+                     "quote.png"
                  })
         {
             Assert.Contains($"assets/{asset}", html);
@@ -59,6 +59,46 @@ public sealed class LandingPageReviewSourceTests
         Assert.Contains("width=\"1600\" height=\"1000\"", html);
         Assert.Contains("closest('picture').hidden = true", html);
         Assert.Contains(".replaceable-media[hidden] { display: none; }", styles);
+    }
+
+    [Fact]
+    public void MaintenanceReminderScreenshot_ShouldPreserveTheFullImage()
+    {
+        var styles = ReadLandingFile("styles.css");
+
+        Assert.Contains(".reminder-media .replaceable-media img { object-fit: contain; }", styles);
+    }
+    [Fact]
+    public void EquipmentHistoryScreenshot_ShouldUseTheProvidedPngAsset()
+    {
+        var html = ReadLandingFile("index.html");
+
+        Assert.Contains("assets/equipment-history.png", html);
+    }
+    [Fact]
+    public void LandingResponsiveLayout_ShouldKeepTabletNavigationAndFlowReadable()
+    {
+        var html = ReadLandingFile("index.html");
+        var styles = ReadLandingFile("styles.css");
+
+        Assert.Contains("max-width: 63.999rem", styles);
+        Assert.Contains(".recurrence-cycle { grid-template-columns: repeat(7, minmax(0, 1fr));", styles);
+        Assert.Contains(".hero-media { aspect-ratio: 8 / 5; }", styles);
+        Assert.Contains(".hero-media .app-preview { min-height: 0; }", styles);
+        Assert.Equal(8, Regex.Matches(html, "class=\"connection-step\"", RegexOptions.CultureInvariant).Count);
+    }
+
+    [Fact]
+    public void HeroContent_ShouldRemainWithinNarrowViewports()
+    {
+        var styles = ReadLandingFile("styles.css");
+
+        Assert.Contains("@media (max-width: 23rem)", styles);
+        Assert.Contains(".hero-actions { display: grid; gap: .75rem; }", styles);
+        Assert.Contains(".hero-grid { grid-template-columns: minmax(0, 1fr); }", styles);
+        Assert.Contains(".hero-actions .button { width: 100%; }", styles);
+        Assert.Contains(".section[id] { scroll-margin-top: 5.5rem; }", styles);
+        Assert.Contains(".container { width: min(100% - 3rem, 72rem); }", styles);
     }
 
     private static string ReadLandingFile(string fileName) =>

@@ -1,12 +1,15 @@
-# Replaceable landing visuals
+# Landing assets
 
-The first landing release uses CSS demonstration frames so it does not depend on product screenshots. Replace those isolated media slots with the following optimized WebP captures when they are available. Every capture must use synthetic data only; never place real customer, equipment, appointment, contact, or financial data in a marketing asset.
+`logo.png` is the VoltaMarcada PNG brand mark. It is used by the landing favicon and the visible brand links in the header and footer.
 
-- `hero-dashboard.webp` — 1600x1000 — populated dashboard
-- `maintenance-reminders.webp` — 1440x960 — maintenance dashboard
-- `public-request-mobile.webp` — 750x1334 — public request page
-- `schedule.webp` — 1440x960 — populated schedule
-- `work-order.webp` — 1440x960 — filled work order
-- `quote.webp` — 1440x960 — optional filled quote
+The following replaceable screenshots must contain synthetic data only. Never use real customer, equipment, appointment, contact, or financial data in a marketing asset.
 
-Keep the crop focused on the product, include explicit dimensions in the eventual `<img>` tags, and lazy-load images outside the first viewport.
+- `hero-dashboard.png` — 1600x1000 — populated dashboard
+- `maintenance-reminders.png` — 1440x960 — maintenance reminder panel
+- `equipment-history.png` — 1440x960 — equipment history
+- `public-request-mobile.png` — 750x1334 — initial public request form
+- `schedule.png` — team schedule
+- `quote.png` — quote
+- `work-order.png` — completed work order
+
+Keep the crop focused on the product, include explicit dimensions in the corresponding `<img>` tags, and lazy-load screenshots outside the first viewport.
