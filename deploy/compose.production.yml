@@ -19,7 +19,10 @@ services:
       start_period: 10s
 
   landing:
-    image: ${LANDING_IMAGE}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.landing
+    image: voltamarcada-landing:local
     restart: unless-stopped
     networks:
       - edge
@@ -31,7 +34,10 @@ services:
       start_period: 10s
 
   web:
-    image: ${WEB_IMAGE}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    image: voltamarcada-web:local
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production

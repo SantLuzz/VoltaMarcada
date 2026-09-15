@@ -1,0 +1,9 @@
+voltamarcada.com.br, www.voltamarcada.com.br {
+    encode zstd gzip
+    reverse_proxy landing:8080
+}
+
+app.voltamarcada.com.br {
+    encode zstd gzip
+    reverse_proxy web:8080
+}

@@ -1,0 +1,29 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - develop
+      - production
+
+jobs:
+  deploy:
+    name: Deploy ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update application on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script_stop: true
+          script: |
+            set -eu
+            cd "${{ vars.DEPLOY_PATH }}"
+            git fetch origin "${{ github.ref_name }}"
+            git checkout --force "${{ github.ref_name }}"
+            git reset --hard "${{ github.sha }}"
+            docker compose --env-file deploy/.env.production -f deploy/compose.production.yml up -d --build --remove-orphans
