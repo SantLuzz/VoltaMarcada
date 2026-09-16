@@ -22,21 +22,7 @@ jobs:
           script: |
             set -eu
 
-            echo "Usuario:"
-            whoami
-
-            echo "Diretorio inicial:"
-            pwd
-
-            echo "DEPLOY_PATH: '${{ vars.DEPLOY_PATH }}'"
-
-            cd "${{ vars.DEPLOY_PATH }}"
-
-            echo "Diretorio apos cd:"
-            pwd
-
-            echo "Verificando repositorio:"
-            git status
+            cd /opt/voltamarcada
 
             git fetch origin "${{ github.ref_name }}"
             git checkout --force "${{ github.ref_name }}"
