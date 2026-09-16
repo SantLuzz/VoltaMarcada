@@ -12,4 +12,4 @@ COPY --chown=nginx:nginx deploy/landing/default.conf.template /etc/nginx/templat
 USER nginx
 EXPOSE 8080
 
-ENTRYPOINT ["nginx", "-g", "daemon off;"]
+CMD ["nginx", "-g", "daemon off;"]
