@@ -68,6 +68,29 @@ public sealed class UpdateWorkOrderUseCase(
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.ServiceNotFound);
         }
 
+        if (command.Items is not null)
+        {
+            foreach (var item in command.Items)
+            {
+                if (item.Type == WorkOrderItemType.Service && (item.ServiceId is null || item.ServiceId == Guid.Empty))
+                {
+                    return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
+                }
+
+                if (item.EquipmentId is { } equipmentId)
+                {
+                    var itemEquipment = await equipmentRepository.GetForCompanyAsync(equipmentId, scope.CompanyId, cancellationToken);
+                    if (itemEquipment is null || itemEquipment.CustomerId != customer.Id) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidEquipmentCustomer);
+                }
+
+                if (item.ServiceId is { } serviceId)
+                {
+                    var itemService = await serviceRepository.GetForCompanyAsync(serviceId, scope.CompanyId, cancellationToken);
+                    if (itemService is null || !itemService.IsActive) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.ServiceNotFound);
+                }
+            }
+        }
+
         var professionalId = scope.IsOwner ? command.ProfessionalId : workOrder.ProfessionalId;
         if (!scope.IsOwner && professionalId != scope.ProfessionalId)
         {
@@ -92,7 +115,15 @@ public sealed class UpdateWorkOrderUseCase(
             .OrderBy(x => x.DisplayOrder)
             .Select(x => new WorkOrderChecklistItemDefinition(x.Description, x.IsRequired, x.DisplayOrder))
             .ToArray();
-        if (!WorkOrderFinancialItems.TryCreate(service, command.ServiceUnitPrice, command.AdditionalItems, out var items))
+        IReadOnlyCollection<WorkOrderItemDefinition> items;
+        if (command.Items is not null)
+        {
+            if (!WorkOrderFinancialItems.TryCreate(command.Items, out items))
+            {
+                return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
+            }
+        }
+        else if (!WorkOrderFinancialItems.TryCreate(service, command.ServiceUnitPrice, command.AdditionalItems, out items))
         {
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
         }

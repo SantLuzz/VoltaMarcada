@@ -6,7 +6,7 @@ using VoltaMarcada.Domain.ValueObjects;
 
 namespace VoltaMarcada.Application.Quotes;
 
-public sealed class UpdateQuoteUseCase(IQuoteRepository quotes, WorkOrderAuthorization authorization, TimeProvider timeProvider)
+public sealed class UpdateQuoteUseCase(IQuoteRepository quotes, IEquipmentRepository equipment, IServiceRepository services, WorkOrderAuthorization authorization, TimeProvider timeProvider)
 {
     public async Task<OperationResult<Guid>> ExecuteAsync(Guid quoteId, UpdateQuoteCommand command, CancellationToken cancellationToken = default)
     {
@@ -19,9 +19,29 @@ public sealed class UpdateQuoteUseCase(IQuoteRepository quotes, WorkOrderAuthori
         var quote = await quotes.GetForCompanyAsync(quoteId, scope.CompanyId, cancellationToken);
         if (quote is null) return OperationResult<Guid>.Failure(QuoteErrors.NotFound);
 
+        foreach (var item in command.Items)
+        {
+            if (item.Type == VoltaMarcada.Domain.Enums.QuoteItemType.Service && (item.ServiceId is null || item.ServiceId == Guid.Empty))
+            {
+                return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
+            }
+
+            if (item.EquipmentId is { } equipmentId)
+            {
+                var itemEquipment = await equipment.GetForCompanyAsync(equipmentId, scope.CompanyId, cancellationToken);
+                if (itemEquipment is null || itemEquipment.CustomerId != quote.CustomerId) return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
+            }
+
+            if (item.ServiceId is { } serviceId)
+            {
+                var itemService = await services.GetForCompanyAsync(serviceId, scope.CompanyId, cancellationToken);
+                if (itemService is null || !itemService.IsActive) return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
+            }
+        }
+
         try
         {
-            quote.UpdateDraft(command.Items.Select(item => new QuoteItemDefinition(item.Description, item.Quantity, item.UnitPrice, item.Type)).ToArray(), command.DiscountAmount, command.Notes, command.ValidUntil, timeProvider.GetUtcNow());
+            quote.UpdateDraft(command.Items.Select(item => new QuoteItemDefinition(item.Description, item.Quantity, item.UnitPrice, item.Type, item.EquipmentId, item.ServiceId)).ToArray(), command.DiscountAmount, command.Notes, command.ValidUntil, timeProvider.GetUtcNow());
             await quotes.SaveChangesAsync(cancellationToken);
             return OperationResult<Guid>.Success(quote.Id);
         }
