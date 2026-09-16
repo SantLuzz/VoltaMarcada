@@ -20,6 +20,19 @@ public sealed class ProductionDeploymentSourceTests
         Assert.Equal(string.Empty, root.GetProperty("Smtp").GetProperty("Password").GetString());
         Assert.Equal(string.Empty, root.GetProperty("LicenseBilling").GetProperty("PixKey").GetString());
     }
+    [Fact]
+    public void ProductionConfiguration_ShouldServeStaticFilesBeforeMappedStaticAssets()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var program = File.ReadAllText(Path.Combine(repositoryRoot, "src", "VoltaMarcada.Web", "Program.cs"));
+
+        var staticFilesIndex = program.IndexOf("app.UseStaticFiles();", StringComparison.Ordinal);
+        var mappedStaticAssetsIndex = program.IndexOf("app.MapStaticAssets();", StringComparison.Ordinal);
+
+        Assert.NotEqual(-1, staticFilesIndex);
+        Assert.NotEqual(-1, mappedStaticAssetsIndex);
+        Assert.True(staticFilesIndex < mappedStaticAssetsIndex);
+    }
 
     [Fact]
     public void ProductionTopology_ShouldExposeOnlyCaddyAndUseManagedPostgreSql()
