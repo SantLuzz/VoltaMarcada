@@ -35,6 +35,14 @@ public sealed class ProductionDeploymentSourceTests
     }
 
     [Fact]
+    public void ProductionBuild_ShouldRequireAspNetWebAssets()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var webProject = File.ReadAllText(Path.Combine(repositoryRoot, "src", "VoltaMarcada.Web", "VoltaMarcada.Web.csproj"));
+
+        Assert.Contains("<RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>", webProject);
+    }
+    [Fact]
     public void ProductionTopology_ShouldExposeOnlyCaddyAndUseManagedPostgreSql()
     {
         var repositoryRoot = FindRepositoryRoot();
