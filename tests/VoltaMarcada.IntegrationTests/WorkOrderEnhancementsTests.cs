@@ -10,6 +10,40 @@ public sealed class WorkOrderEnhancementsTests
     private static readonly DateTimeOffset Now = new(2026, 9, 3, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public void Create_WithItemsLinkedToDifferentEquipmentAndServices_PreservesEachAssociation()
+    {
+        var companyId = Guid.NewGuid();
+        var equipmentA = Guid.NewGuid();
+        var equipmentB = Guid.NewGuid();
+        var serviceA = Guid.NewGuid();
+        var serviceB = Guid.NewGuid();
+        var items = new[]
+        {
+            new WorkOrderItemDefinition("Clean A", 1, 120m, WorkOrderItemType.Service, equipmentA, serviceA),
+            new WorkOrderItemDefinition("Repair B", 1, 150m, WorkOrderItemType.Service, equipmentB, serviceB),
+            new WorkOrderItemDefinition("Travel", 1, 30m, WorkOrderItemType.Travel, null, null)
+        };
+
+        var workOrder = WorkOrder.Create(
+            companyId,
+            Guid.NewGuid(),
+            equipmentA,
+            serviceA,
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            WorkOrderPriority.Normal,
+            null,
+            items,
+            [],
+            Now);
+
+        Assert.Equal(equipmentA, workOrder.Items.ElementAt(0).EquipmentId);
+        Assert.Equal(serviceB, workOrder.Items.ElementAt(1).ServiceId);
+        Assert.Null(workOrder.Items.ElementAt(2).EquipmentId);
+        Assert.Null(workOrder.Items.ElementAt(2).ServiceId);
+    }
+
+    [Fact]
     public void AddAttachmentAndHistory_WhenWorkOrderIsInProgress_RecordsImmutableMetadata()
     {
         var workOrder = CreateInProgressWorkOrder();

@@ -1353,11 +1353,17 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("EquipmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
                     b.Property<Guid>("QuoteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ServiceId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Type")
@@ -1368,6 +1374,10 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(18,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "EquipmentId");
+
+                    b.HasIndex("CompanyId", "ServiceId");
 
                     b.HasIndex("CompanyId", "QuoteId", "DisplayOrder");
 
@@ -1972,9 +1982,15 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("EquipmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid?>("ServiceId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");
@@ -1990,6 +2006,10 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "EquipmentId");
+
+                    b.HasIndex("CompanyId", "ServiceId");
 
                     b.HasIndex("CompanyId", "WorkOrderId", "DisplayOrder");
 
@@ -2546,12 +2566,24 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.QuoteItem", b =>
                 {
+                    b.HasOne("VoltaMarcada.Domain.Entities.Equipment", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "EquipmentId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("VoltaMarcada.Domain.Entities.Quote", null)
                         .WithMany("Items")
                         .HasForeignKey("CompanyId", "QuoteId")
                         .HasPrincipalKey("CompanyId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("VoltaMarcada.Domain.Entities.Service", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "ServiceId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.ScheduleBlock", b =>
@@ -2726,6 +2758,18 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrderItem", b =>
                 {
+                    b.HasOne("VoltaMarcada.Domain.Entities.Equipment", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "EquipmentId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("VoltaMarcada.Domain.Entities.Service", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "ServiceId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("VoltaMarcada.Domain.Entities.WorkOrder", null)
                         .WithMany("Items")
                         .HasForeignKey("CompanyId", "WorkOrderId")

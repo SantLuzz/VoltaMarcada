@@ -182,9 +182,13 @@ public sealed class WorkOrder : ICompanyScopedEntity
     {
         if (items is null) throw new DomainException("Work order items are required.");
         var utcNow = now.ToUniversalTime(); var normalized = items.ToArray();
-        if (normalized.Count(item => item.Type == WorkOrderItemType.Service) != 1 || normalized.Any(item => !Enum.IsDefined(item.Type))) throw new DomainException("Work order items must contain exactly one service item.");
+        if (normalized.Count(item => item.Type == WorkOrderItemType.Service) == 0 || normalized.Any(item => !Enum.IsDefined(item.Type))) throw new DomainException("Work order items must contain at least one service item.");
         _items.Clear();
-        for (var index = 0; index < normalized.Length; index++) _items.Add(WorkOrderItem.Create(CompanyId, Id, normalized[index], index, utcNow));
+        for (var index = 0; index < normalized.Length; index++)
+        {
+            var definition = normalized[index];
+            _items.Add(WorkOrderItem.Create(CompanyId, Id, definition.Type == WorkOrderItemType.Service ? definition with { EquipmentId = NormalizeOptionalId(definition.EquipmentId) ?? EquipmentId, ServiceId = NormalizeOptionalId(definition.ServiceId) ?? ServiceId } : definition, index, utcNow));
+        }
     }
 
     private void ReplaceChecklistItems(IReadOnlyCollection<WorkOrderChecklistItemDefinition> items)

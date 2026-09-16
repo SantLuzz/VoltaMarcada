@@ -87,7 +87,10 @@ public sealed class Quote : ICompanyScopedEntity
     {
         if (items is null || items.Count is 0 or > 100 || items.Count(item => item.Type == QuoteItemType.Service) == 0) throw new DomainException("Quote must contain at least one service item.");
         _items.Clear();
-        for (var index = 0; index < items.Count; index++) _items.Add(QuoteItem.Create(CompanyId, Id, items.ElementAt(index), index));
+        for (var index = 0; index < items.Count; index++)
+        {
+            var definition = items.ElementAt(index); _items.Add(QuoteItem.Create(CompanyId, Id, definition.Type == QuoteItemType.Service ? definition with { EquipmentId = NormalizeId(definition.EquipmentId) ?? EquipmentId, ServiceId = NormalizeId(definition.ServiceId) ?? PrimaryServiceId } : definition, index));
+        }
     }
 
     private void EnsureStatus(QuoteStatus status)

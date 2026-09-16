@@ -17,6 +17,41 @@ namespace VoltaMarcada.IntegrationTests;
 public sealed class QuoteMaintenanceOpportunityTests
 {
     [Fact]
+    public void Create_WithItemsLinkedToDifferentEquipmentAndServices_PreservesEachAssociation()
+    {
+        var companyId = Guid.NewGuid();
+        var equipmentA = Guid.NewGuid();
+        var equipmentB = Guid.NewGuid();
+        var serviceA = Guid.NewGuid();
+        var serviceB = Guid.NewGuid();
+        var items = new[]
+        {
+            new QuoteItemDefinition("Clean A", 1, 120m, QuoteItemType.Service, equipmentA, serviceA),
+            new QuoteItemDefinition("Repair B", 1, 150m, QuoteItemType.Service, equipmentB, serviceB),
+            new QuoteItemDefinition("Travel", 1, 30m, QuoteItemType.Travel, null, null)
+        };
+
+        var quote = Quote.Create(
+            companyId,
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            equipmentA,
+            serviceA,
+            null,
+            null,
+            items,
+            0,
+            null,
+            new DateOnly(2026, 10, 2),
+            new DateTimeOffset(2026, 9, 2, 12, 0, 0, TimeSpan.Zero));
+
+        Assert.Equal(equipmentA, quote.Items.ElementAt(0).EquipmentId);
+        Assert.Equal(serviceB, quote.Items.ElementAt(1).ServiceId);
+        Assert.Null(quote.Items.ElementAt(2).EquipmentId);
+        Assert.Null(quote.Items.ElementAt(2).ServiceId);
+    }
+
+    [Fact]
     public async Task CreateQuote_converts_manual_opportunity()
     {
         await using var fixture = await Fixture.CreateAsync();
