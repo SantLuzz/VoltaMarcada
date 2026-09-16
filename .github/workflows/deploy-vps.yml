@@ -1,27 +1,48 @@
-script: |
-  set -eu
+name: Deploy to VPS
 
-  echo "Usuario:"
-  whoami
+on:
+  push:
+    branches:
+      - develop
 
-  echo "Diretorio inicial:"
-  pwd
+jobs:
+  deploy:
+    name: Deploy ${{ github.ref_name }}
+    runs-on: ubuntu-latest
 
-  echo "DEPLOY_PATH: '${{ vars.DEPLOY_PATH }}'"
+    steps:
+      - name: Update application on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script_stop: true
+          script: |
+            set -eu
 
-  cd "${{ vars.DEPLOY_PATH }}"
+            echo "Usuario:"
+            whoami
 
-  echo "Diretorio apos cd:"
-  pwd
+            echo "Diretorio inicial:"
+            pwd
 
-  echo "Verificando repositorio:"
-  git status
+            echo "DEPLOY_PATH: '${{ vars.DEPLOY_PATH }}'"
 
-  git fetch origin "${{ github.ref_name }}"
-  git checkout --force "${{ github.ref_name }}"
-  git reset --hard "${{ github.sha }}"
+            cd "${{ vars.DEPLOY_PATH }}"
 
-  docker compose \
-    --env-file deploy/.env.production \
-    -f deploy/compose.production.yml \
-    up -d --build --remove-orphans
+            echo "Diretorio apos cd:"
+            pwd
+
+            echo "Verificando repositorio:"
+            git status
+
+            git fetch origin "${{ github.ref_name }}"
+            git checkout --force "${{ github.ref_name }}"
+            git reset --hard "${{ github.sha }}"
+
+            docker compose \
+              --env-file deploy/.env.production \
+              -f deploy/compose.production.yml \
+              up -d --build --remove-orphans
