@@ -44,6 +44,53 @@ public sealed class WorkOrderEnhancementsTests
     }
 
     [Fact]
+    public void UpdatePendingDetails_WithMultipleServiceItems_RetainsEachAssociation()
+    {
+        var companyId = Guid.NewGuid();
+        var customerId = Guid.NewGuid();
+        var equipmentA = Guid.NewGuid();
+        var equipmentB = Guid.NewGuid();
+        var serviceA = Guid.NewGuid();
+        var serviceB = Guid.NewGuid();
+        var items = new[]
+        {
+            new WorkOrderItemDefinition("Clean A", 1, 120m, WorkOrderItemType.Service, equipmentA, serviceA),
+            new WorkOrderItemDefinition("Repair B", 1, 150m, WorkOrderItemType.Service, equipmentB, serviceB),
+            new WorkOrderItemDefinition("Travel", 1, 30m, WorkOrderItemType.Travel, null, null)
+        };
+
+        var workOrder = WorkOrder.Create(
+            companyId,
+            customerId,
+            equipmentA,
+            serviceA,
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            WorkOrderPriority.Normal,
+            null,
+            items,
+            [],
+            Now);
+
+        workOrder.UpdatePendingDetails(
+            customerId,
+            equipmentA,
+            serviceA,
+            workOrder.ProfessionalId,
+            WorkOrderPriority.Normal,
+            null,
+            items,
+            [],
+            10m,
+            Now.AddMinutes(1));
+
+        Assert.Equal(equipmentA, workOrder.Items.ElementAt(0).EquipmentId);
+        Assert.Equal(serviceA, workOrder.Items.ElementAt(0).ServiceId);
+        Assert.Equal(equipmentB, workOrder.Items.ElementAt(1).EquipmentId);
+        Assert.Equal(serviceB, workOrder.Items.ElementAt(1).ServiceId);
+    }
+
+    [Fact]
     public void AddAttachmentAndHistory_WhenWorkOrderIsInProgress_RecordsImmutableMetadata()
     {
         var workOrder = CreateInProgressWorkOrder();

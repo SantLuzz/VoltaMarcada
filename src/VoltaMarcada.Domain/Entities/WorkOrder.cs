@@ -61,14 +61,17 @@ public sealed class WorkOrder : ICompanyScopedEntity
         EnsurePending(); RequireId(customerId, "Customer"); RequireId(equipmentId, "Equipment"); RequireId(serviceId, "Service");
         if (serviceId != ServiceId) throw new DomainException("Work order service cannot be changed.");
         if (items is null) throw new DomainException("Work order items are required.");
-        var existingServiceItem = _items.Single(item => item.Type == WorkOrderItemType.Service);
-        var submittedServiceItem = items.SingleOrDefault(item => item.Type == WorkOrderItemType.Service);
-        if (submittedServiceItem is null ||
-            !string.Equals(submittedServiceItem.Description.Trim(), existingServiceItem.Description, StringComparison.Ordinal) ||
-            submittedServiceItem.Quantity != existingServiceItem.Quantity ||
-            submittedServiceItem.UnitPrice != existingServiceItem.UnitPrice)
+        var existingServiceItems = _items.Where(item => item.Type == WorkOrderItemType.Service).ToArray();
+        var submittedServiceItems = items.Where(item => item.Type == WorkOrderItemType.Service).ToArray();
+        if (existingServiceItems.Length != submittedServiceItems.Length ||
+            !existingServiceItems.Zip(submittedServiceItems, (existing, submitted) =>
+                string.Equals(submitted.Description.Trim(), existing.Description, StringComparison.Ordinal) &&
+                submitted.Quantity == existing.Quantity &&
+                submitted.UnitPrice == existing.UnitPrice &&
+                existing.EquipmentId == (NormalizeOptionalId(submitted.EquipmentId) ?? EquipmentId) &&
+                existing.ServiceId == (NormalizeOptionalId(submitted.ServiceId) ?? ServiceId)).All(match => match))
         {
-            throw new DomainException("Work order service item cannot be changed.");
+            throw new DomainException("Work order service items cannot be changed.");
         }
         if (!Enum.IsDefined(priority)) throw new DomainException("Work order priority is invalid."); if (discountAmount < 0) throw new DomainException("Work order discount cannot be negative.");
         CustomerId = customerId; EquipmentId = equipmentId; ServiceId = serviceId; ProfessionalId = professionalId; Priority = priority; ReportedProblem = NormalizeOptionalText(reportedProblem); DiscountAmount = discountAmount;
