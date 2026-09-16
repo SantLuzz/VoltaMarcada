@@ -11,12 +11,6 @@ services:
       - caddy-config:/config
     networks:
       - edge
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:2019/config/ >/dev/null || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
   landing:
     build:
@@ -60,12 +54,12 @@ services:
       PlatformAdministrator__Password: ${PLATFORM_ADMINISTRATOR_PASSWORD}
     networks:
       - edge
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health | grep -qx Healthy"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
+     healthcheck:
+    test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 20s
 
 networks:
   edge:
