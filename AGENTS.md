@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-VoltaMarcada is a multi-tenant SaaS platform for service companies and independent technicians.
+VoltaMarcada is a multi-tenant SaaS platform for service companies and independent technicians
 
 The product is designed around the complete service lifecycle:
 
