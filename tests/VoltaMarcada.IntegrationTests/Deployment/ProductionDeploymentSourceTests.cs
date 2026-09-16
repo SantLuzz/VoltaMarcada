@@ -75,7 +75,7 @@ public sealed class ProductionDeploymentSourceTests
         Assert.DoesNotContain("postgres-data", compose);
         Assert.Contains("USER app", webDockerfile);
         Assert.Contains("s|/run/nginx.pid|/tmp/nginx.pid|", landingDockerfile);
-        Assert.Matches(@"EXPOSE 8080\r?\n(?:\r?\n)?ENTRYPOINT \[\""nginx\"", \""-g\"", \""daemon off;\""\]", landingDockerfile);
+        Assert.Matches(@"EXPOSE 8080\r?\n(?:\r?\n)?CMD \[\""nginx\"", \""-g\"", \""daemon off;\""\]", landingDockerfile);
 
         Assert.Equal(["80:80", "443:443"], GetPortMappings(GetServiceBlock(compose, "caddy")));
         foreach (var serviceName in new[] { "landing", "web" })
