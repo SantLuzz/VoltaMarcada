@@ -1,4 +1,7 @@
 @using VoltaMarcada.Application.WorkOrders
+@using VoltaMarcada.Application.Equipment
+@using VoltaMarcada.Application.Services
+@using VoltaMarcada.Domain.Enums
 @using VoltaMarcada.Web.Formatting
 @inject IBrazilianDisplayFormatter DisplayFormatter
 
@@ -46,7 +49,34 @@
         @foreach (var item in Items.Select((value, index) => new { value, index }))
         {
             <MudGrid Class="work-order-item-row" AlignItems="AlignItems.Center">
-                <MudItem xs="12" sm="5">
+                <MudItem xs="12" sm="3">
+                    <MudSelect T="WorkOrderItemType" Value="@item.value.Type" ValueChanged="@(value => UpdateItem(item.index, item.value with { Type = value, ServiceId = value == WorkOrderItemType.Service ? item.value.ServiceId : null }))" Label="Tipo" Disabled="@(ReadOnly || !CanEditItemTypes)">
+                        @foreach (var type in Enum.GetValues<WorkOrderItemType>())
+                        {
+                            <MudSelectItem Value="@type">@GetItemTypeName(type)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudSelect T="Guid?" Value="@item.value.EquipmentId" ValueChanged="@(value => UpdateItem(item.index, item.value with { EquipmentId = value }))" Label="Equipamento" Clearable="true" Disabled="ReadOnly">
+                        @foreach (var equipment in EquipmentOptions)
+                        {
+                            <MudSelectItem Value="@((Guid?)equipment.Id)">@equipment.Type @equipment.Manufacturer @equipment.Model</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                @if (item.value.Type == WorkOrderItemType.Service)
+                {
+                    <MudItem xs="12" sm="3">
+                        <MudSelect T="Guid?" Value="@item.value.ServiceId" ValueChanged="@(value => UpdateItem(item.index, item.value with { ServiceId = value }))" Label="Serviço" Required="true" RequiredError="Selecione o serviço." Disabled="ReadOnly">
+                            @foreach (var service in ServiceOptions)
+                            {
+                                <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
+                <MudItem xs="12" sm="@(item.value.Type == WorkOrderItemType.Service ? 3 : 6)">
                     <MudTextField T="string" Value="@item.value.Description" ValueChanged="@(value => UpdateItem(item.index, item.value with { Description = value ?? string.Empty }))" Label="Descrição" ReadOnly="ReadOnly" />
                 </MudItem>
                 <MudItem xs="6" sm="2">
@@ -88,6 +118,15 @@
 
     [Parameter]
     public EventCallback<List<WorkOrderItemInput>> ItemsChanged { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<EquipmentDto> EquipmentOptions { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<ServiceDto> ServiceOptions { get; set; } = [];
+
+    [Parameter]
+    public bool CanEditItemTypes { get; set; } = true;
 
     [Parameter]
     public bool ReadOnly { get; set; }
@@ -134,4 +173,12 @@
     }
 
     private Task OnDiscountAmountChanged(decimal? value) => DiscountAmountChanged.InvokeAsync(value ?? 0m);
+    private static string GetItemTypeName(WorkOrderItemType type) => type switch
+    {
+        WorkOrderItemType.Service => "Serviço",
+        WorkOrderItemType.Part => "Peça",
+        WorkOrderItemType.Material => "Material",
+        WorkOrderItemType.Travel => "Deslocamento",
+        _ => "Outro"
+    };
 }

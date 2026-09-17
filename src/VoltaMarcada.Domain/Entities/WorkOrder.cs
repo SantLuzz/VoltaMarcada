@@ -61,15 +61,14 @@ public sealed class WorkOrder : ICompanyScopedEntity
         EnsurePending(); RequireId(customerId, "Customer"); RequireId(equipmentId, "Equipment"); RequireId(serviceId, "Service");
         if (serviceId != ServiceId) throw new DomainException("Work order service cannot be changed.");
         if (items is null) throw new DomainException("Work order items are required.");
-        var existingServiceItems = _items.Where(item => item.Type == WorkOrderItemType.Service).ToArray();
-        var submittedServiceItems = items.Where(item => item.Type == WorkOrderItemType.Service).ToArray();
-        if (existingServiceItems.Length != submittedServiceItems.Length ||
-            !existingServiceItems.Zip(submittedServiceItems, (existing, submitted) =>
-                string.Equals(submitted.Description.Trim(), existing.Description, StringComparison.Ordinal) &&
-                submitted.Quantity == existing.Quantity &&
-                submitted.UnitPrice == existing.UnitPrice &&
-                existing.EquipmentId == (NormalizeOptionalId(submitted.EquipmentId) ?? EquipmentId) &&
-                existing.ServiceId == (NormalizeOptionalId(submitted.ServiceId) ?? ServiceId)).All(match => match))
+        var existingPrimaryServiceItem = _items.FirstOrDefault(item => item.Type == WorkOrderItemType.Service);
+        var submittedPrimaryServiceItem = items.FirstOrDefault(item => item.Type == WorkOrderItemType.Service);
+        if (existingPrimaryServiceItem is null || submittedPrimaryServiceItem is null ||
+            !string.Equals(submittedPrimaryServiceItem.Description.Trim(), existingPrimaryServiceItem.Description, StringComparison.Ordinal) ||
+            submittedPrimaryServiceItem.Quantity != existingPrimaryServiceItem.Quantity ||
+            submittedPrimaryServiceItem.UnitPrice != existingPrimaryServiceItem.UnitPrice ||
+            existingPrimaryServiceItem.EquipmentId != (NormalizeOptionalId(submittedPrimaryServiceItem.EquipmentId) ?? EquipmentId) ||
+            existingPrimaryServiceItem.ServiceId != (NormalizeOptionalId(submittedPrimaryServiceItem.ServiceId) ?? ServiceId))
         {
             throw new DomainException("Work order service items cannot be changed.");
         }

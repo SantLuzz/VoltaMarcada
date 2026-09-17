@@ -45,8 +45,11 @@ public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IA
 
                 var timeZone = TimeZoneInfo.FindSystemTimeZoneById(schedulingConfiguration.DefaultTimeZoneId);
                 var businessDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, timeZone).DateTime);
+                var installments = command.PaymentDecision?.Installments;
                 await chargeRepository.AddAsync(
-                    WorkOrderCharge.CreateAutomatic(scope.CompanyId, order.Id, order.TotalAmount, businessDate, now),
+                    installments is { Count: > 0 }
+                        ? WorkOrderCharge.CreateAutomatic(scope.CompanyId, order.Id, order.TotalAmount, installments, businessDate, now)
+                        : WorkOrderCharge.CreateAutomatic(scope.CompanyId, order.Id, order.TotalAmount, businessDate, now),
                     cancellationToken);
             }
         }

@@ -121,6 +121,7 @@ public static class DependencyInjection
         services.AddScoped<Payments.ConfirmWorkOrderChargeInstallmentUseCase>();
         services.AddScoped<Payments.UpdateWorkOrderChargeInstallmentUseCase>();
         services.AddScoped<Payments.DeleteWorkOrderChargeInstallmentUseCase>();
+        services.AddScoped<GetWorkOrderPixPaymentUseCase>();
         services.AddScoped<GetPublicCompanyPageUseCase>();
         services.AddScoped<GetPublicAvailableSlotsUseCase>();
         services.AddScoped<SubmitPublicAppointmentRequestUseCase>();

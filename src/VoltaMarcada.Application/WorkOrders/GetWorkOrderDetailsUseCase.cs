@@ -1,16 +1,18 @@
-﻿using VoltaMarcada.Application.Abstractions.Persistence;
+using VoltaMarcada.Application.Abstractions.Persistence;
 using VoltaMarcada.Application.Equipment;
 using VoltaMarcada.Domain.Enums;
 
 namespace VoltaMarcada.Application.WorkOrders;
 
-public sealed class GetWorkOrderDetailsUseCase(IWorkOrderRepository repository, WorkOrderAuthorization authorization, IServiceRepository serviceRepository, ICustomerRepository customerRepository, IEquipmentRepository equipmentRepository)
+public sealed class GetWorkOrderDetailsUseCase(IWorkOrderRepository repository, WorkOrderAuthorization authorization, IServiceRepository serviceRepository, ICustomerRepository customerRepository, IEquipmentRepository equipmentRepository, ICompanyRepository companyRepository)
 {
     public async Task<WorkOrderDetailDto?> ExecuteAsync(Guid workOrderId, CancellationToken cancellationToken = default)
     {
         var scope = await authorization.GetAccessScopeAsync(cancellationToken);
         var workOrder = await repository.GetForAccessAsync(workOrderId, scope.CompanyId, scope.IsOwner ? null : scope.ProfessionalId ?? Guid.Empty, cancellationToken);
         if (workOrder is null) return null;
+        var company = await companyRepository.GetByIdAsync(scope.CompanyId, cancellationToken);
+        if (company is null) return null;
         var service = await serviceRepository.GetForCompanyAsync(workOrder.ServiceId, scope.CompanyId, cancellationToken);
         if (service is null) return null;
         var canEdit = workOrder.Status == WorkOrderStatus.Pending;
@@ -26,7 +28,7 @@ public sealed class GetWorkOrderDetailsUseCase(IWorkOrderRepository repository, 
             workOrder.Photos.OrderBy(x => x.CreatedAtUtc).Select(x => new WorkOrderPhotoDto(x.Id, x.Type, x.Description, x.CreatedAtUtc)).ToArray(),
             workOrder.Attachments.OrderBy(x => x.CreatedAtUtc).Select(x => new WorkOrderAttachmentDto(x.Id, x.OriginalFileName, x.ContentType, x.Length, x.Description, x.CreatedAtUtc)).ToArray(),
             workOrder.HistoryEntries.OrderBy(x => x.CreatedAtUtc).Select(x => new WorkOrderHistoryEntryDto(x.EventType, x.Description, x.ActorUserId is { } actorUserId && actorNames.TryGetValue(actorUserId, out var actorName) ? actorName : null, x.CreatedAtUtc)).ToArray(),
-            new WorkOrderCapabilities(canEdit, scope.IsOwner && canEdit, workOrder.Status == WorkOrderStatus.Pending && workOrder.ProfessionalId is not null, canExecute, canManageAdditionalItems));
+            new WorkOrderCapabilities(canEdit, scope.IsOwner && canEdit, workOrder.Status == WorkOrderStatus.Pending && workOrder.ProfessionalId is not null, canExecute, canManageAdditionalItems), company.PaymentControlEnabled);
     }
 }
 

@@ -7,6 +7,7 @@
 @inject IComponentOperationExecutor OperationExecutor
 @inject ISnackbar Snackbar
 @inject IJSRuntime JsRuntime
+@inject GetWorkOrderPixPaymentUseCase GetWorkOrderPixPayment
 
 @if (WorkOrder.Status == WorkOrderStatus.Pending)
 {
@@ -155,16 +156,30 @@ else
                     {
                         <MudTextField @bind-Value="noChargeReason" Label="Motivo de não cobrança" Required="true" Lines="3" Variant="Variant.Outlined" Class="mt-3" />
                     }
-                    else if (WorkOrder.TotalAmount > 0)
+                    else
                     {
-                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">Será criada uma pendência de @WorkOrder.TotalAmount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) no Caixa para confirmação posterior.</MudAlert>
+                        <MudText Typo="Typo.subtitle2" Class="mt-3">Valor da OS: @WorkOrder.TotalAmount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))</MudText>
+                        <MudSelect T="PaymentMethod" Label="Forma de pagamento" Variant="Variant.Outlined" @bind-Value="selectedPaymentMethod" FullWidth="true" Class="mt-3">
+                            @foreach (var method in AvailablePaymentMethods) { <MudSelectItem Value="@method">@GetPaymentMethodLabel(method)</MudSelectItem> }
+                        </MudSelect>
+                        @if (selectedPaymentMethod == PaymentMethod.Other) { <MudTextField @bind-Value="otherPaymentMethodDescription" Label="Descreva a forma de pagamento" Required="true" Variant="Variant.Outlined" Class="mt-3" /> }
+                        @if (selectedPaymentMethod == PaymentMethod.Pix)
+                        {
+                            @if (isLoadingPixPayment) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-3" /> }
+                            else if (pixPayment is { } currentPixPayment)
+                            {
+                                <MudPaper Outlined="true" Class="pa-3 mt-3"><MudStack AlignItems="AlignItems.Center" Spacing="2"><PixQrCode Payload="@currentPixPayment.CopyAndPasteCode" Size="180" /><MudText Typo="Typo.subtitle2">PIX Copia e Cola</MudText><MudTextField T="string" Value="@currentPixPayment.CopyAndPasteCode" ReadOnly="true" Lines="3" Variant="Variant.Outlined" FullWidth="true" /><MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap"><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="CopyPixAsync">Copiar código PIX</MudButton>@if (currentPixPayment.WhatsAppShareLink is not null) { <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.Send" Href="@currentPixPayment.WhatsAppShareLink" Target="_blank">Enviar no WhatsApp</MudButton> }</MudStack></MudStack></MudPaper>
+                            }
+                            else { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">Configure a chave Pix da empresa para gerar a cobrança.</MudAlert> }
+                        }
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">A cobrança será incluída no Caixa como pendência para confirmação posterior.</MudAlert>
                     }
                 </DialogContent>
-                <DialogActions><MudButton OnClick="CloseCompletionDialog">Cancelar</MudButton><MudButton OnClick="CompleteAsync" Color="Color.Success" Variant="Variant.Filled">Concluir serviço</MudButton></DialogActions>
+                <DialogActions><MudButton OnClick="CloseCompletionDialog">Cancelar</MudButton><MudButton OnClick="CompleteAsync" Color="Color.Success" Variant="Variant.Filled" Disabled="@isLoadingPixPayment">Concluir serviço</MudButton></DialogActions>
             </MudDialog>
             <MudStack Row="true">
                 <MudButton OnClick="SaveAsync" Variant="Variant.Outlined" Disabled="@(isSaving || isUploadingPhoto)">Salvar progresso</MudButton>
-                <MudButton OnClick="OpenCompletionDialog" Color="Color.Success" Variant="Variant.Filled" Disabled="@(!CanComplete)">Concluir serviço</MudButton>
+                <MudButton OnClick="OpenCompletionDialogAsync" Color="Color.Success" Variant="Variant.Filled" Disabled="@(!CanComplete)">Concluir serviço</MudButton>
             </MudStack>
         }
     </MudStack>
@@ -203,6 +218,14 @@ else
     private bool isCompletionDialogOpen;
     private bool isNoCharge;
     private string? noChargeReason;
+    private PaymentMethod selectedPaymentMethod = PaymentMethod.Pix;
+    private string? otherPaymentMethodDescription;
+    private WorkOrderPixPaymentDto? pixPayment;
+    private bool isLoadingPixPayment;
+
+    private IEnumerable<PaymentMethod> AvailablePaymentMethods => pixPayment is null
+        ? Enum.GetValues<PaymentMethod>().Where(method => method != PaymentMethod.Pix)
+        : Enum.GetValues<PaymentMethod>();
     private string? recommendationPeriod;
     private int? customIntervalDays;
     private DateTime? recommendedDueDate;
@@ -423,7 +446,33 @@ else
         }
     }
 
-    private void OpenCompletionDialog() => isCompletionDialogOpen = true;
+    private async Task OpenCompletionDialogAsync()
+    {
+        if (!WorkOrder.PaymentControlEnabled || WorkOrder.TotalAmount <= 0)
+        {
+            await CompleteAsync();
+            return;
+        }
+
+        isNoCharge = false;
+        noChargeReason = null;
+        otherPaymentMethodDescription = null;
+        pixPayment = null;
+        isLoadingPixPayment = true;
+        try
+        {
+            pixPayment = await OperationExecutor.ExecuteAsync(
+                (GetWorkOrderPixPaymentUseCase useCase, CancellationToken cancellationToken) =>
+                    useCase.ExecuteAsync(WorkOrder.Id, WorkOrder.TotalAmount, cancellationToken));
+            selectedPaymentMethod = pixPayment is null ? PaymentMethod.Cash : PaymentMethod.Pix;
+        }
+        finally
+        {
+            isLoadingPixPayment = false;
+        }
+
+        isCompletionDialogOpen = true;
+    }
 
     private void CloseCompletionDialog() => isCompletionDialogOpen = false;
 
@@ -452,6 +501,18 @@ else
 
             paymentDecision = new WorkOrderPaymentDecisionInput(null, noChargeReason);
         }
+        else if (WorkOrder.PaymentControlEnabled && WorkOrder.TotalAmount > 0)
+        {
+            if (selectedPaymentMethod == PaymentMethod.Other && string.IsNullOrWhiteSpace(otherPaymentMethodDescription))
+            {
+                Snackbar.Add("Descreva a forma de pagamento.", Severity.Warning);
+                return;
+            }
+
+            paymentDecision = new WorkOrderPaymentDecisionInput(
+                [new VoltaMarcada.Domain.ValueObjects.WorkOrderChargeInstallmentDefinition(selectedPaymentMethod, WorkOrder.TotalAmount, otherPaymentMethodDescription)],
+                null);
+        }
 
         var result = await OperationExecutor.ExecuteAsync(
             (CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrder.Id, new CompleteWorkOrderCommand(recommendation, paymentDecision), cancellationToken));
@@ -465,6 +526,27 @@ else
 
         ShowOperationError(result.Error?.Code);
     }
+    private async Task CopyPixAsync()
+    {
+        if (pixPayment is null)
+        {
+            return;
+        }
+
+        await JsRuntime.InvokeVoidAsync("serviceSync.copyText", pixPayment.CopyAndPasteCode);
+        Snackbar.Add("Código Pix copiado.", Severity.Success);
+    }
+
+    private static string GetPaymentMethodLabel(PaymentMethod method) => method switch
+    {
+        PaymentMethod.Pix => "Pix",
+        PaymentMethod.Cash => "Dinheiro",
+        PaymentMethod.DebitCard => "Cartão de débito",
+        PaymentMethod.CreditCard => "Cartão de crédito",
+        PaymentMethod.BankTransfer => "Transferência bancária",
+        PaymentMethod.Other => "Outro",
+        _ => method.ToString()
+    };
     private bool TryCreateRecommendation(out MaintenanceRecommendationInput? recommendation)
     {
         recommendation = null;

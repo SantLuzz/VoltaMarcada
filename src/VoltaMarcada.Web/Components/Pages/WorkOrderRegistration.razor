@@ -124,11 +124,14 @@ else
                     }
                     <MudItem xs="12">
                         <WorkOrderItemsEditor @bind-Items="items"
+                                              EquipmentOptions="equipment"
+                                              ServiceOptions="services"
                                               ServiceName="@GetSelectedServiceName()"
                                               @bind-ServiceUnitPrice="serviceUnitPrice"
                                               @bind-DiscountAmount="discountAmount"
                                               IsServicePriceFixed="@IsServicePriceFixed"
                                               IsServicePriceReadOnly="@(WorkOrderId is not null)"
+                                              CanEditItemTypes="@CanEdit"
                                               ReadOnly="@(!CanManageAdditionalItems)" />
                     </MudItem>
                     @if (CanEdit || CanManageAdditionalItems)
@@ -354,9 +357,13 @@ else
         professionalId = detail.ProfessionalId;
         priority = detail.Priority;
         reportedProblem = detail.ReportedProblem ?? string.Empty;
-        serviceUnitPrice = detail.Items.SingleOrDefault(item => item.Type == WorkOrderItemType.Service)?.UnitPrice
+        serviceUnitPrice = detail.Items.FirstOrDefault(item => item.Type == WorkOrderItemType.Service)?.UnitPrice
             ?? (GetSelectedService()?.PriceType == ServicePriceType.Fixed ? GetSelectedService()?.BasePrice : null);
-        items = detail.Items.Where(item => item.Type != WorkOrderItemType.Service).Select(item => new WorkOrderItemInput(item.Description, item.Quantity, item.UnitPrice)).ToList();
+        var primaryServiceItemId = detail.Items.FirstOrDefault(item => item.Type == WorkOrderItemType.Service)?.Id;
+        items = detail.Items
+            .Where(item => item.Id != primaryServiceItemId)
+            .Select(item => new WorkOrderItemInput(item.EquipmentId, item.ServiceId, item.Description, item.Quantity, item.UnitPrice, item.Type))
+            .ToList();
         discountAmount = detail.DiscountAmount;
         await LoadEquipmentAsync(false);
         await LoadProfessionalOptions();
@@ -530,7 +537,7 @@ else
                 return;
             }
 
-            if (items.Any(item => string.IsNullOrWhiteSpace(item.Description) || item.Quantity <= 0 || item.UnitPrice < 0))
+            if (!AreItemsValid())
             {
                 Snackbar.Add("Revise os itens e valores da OS.", Severity.Warning);
                 return;
@@ -564,7 +571,7 @@ else
             return;
         }
 
-        if (items.Any(item => string.IsNullOrWhiteSpace(item.Description) || item.Quantity <= 0 || item.UnitPrice < 0))
+        if (!AreItemsValid())
         {
             Snackbar.Add("Revise os itens e valores da OS.", Severity.Warning);
             return;
@@ -582,7 +589,7 @@ else
                 ? new WorkOrderAppointmentInput(DateOnly.FromDateTime(newAppointmentDate!.Value), newAppointmentStartTime!.Value)
                 : null;
             var result = await OperationExecutor.ExecuteAsync(
-                (CreateWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, discountAmount, items, appointment, SourceAppointmentId), cancellationToken));
+                (CreateWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(new CreateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, discountAmount, items, appointment, SourceAppointmentId, BuildWorkOrderItems()), cancellationToken));
             if (result.IsSuccess && result.Value?.WorkOrderId is { } createdId)
             {
                 NavigationManager.NavigateTo($"/ordens-servico/registro?id={createdId}");
@@ -594,7 +601,7 @@ else
         }
 
         var updateResult = await OperationExecutor.ExecuteAsync(
-            (UpdateWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrderId.Value, new UpdateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, discountAmount, items), cancellationToken));
+            (UpdateWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrderId.Value, new UpdateWorkOrderCommand(customerId.Value, equipmentId.Value, serviceId.Value, professionalId, priority, reportedProblem, serviceUnitPrice, discountAmount, items, BuildWorkOrderItems()), cancellationToken));
         if (updateResult.IsSuccess)
         {
             Snackbar.Add("OS atualizada.", Severity.Success);
@@ -669,6 +676,24 @@ else
             : "Selecione um equipamento"
         : "Selecione um equipamento";
 
+    private bool AreItemsValid() => items.All(item =>
+        !string.IsNullOrWhiteSpace(item.Description) &&
+        item.Quantity > 0 &&
+        item.UnitPrice >= 0 &&
+        (item.Type != WorkOrderItemType.Service || item.ServiceId is { } serviceItemId && serviceItemId != Guid.Empty));
+
+    private IReadOnlyList<WorkOrderItemInput> BuildWorkOrderItems()
+    {
+        var primaryItem = new WorkOrderItemInput(
+            equipmentId,
+            serviceId,
+            GetSelectedServiceName(),
+            1,
+            serviceUnitPrice ?? 0m,
+            WorkOrderItemType.Service);
+
+        return [primaryItem, .. items];
+    }
     private sealed record StateOption(Guid Id, string Name, string Abbreviation);
     private sealed record CityOption(Guid Id, string Name);
 }
