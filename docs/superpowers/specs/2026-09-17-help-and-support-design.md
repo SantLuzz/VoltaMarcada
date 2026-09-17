@@ -1,92 +1,65 @@
 # Help and Support Design
 
-## Purpose
+## Goal
 
-Provide authenticated VoltaMarcada users with an in-application help area that explains the principal operational flows and offers direct support through WhatsApp or an email support request.
+Allow an authenticated company member to access practical product guidance, contact VoltaMarcada through WhatsApp, or securely submit a support request with optional image attachments.
 
-The support request must be delivered through the existing SMTP infrastructure to the same VoltaMarcada mailbox configured as `Smtp:SenderEmail`. The user can attach screenshots or other error images, and a support operator can reply directly to the user's authenticated email address.
+## Scope and constraints
 
-## Scope
+- The internal page is available at `/ajuda` and is accessible only to authenticated company members.
+- Source-code identifiers, validation codes, logs, and documentation are English. Visible UI copy is Brazilian Portuguese.
+- The browser supplies only subject, message, and attachment content. The server resolves the user and company context.
+- A support request may contain at most five PNG, JPEG, or WEBP images; each is limited to 5 MiB and all attachments together are limited to 20 MiB.
+- Attachment acceptance depends on binary image-signature validation, not filename or declared content type. Accepted attachment content types are derived from the detected signature.
+- The request email is addressed to `Smtp:SenderEmail`, uses the authenticated user's email as `Reply-To`, and contains the authenticated user's name/email plus the tenant's trade and legal names in an HTML-encoded body.
+- Requests are limited to five per authenticated user in every fixed ten-minute window. The limiter must partition on the authenticated user ID, never client IP.
+- `Support:WhatsAppNumber` is optional. Its configuration abstraction strips non-digits, accepts a Brazilian local 10/11-digit number by prepending `55`, accepts a 12/13-digit international number only when it starts with `55`, and exposes `null` for missing or invalid values. The UI renders a WhatsApp link only when a valid number exists.
 
-- Add an authenticated Help and Support page at `/ajuda`, linked from the main navigation.
-- Present concise in-app help for the principal operational flows:
-  - getting started and registrations;
-  - customers and equipment;
-  - work orders and execution;
-  - schedule and appointments;
-  - recurring maintenance and contextual booking links;
-  - quotes;
-  - public booking requests.
-- Keep a Markdown source document with the same flow reference for maintainers.
-- Add a WhatsApp contact action using a configurable support number.
-- Add a support request form with subject, message, and image attachments.
-- Deliver requests through the existing SMTP sender and make replies go to the authenticated user.
+## Application design
 
-## Configuration
+Create a `Support` application feature with:
 
-`Support:WhatsAppNumber` is the only new setting. It is a non-secret number formatted for WhatsApp international dialing.
+- `SendSupportRequestCommand(string Subject, string Message, IReadOnlyList<SupportAttachmentInput> Attachments)`.
+- `SupportAttachmentInput(string FileName, string DeclaredContentType, byte[] Content)` as the transport-neutral attachment value.
+- `SendSupportRequestUseCase`, using `ICurrentUser`, `ICurrentCompany`, an application persistence abstraction or `AppDbContext`-backed existing data-access pattern, and `IEmailSender`.
+- `SupportErrors` and explicit operation results for unauthenticated users, missing company membership, missing required text, invalid attachment count/size/total size/signature, unavailable user email, and unavailable support recipient.
 
-Production maps it from `Support__WhatsAppNumber` in `deploy/compose.production.yml`. The environment example declares the variable with a placeholder only. No real support number, SMTP address, password, or credential is committed.
+The use case trims and bounds text, checks authentication before accessing identifiers, loads the current user and company using both IDs and tenant membership, validates each byte array before creating `EmailAttachment`, and invokes `IEmailSender.SendAsync`. The email subject is prefixed to identify support traffic. The HTML body encodes all user-provided and database-derived strings.
 
-The support request recipient is deliberately not separately configurable. It is `Smtp:SenderEmail`, which is already supplied from the production environment and identifies the VoltaMarcada mailbox that both sends and receives support messages.
+Signature detection recognizes PNG (`89 50 4E 47 0D 0A 1A 0A`), JPEG (`FF D8 FF`), and RIFF/WEBP (`RIFF` at offset zero and `WEBP` at offset eight). It rejects truncated signatures and every other payload, including files whose extension or declared MIME type falsely claims to be an image.
 
-## User Experience
+## Web endpoint and configuration design
 
-The page uses the established authenticated application shell and MudBlazor components. It has:
+Add `SupportEndpoints.MapSupportEndpoints` and map `POST /support/requests`. The endpoint accepts multipart form fields `subject`, `message`, and zero or more `attachments`; it translates `IFormFile` streams to bounded byte arrays before calling the use case. It applies `AuthorizationPolicies.CompanyMember` and the `support-requests` rate-limit policy. It returns a successful empty response for delivery acceptance and standardized validation/problem responses for expected failures.
 
-1. A page header explaining that users can consult guides or contact VoltaMarcada.
-2. Help sections presented as clear expandable cards, using plain Brazilian Portuguese and linking to relevant application pages where helpful.
-3. A support contact card with a WhatsApp button. The generated URL contains only the configured number and an optional generic pre-filled message; no tenant or user data is put in the URL.
-4. A support form with required subject and message fields, an optional multi-image picker, submission state, and clear success or error feedback.
+Add `SupportOptions` and `SupportConfiguration` in `VoltaMarcada.Web.Configuration`, with an `ISupportConfiguration` application-facing interface if the page must not reference Web option classes directly. Register options binding and validation at startup, the configuration abstraction, the endpoint mapper, the use case, and the rate-limit policy in `Program.cs`. The policy's partition key uses `ClaimTypes.NameIdentifier`; a missing or invalid claim gets a non-shared rejected partition.
 
-The form is available only to authenticated company members. The application resolves the company and user identity server-side; no company or user identifiers are accepted from the browser as authority.
+No SMTP credential moves are required: the existing `SmtpEmailSender` and extended `EmailMessage` remain the delivery boundary. Production compose and `.env.production.example` already map `SUPPORT_WHATSAPP_NUMBER`; source tests will assert that contract and that no example value contains secrets.
 
-## Support Email Flow
+## UI design
 
-1. The browser sends the subject, message, and selected images to an authenticated support endpoint.
-2. Server-side validation checks the form values and uploads.
-3. The application builds a support email containing the authenticated user's display name, email, company name, submitted subject, and safely encoded message.
-4. The email recipient and sender are both `Smtp:SenderEmail`.
-5. The message `Reply-To` is the authenticated user's email address, allowing the support operator to reply directly from the VoltaMarcada mailbox.
-6. Valid image content is attached to the message and SMTP delivers it through the existing sender.
-7. No attachment is persisted after the request lifecycle completes.
+Create `Components/Pages/Help.razor` with `@page "/ajuda"`, company-member authorization, and MudBlazor layout sections for the seven requested topics: registrations, customers/equipment, work orders, schedule, recurring maintenance, quotes, and public requests.
 
-## Attachment Safety Rules
+The page displays a WhatsApp button only when `ISupportConfiguration.WhatsAppUrl` is available. Its message says that the channel is for assistance and opens the normalized `wa.me` URL. The form uses `MudForm`, a subject field, message field, MudBlazor-compatible image selection, a list of selected files, client-side guidance, pending/success/error states, and submits multipart data to `/support/requests`. Client-side checks improve feedback but do not replace endpoint/use-case validation.
 
-The initial release accepts only PNG, JPEG, and WEBP images. A request may contain at most five images, each no larger than 5 MB, with a combined maximum of 20 MB.
+Add a navigation item named `Ajuda e suporte` to `MainLayout`. It appears in the internal company-context drawer alongside the operational navigation.
 
-Validation is enforced on the server by extension, declared MIME type, and image signature/content inspection before any email is composed. Filenames are treated as display-only data and sanitized for email headers. Invalid images fail the request with a clear validation message. Attachments are held in memory only for the request and disposed after sending; they are neither stored nor made publicly accessible.
+## Error handling and security
 
-## Application Boundaries
+- The endpoint never binds user name, user email, company name, company ID, or recipient email from client input.
+- The use case rechecks authentication and company association, so direct endpoint calls and internal invocations share the same security boundary.
+- Rejected attachments are never passed to SMTP.
+- User-visible errors are generic and Portuguese; logs avoid including message bodies or attachment data.
+- Email sending preserves the current sender behavior. Delivery failures are logged by the sender and are not exposed as SMTP internals to the user.
 
-The Application project owns a focused `SendSupportRequest` use case, request/response contracts, validation, and a small configuration abstraction for the WhatsApp number. It depends on the existing email abstraction, extended with optional reply-to and attachment data.
+## Tests and documentation
 
-Infrastructure owns SMTP-specific message construction, including `MailMessage.ReplyToList` and attachments. Existing password-reset and notification flows remain compatible because attachments and reply-to are optional.
+Add or extend tests covering:
 
-Web owns the `/ajuda` page, multipart request binding, authenticated endpoint, page interaction, and configuration binding. Razor components do not decide the recipient or trust browser-provided tenancy data.
+1. `SendSupportRequestUseCase`: valid request builds the expected email recipient, HTML context, reply-to, and detected attachment content type; missing authentication/membership; blank subject/message; attachment count; per-file and aggregate limits; invalid/disguised/truncated image signatures.
+2. `SupportEndpoints`: unauthenticated and no-company access rejection, multipart success without trusting client identity fields, validation result mapping, and user-partitioned five-per-ten-minute rate limiting.
+3. `SupportConfiguration`: blank/invalid input has no link and formatted Brazilian/international values produce the normalized `https://wa.me/55...` URL.
+4. `Help.razor` and `MainLayout`: route, guidance sections, form controls, conditional WhatsApp CTA, and navigation link source contracts.
+5. Existing mail and production deployment source tests: `ReplyToEmail` and attachments remain covered; support production configuration maps `SUPPORT_WHATSAPP_NUMBER` while examples remain sanitized.
 
-## Error Handling and Abuse Protection
-
-Expected validation failures return structured errors and keep the user-entered form state where possible. SMTP delivery failures are logged without exposing mail-server details and return a generic support-unavailable message.
-
-The endpoint uses the existing authenticated authorization policy and a dedicated request rate limit appropriate for a human support form. It does not log attachment bytes, credentials, or message bodies.
-
-## Testing
-
-Integration tests cover:
-
-- production configuration mapping for `Support__WhatsAppNumber`;
-- navigation and authenticated rendering of the help page;
-- server-side form validation;
-- use-case recipient selection from the SMTP sender setting;
-- authenticated user email as reply-to;
-- allowed image attachments and rejection of unsupported, oversized, or excessive uploads;
-- SMTP message construction with optional reply-to and attachments;
-- preservation of existing no-attachment email behavior.
-
-## Non-Goals
-
-- Ticket persistence, support dashboards, ticket statuses, or SLA workflow;
-- file storage, public upload URLs, or non-image attachments;
-- official WhatsApp Business API integration;
-- exposing internal logs or tenant data through support requests.
+Create `docs/help-and-support-flows.md` for end-user-facing operational guidance and the support submission flow, and link it from the repository README.
