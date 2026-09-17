@@ -222,4 +222,19 @@ public sealed class ProductionDeploymentSourceTests
 
         throw new DirectoryNotFoundException("Repository root could not be found.");
     }
+
+    [Fact]
+    public void ProductionSupportConfiguration_ShouldMapWhatsAppNumberWithoutExampleSecrets()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var compose = File.ReadAllText(Path.Combine(repositoryRoot, "deploy", "compose.production.yml"));
+        var environmentExample = File.ReadAllText(Path.Combine(repositoryRoot, "deploy", ".env.production.example"));
+        using var settingsDocument = JsonDocument.Parse(File.ReadAllText(Path.Combine(repositoryRoot, "src", "VoltaMarcada.Web", "appsettings.json")));
+        var root = settingsDocument.RootElement;
+
+        Assert.Contains("Support__WhatsAppNumber: ${SUPPORT_WHATSAPP_NUMBER}", compose);
+        Assert.Equal(string.Empty, root.GetProperty("Support").GetProperty("WhatsAppNumber").GetString());
+        Assert.Contains("SUPPORT_WHATSAPP_NUMBER=", environmentExample);
+        Assert.DoesNotContain("Password=", environmentExample);
+    }
 }
