@@ -1,5 +1,21 @@
 namespace VoltaMarcada.Application.Abstractions.Communication;
 
+public sealed record EmailAttachment
+{
+    public EmailAttachment(string fileName, string contentType, byte[] content)
+    {
+        FileName = Sanitize(fileName);
+        ContentType = Sanitize(contentType);
+        Content = content;
+    }
+
+    public string FileName { get; }
+    public string ContentType { get; }
+    public byte[] Content { get; }
+
+    private static string Sanitize(string value) => value.Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", string.Empty, StringComparison.Ordinal);
+}
+
 public interface IEmailSender
 {
     Task SendAsync(EmailMessage email, CancellationToken cancellationToken = default);
@@ -7,18 +23,22 @@ public interface IEmailSender
 
 public sealed record EmailMessage
 {
-    public EmailMessage(string recipientEmail, string subject, string htmlBody)
+    public EmailMessage(string recipientEmail, string subject, string htmlBody, string? replyToEmail = null, IEnumerable<EmailAttachment>? attachments = null)
     {
-        RecipientEmail = recipientEmail;
-        Subject = subject.Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", string.Empty, StringComparison.Ordinal);
+        RecipientEmail = Sanitize(recipientEmail);
+        Subject = Sanitize(subject);
         HtmlBody = htmlBody;
+        ReplyToEmail = string.IsNullOrWhiteSpace(replyToEmail) ? null : Sanitize(replyToEmail);
+        Attachments = Array.AsReadOnly((attachments ?? []).ToArray());
     }
 
     public string RecipientEmail { get; }
-
     public string Subject { get; }
-
     public string HtmlBody { get; }
+    public string? ReplyToEmail { get; }
+    public IReadOnlyList<EmailAttachment> Attachments { get; }
+
+    private static string Sanitize(string value) => value.Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", string.Empty, StringComparison.Ordinal);
 }
 
 public sealed record AccountPasswordResetEmail(string Subject, string HtmlBody)
@@ -27,8 +47,6 @@ public sealed record AccountPasswordResetEmail(string Subject, string HtmlBody)
     {
         var safeName = System.Net.WebUtility.HtmlEncode(recipientName);
         var safeUrl = System.Net.WebUtility.HtmlEncode(resetUrl.AbsoluteUri);
-        return new AccountPasswordResetEmail(
-            "Redefina sua senha",
-            $"<p>Ol\u00e1, {safeName}.</p><p>Recebemos uma solicita\u00e7\u00e3o para redefinir sua senha.</p><p><a href=\"{safeUrl}\">Redefinir senha</a></p><p>Se voc\u00ea n\u00e3o solicitou esta altera\u00e7\u00e3o, ignore este e-mail.</p>");
+        return new AccountPasswordResetEmail("Redefina sua senha", $"<p>Olá, {safeName}.</p><p>Recebemos uma solicitação para redefinir sua senha.</p><p><a href=\"{safeUrl}\">Redefinir senha</a></p><p>Se você não solicitou esta alteração, ignore este e-mail.</p>");
     }
 }

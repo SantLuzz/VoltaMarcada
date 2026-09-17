@@ -55,6 +55,7 @@ services:
       Smtp__SenderName: ${SMTP_SENDER_NAME}
       Smtp__Username: ${SMTP_USERNAME}
       Smtp__Password: ${SMTP_PASSWORD}
+      Support__WhatsAppNumber: ${SUPPORT_WHATSAPP_NUMBER}
       LicenseBilling__PixKey: ${LICENSE_BILLING_PIX_KEY}
       PlatformAdministrator__Email: ${PLATFORM_ADMINISTRATOR_EMAIL}
       PlatformAdministrator__Password: ${PLATFORM_ADMINISTRATOR_PASSWORD}
