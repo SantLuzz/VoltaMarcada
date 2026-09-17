@@ -90,6 +90,37 @@ public sealed class WorkOrderEnhancementsTests
         Assert.Equal(serviceB, workOrder.Items.ElementAt(1).ServiceId);
     }
 
+
+    [Fact]
+    public void UpdatePendingDetails_WithAnAdditionalServiceItem_AllowsTheServiceAndPreservesItsAssociation()
+    {
+        var companyId = Guid.NewGuid();
+        var customerId = Guid.NewGuid();
+        var equipmentA = Guid.NewGuid();
+        var equipmentB = Guid.NewGuid();
+        var serviceA = Guid.NewGuid();
+        var serviceB = Guid.NewGuid();
+        var primaryItem = new WorkOrderItemDefinition("Clean A", 1, 120m, WorkOrderItemType.Service, equipmentA, serviceA);
+        var additionalServiceItem = new WorkOrderItemDefinition("Repair B", 1, 150m, WorkOrderItemType.Service, equipmentB, serviceB);
+        var workOrder = WorkOrder.Create(companyId, customerId, equipmentA, serviceA, Guid.NewGuid(), Guid.NewGuid(), WorkOrderPriority.Normal, null, [primaryItem], [], Now);
+
+        workOrder.UpdatePendingDetails(
+            customerId,
+            equipmentA,
+            serviceA,
+            workOrder.ProfessionalId,
+            WorkOrderPriority.Normal,
+            null,
+            [primaryItem, additionalServiceItem],
+            [],
+            0m,
+            Now.AddMinutes(1));
+
+        var additionalService = Assert.Single(workOrder.Items, item => item.ServiceId == serviceB);
+        Assert.Equal(equipmentB, additionalService.EquipmentId);
+        Assert.Equal(WorkOrderItemType.Service, additionalService.Type);
+    }
+
     [Fact]
     public void AddAttachmentAndHistory_WhenWorkOrderIsInProgress_RecordsImmutableMetadata()
     {
