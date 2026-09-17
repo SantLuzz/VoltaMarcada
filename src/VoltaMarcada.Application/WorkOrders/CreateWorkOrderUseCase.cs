@@ -1,4 +1,4 @@
-using VoltaMarcada.Application.Abstractions.Operations;
+﻿using VoltaMarcada.Application.Abstractions.Operations;
 using FluentValidation;
 using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Application.Abstractions.Persistence;
@@ -106,3 +106,4 @@ public sealed class CreateWorkOrderUseCase(IWorkOrderRepository workOrderReposit
         return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(workOrder.Id));
     }
 }
+

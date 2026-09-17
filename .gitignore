@@ -32,3 +32,4 @@ user-secrets.txt
 .DS_Store
 Thumbs.db
 env.txt
+deploy/.env.production.example

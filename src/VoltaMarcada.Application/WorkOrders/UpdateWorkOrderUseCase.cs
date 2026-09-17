@@ -1,4 +1,4 @@
-using VoltaMarcada.Application.Abstractions.Identity;
+﻿using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Application.Abstractions.Operations;
 using FluentValidation;
 using VoltaMarcada.Application.Abstractions.Persistence;
@@ -45,6 +45,9 @@ public sealed class UpdateWorkOrderUseCase(
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidStatus);
         }
 
+        var firstLinkedItem = command.Items?.FirstOrDefault(item => item.EquipmentId is { } equipmentId && equipmentId != Guid.Empty && item.ServiceId is { } serviceId && serviceId != Guid.Empty);
+        if (command.Items is not null && firstLinkedItem is null) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
+        if (firstLinkedItem is not null) command = command with { EquipmentId = firstLinkedItem.EquipmentId!.Value, ServiceId = firstLinkedItem.ServiceId!.Value };
         var customer = await customerRepository.GetForCompanyAsync(command.CustomerId, scope.CompanyId, cancellationToken);
         if (customer is null)
         {
@@ -153,3 +156,5 @@ public sealed class UpdateWorkOrderUseCase(
         return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(workOrder.Id));
     }
 }
+
+

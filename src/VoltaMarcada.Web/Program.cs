@@ -1,6 +1,8 @@
 using MudBlazor.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Localization;
+using System.Globalization;
 using VoltaMarcada.Application.CompanyOnboarding;
 using VoltaMarcada.Application;
 using VoltaMarcada.Application.Abstractions.Identity;
@@ -24,6 +26,16 @@ using Microsoft.AspNetCore.Components.Server;
 using VoltaMarcada.Application.Licensing;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var brazilianCulture = CultureInfo.GetCultureInfo("pt-BR");
+CultureInfo.DefaultThreadCurrentCulture = brazilianCulture;
+CultureInfo.DefaultThreadCurrentUICulture = brazilianCulture;
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    options.DefaultRequestCulture = new RequestCulture(brazilianCulture);
+    options.SupportedCultures = [brazilianCulture];
+    options.SupportedUICultures = [brazilianCulture];
+});
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options =>
@@ -163,6 +175,7 @@ catch (Exception exception)
 }
 await PlatformAdministratorInitializer.InitializeAsync(app.Services, builder.Configuration);
 
+app.UseRequestLocalization();
 app.UseExceptionHandler();
 
 if (!app.Environment.IsDevelopment())

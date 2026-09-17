@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace VoltaMarcada.IntegrationTests.Deployment;
@@ -15,10 +16,25 @@ public sealed class ProductionDeploymentSourceTests
 
         Assert.Contains("app.MapGet(\"/health\"", program);
         Assert.Contains("Results.Text(\"Healthy\")", program);
+        Assert.Contains("CultureInfo.GetCultureInfo(\"pt-BR\")", program);
+        Assert.Contains("CultureInfo.DefaultThreadCurrentCulture = brazilianCulture", program);
+        Assert.Contains("CultureInfo.DefaultThreadCurrentUICulture = brazilianCulture", program);
+        Assert.Contains("app.UseRequestLocalization", program);
         Assert.Equal(string.Empty, root.GetProperty("ConnectionStrings").GetProperty("DefaultConnection").GetString());
         Assert.Equal(string.Empty, root.GetProperty("Cloudinary").GetProperty("ApiSecret").GetString());
         Assert.Equal(string.Empty, root.GetProperty("Smtp").GetProperty("Password").GetString());
         Assert.Equal(string.Empty, root.GetProperty("LicenseBilling").GetProperty("PixKey").GetString());
+    }
+
+    [Fact]
+    public void MudBlazorFormControls_ShouldUseBrazilianCultureAndPortugueseRequiredMessages()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var sources = string.Join(Environment.NewLine, Directory.GetFiles(Path.Combine(repositoryRoot, "src", "VoltaMarcada.Web", "Components"), "*.razor", SearchOption.AllDirectories).Select(File.ReadAllText)).Replace("=>", "= ");
+
+        Assert.DoesNotMatch(new Regex("<MudDatePicker(?![^>]*\\bCulture=)", RegexOptions.Singleline), sources);
+        Assert.DoesNotMatch(new Regex("<MudNumericField(?![^>]*\\bCulture=)", RegexOptions.Singleline), sources);
+        Assert.DoesNotMatch(new Regex("<Mud(?:TextField|Select|NumericField|DatePicker)(?=[^>]*\\bRequired=\\\"true\\\")(?![^>]*\\bRequiredError=)", RegexOptions.Singleline), sources);
     }
 
     [Fact]

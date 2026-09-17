@@ -1,9 +1,10 @@
-using VoltaMarcada.Application.Abstractions.Persistence;
+﻿using VoltaMarcada.Application.Abstractions.Persistence;
+using VoltaMarcada.Application.Equipment;
 using VoltaMarcada.Domain.Enums;
 
 namespace VoltaMarcada.Application.WorkOrders;
 
-public sealed class GetWorkOrderDetailsUseCase(IWorkOrderRepository repository, WorkOrderAuthorization authorization, IServiceRepository serviceRepository, ICustomerRepository customerRepository)
+public sealed class GetWorkOrderDetailsUseCase(IWorkOrderRepository repository, WorkOrderAuthorization authorization, IServiceRepository serviceRepository, ICustomerRepository customerRepository, IEquipmentRepository equipmentRepository)
 {
     public async Task<WorkOrderDetailDto?> ExecuteAsync(Guid workOrderId, CancellationToken cancellationToken = default)
     {
@@ -17,9 +18,10 @@ public sealed class GetWorkOrderDetailsUseCase(IWorkOrderRepository repository, 
         var canManageAdditionalItems = workOrder.Status is not (WorkOrderStatus.Completed or WorkOrderStatus.Cancelled);
         var customer = await customerRepository.GetForCompanyAsync(workOrder.CustomerId, scope.CompanyId, cancellationToken);
         if (customer is null) return null;
+        var equipmentDescriptions = (await equipmentRepository.GetAllForCompanyAsync(scope.CompanyId, GetEquipmentQuery.Empty, cancellationToken)).ToDictionary(item => item.Equipment.Id, item => string.Join(" ", new[] { item.Equipment.Type, item.Equipment.Manufacturer, item.Equipment.Model }.Where(value => !string.IsNullOrWhiteSpace(value))));
         var actorNames = await repository.GetHistoryActorNamesAsync(scope.CompanyId, workOrder.HistoryEntries.Where(entry => entry.ActorUserId is not null).Select(entry => entry.ActorUserId!.Value).Distinct().ToArray(), cancellationToken);
         return new WorkOrderDetailDto(workOrder.Id, workOrder.CustomerId, workOrder.EquipmentId, workOrder.ServiceId, workOrder.ProfessionalId, workOrder.Status, workOrder.Priority, workOrder.ReportedProblem, workOrder.ExecutionNotes, service.RequireBeforePhotos, service.RequireAfterPhotos, workOrder.DiscountAmount, workOrder.TotalAmount,
-            workOrder.Items.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderItemDto(x.Id, x.Description, x.Quantity, x.UnitPrice, x.Type, x.TotalAmount, x.DisplayOrder)).ToArray(),
+            workOrder.Items.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderItemDto(x.Id, x.Description, x.Quantity, x.UnitPrice, x.Type, x.TotalAmount, x.DisplayOrder, x.EquipmentId, x.EquipmentId is { } equipmentId ? equipmentDescriptions.GetValueOrDefault(equipmentId, "Equipamento indisponível") : null, x.ServiceId)).ToArray(),
             workOrder.ChecklistItems.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderChecklistItemDto(x.Id, x.Description, x.IsRequired, x.IsCompleted, x.CompletedAtUtc, x.DisplayOrder)).ToArray(),
             workOrder.Photos.OrderBy(x => x.CreatedAtUtc).Select(x => new WorkOrderPhotoDto(x.Id, x.Type, x.Description, x.CreatedAtUtc)).ToArray(),
             workOrder.Attachments.OrderBy(x => x.CreatedAtUtc).Select(x => new WorkOrderAttachmentDto(x.Id, x.OriginalFileName, x.ContentType, x.Length, x.Description, x.CreatedAtUtc)).ToArray(),
@@ -27,6 +29,9 @@ public sealed class GetWorkOrderDetailsUseCase(IWorkOrderRepository repository, 
             new WorkOrderCapabilities(canEdit, scope.IsOwner && canEdit, workOrder.Status == WorkOrderStatus.Pending && workOrder.ProfessionalId is not null, canExecute, canManageAdditionalItems));
     }
 }
+
+
+
 
 
 

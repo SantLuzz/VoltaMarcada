@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 
 namespace VoltaMarcada.Application.WorkOrders;
 
@@ -6,7 +6,7 @@ public sealed class CreateWorkOrderCommandValidator : AbstractValidator<CreateWo
 {
     public CreateWorkOrderCommandValidator()
     {
-        RuleFor(x => x.CustomerId).NotEmpty(); RuleFor(x => x.EquipmentId).NotEmpty(); RuleFor(x => x.ServiceId).NotEmpty(); RuleFor(x => x.Priority).IsInEnum(); RuleFor(x => x.ReportedProblem).MaximumLength(2000); RuleFor(x => x.ServiceUnitPrice).GreaterThanOrEqualTo(0).When(value => value.ServiceUnitPrice.HasValue); RuleFor(x => x.DiscountAmount).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.CustomerId).NotEmpty(); RuleFor(x => x.EquipmentId).NotEmpty().When(x => x.Items is null); RuleFor(x => x.ServiceId).NotEmpty().When(x => x.Items is null); RuleFor(x => x.Priority).IsInEnum(); RuleFor(x => x.ReportedProblem).MaximumLength(2000); RuleFor(x => x.ServiceUnitPrice).GreaterThanOrEqualTo(0).When(value => value.ServiceUnitPrice.HasValue); RuleFor(x => x.DiscountAmount).GreaterThanOrEqualTo(0);
         RuleFor(x => x.AdditionalItems).NotNull().Must(items => items.Count <= 100);
         RuleForEach(x => x.AdditionalItems).ChildRules(item =>
         {
@@ -21,7 +21,7 @@ public sealed class UpdateWorkOrderCommandValidator : AbstractValidator<UpdateWo
 {
     public UpdateWorkOrderCommandValidator()
     {
-        RuleFor(x => x.CustomerId).NotEmpty(); RuleFor(x => x.EquipmentId).NotEmpty(); RuleFor(x => x.ServiceId).NotEmpty(); RuleFor(x => x.Priority).IsInEnum(); RuleFor(x => x.ReportedProblem).MaximumLength(2000); RuleFor(x => x.ServiceUnitPrice).GreaterThanOrEqualTo(0).When(value => value.ServiceUnitPrice.HasValue); RuleFor(x => x.DiscountAmount).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.CustomerId).NotEmpty(); RuleFor(x => x.EquipmentId).NotEmpty().When(x => x.Items is null); RuleFor(x => x.ServiceId).NotEmpty().When(x => x.Items is null); RuleFor(x => x.Priority).IsInEnum(); RuleFor(x => x.ReportedProblem).MaximumLength(2000); RuleFor(x => x.ServiceUnitPrice).GreaterThanOrEqualTo(0).When(value => value.ServiceUnitPrice.HasValue); RuleFor(x => x.DiscountAmount).GreaterThanOrEqualTo(0);
         RuleFor(x => x.AdditionalItems).NotNull().Must(items => items.Count <= 100);
         RuleForEach(x => x.AdditionalItems).ChildRules(item =>
         {
@@ -55,3 +55,4 @@ public sealed class SaveWorkOrderChecklistProgressCommandValidator : AbstractVal
         RuleFor(x => x.ExecutionNotes).MaximumLength(4000);
     }
 }
+

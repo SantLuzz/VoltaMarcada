@@ -1,4 +1,4 @@
-using VoltaMarcada.Application.Abstractions.Operations;
+﻿using VoltaMarcada.Application.Abstractions.Operations;
 using VoltaMarcada.Application.Abstractions.Persistence;
 using VoltaMarcada.Application.WorkOrders;
 using VoltaMarcada.Domain.Exceptions;
@@ -19,6 +19,11 @@ public sealed class UpdateQuoteUseCase(IQuoteRepository quotes, IEquipmentReposi
         var quote = await quotes.GetForCompanyAsync(quoteId, scope.CompanyId, cancellationToken);
         if (quote is null) return OperationResult<Guid>.Failure(QuoteErrors.NotFound);
 
+        var firstLinkedItem = command.Items.FirstOrDefault(item => item.EquipmentId is { } equipmentId && equipmentId != Guid.Empty && item.ServiceId is { } serviceId && serviceId != Guid.Empty);
+        if (firstLinkedItem is not null)
+        {
+            quote.UpdateDraft(command.Items.Select(item => new QuoteItemDefinition(item.Description, item.Quantity, item.UnitPrice, item.Type, item.EquipmentId, item.ServiceId)).ToArray(), command.DiscountAmount, command.Notes, command.ValidUntil, timeProvider.GetUtcNow());
+        }
         foreach (var item in command.Items)
         {
             if (item.Type == VoltaMarcada.Domain.Enums.QuoteItemType.Service && (item.ServiceId is null || item.ServiceId == Guid.Empty))
@@ -51,3 +56,4 @@ public sealed class UpdateQuoteUseCase(IQuoteRepository quotes, IEquipmentReposi
         }
     }
 }
+
