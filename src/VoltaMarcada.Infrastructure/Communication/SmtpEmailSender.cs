@@ -11,33 +11,15 @@ public sealed class SmtpEmailSender(IOptions<SmtpOptions> options, ILogger<SmtpE
     public async Task SendAsync(EmailMessage email, CancellationToken cancellationToken = default)
     {
         var smtpOptions = options.Value;
-        if (!smtpOptions.Enabled)
-        {
-            logger.LogWarning("Email delivery is disabled for recipient {RecipientEmail}", email.RecipientEmail);
-            return;
-        }
-
+        if (!smtpOptions.Enabled) { logger.LogWarning("Email delivery is disabled for recipient {RecipientEmail}", email.RecipientEmail); return; }
         try
         {
-            using var message = new MailMessage(new MailAddress(smtpOptions.SenderEmail, smtpOptions.SenderName), new MailAddress(email.RecipientEmail))
-            {
-                Subject = email.Subject,
-                Body = email.HtmlBody,
-                IsBodyHtml = true
-            };
-            using var client = new SmtpClient(smtpOptions.Host, smtpOptions.Port)
-            {
-                EnableSsl = smtpOptions.UseTls,
-                UseDefaultCredentials = false,
-                Credentials = string.IsNullOrWhiteSpace(smtpOptions.Username)
-                    ? CredentialCache.DefaultNetworkCredentials
-                    : new NetworkCredential(smtpOptions.Username, smtpOptions.Password)
-            };
+            using var message = new MailMessage(new MailAddress(smtpOptions.SenderEmail, smtpOptions.SenderName), new MailAddress(email.RecipientEmail)) { Subject = email.Subject, Body = email.HtmlBody, IsBodyHtml = true };
+            if (!string.IsNullOrWhiteSpace(email.ReplyToEmail)) message.ReplyToList.Add(new MailAddress(email.ReplyToEmail));
+            foreach (var item in email.Attachments) message.Attachments.Add(new Attachment(new MemoryStream(item.Content, writable: false), item.FileName, item.ContentType));
+            using var client = new SmtpClient(smtpOptions.Host, smtpOptions.Port) { EnableSsl = smtpOptions.UseTls, UseDefaultCredentials = false, Credentials = string.IsNullOrWhiteSpace(smtpOptions.Username) ? CredentialCache.DefaultNetworkCredentials : new NetworkCredential(smtpOptions.Username, smtpOptions.Password) };
             await client.SendMailAsync(message, cancellationToken);
         }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Unable to deliver email to recipient {RecipientEmail}", email.RecipientEmail);
-        }
+        catch (Exception exception) { logger.LogError(exception, "Unable to deliver email to recipient {RecipientEmail}", email.RecipientEmail); }
     }
 }
