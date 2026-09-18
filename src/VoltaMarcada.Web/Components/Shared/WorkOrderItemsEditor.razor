@@ -199,7 +199,12 @@
     {
         var service = ServiceOptions.SingleOrDefault(option => option.Id == serviceId);
         var unitPrice = service?.PriceType is ServicePriceType.Fixed or ServicePriceType.StartingAt ? service.BasePrice ?? item.UnitPrice : item.UnitPrice;
-        return UpdateItem(index, item with { ServiceId = serviceId, UnitPrice = unitPrice });
+        return UpdateItem(index, item with
+        {
+            ServiceId = serviceId,
+            Description = service?.Name ?? item.Description,
+            UnitPrice = unitPrice
+        });
     }
 
     private Task OnDiscountAmountChanged(decimal? value) => DiscountAmountChanged.InvokeAsync(value ?? 0m);

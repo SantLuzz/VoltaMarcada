@@ -68,8 +68,11 @@ public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IA
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidMaintenanceRecommendation);
         }
 
-        var recommendedService = await serviceRepository.GetForCompanyAsync(recommendation.RecommendedServiceId, scope.CompanyId, cancellationToken);
-        if (recommendedService is null || !recommendedService.IsActive || string.IsNullOrWhiteSpace(recommendation.Notes) || recommendation.Notes.Trim().Length > 2000)
+        var recommendationItems = command.MaintenanceRecommendationItems is { Count: > 0 }
+            ? command.MaintenanceRecommendationItems
+            : [new MaintenanceRecommendationItemInput(order.EquipmentId, recommendation.RecommendedServiceId)];
+        var equipmentIds = order.Items.Where(item => item.EquipmentId is not null).Select(item => item.EquipmentId!.Value).Append(order.EquipmentId).Distinct().ToHashSet();
+        if (recommendationItems.Any(item => item.EquipmentId == Guid.Empty || item.RecommendedServiceId == Guid.Empty || !equipmentIds.Contains(item.EquipmentId)) || string.IsNullOrWhiteSpace(recommendation.Notes) || recommendation.Notes.Trim().Length > 2000)
         {
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidMaintenanceRecommendation);
         }
@@ -77,17 +80,16 @@ public sealed class CompleteWorkOrderUseCase(IWorkOrderRepository repository, IA
         await using var transaction = await maintenanceOpportunityRepository.BeginTransactionAsync(cancellationToken);
         order.Complete(service.RequireBeforePhotos, service.RequireAfterPhotos, now);
         order.RecordHistory(global::VoltaMarcada.Domain.Enums.WorkOrderHistoryEventType.Completed, currentUser.UserId == Guid.Empty ? null : currentUser.UserId, WorkOrderHistoryDescriptions.Completed(), now);
-        await maintenanceOpportunityRepository.AddAsync(
-            MaintenanceOpportunity.Create(
-                scope.CompanyId,
-                order.CustomerId,
-                order.EquipmentId,
-                order.Id,
-                recommendation.RecommendedServiceId,
-                dueDate,
-                recommendation.Notes,
-                now),
-            cancellationToken);
+        foreach (var recommendationItem in recommendationItems)
+        {
+            var recommendedService = await serviceRepository.GetForCompanyAsync(recommendationItem.RecommendedServiceId, scope.CompanyId, cancellationToken);
+            if (recommendedService is null || !recommendedService.IsActive)
+            {
+                return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidMaintenanceRecommendation);
+            }
+
+            await maintenanceOpportunityRepository.AddAsync(MaintenanceOpportunity.Create(scope.CompanyId, order.CustomerId, recommendationItem.EquipmentId, order.Id, recommendationItem.RecommendedServiceId, dueDate, recommendation.Notes, now), cancellationToken);
+        }
         await repository.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(order.Id));

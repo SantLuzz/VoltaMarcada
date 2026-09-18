@@ -143,7 +143,10 @@ else
                         <MudItem xs="12" sm="6"><MudSelect T="string" Label="Quando?" Variant="Variant.Outlined" Required="true" @bind-Value="recommendationPeriod"><MudSelectItem T="string" Value="@("30")">30 dias</MudSelectItem><MudSelectItem T="string" Value="@("60")">60 dias</MudSelectItem><MudSelectItem T="string" Value="@("90")">90 dias</MudSelectItem><MudSelectItem T="string" Value="@("180")">180 dias</MudSelectItem><MudSelectItem T="string" Value="@("custom")">Personalizado</MudSelectItem><MudSelectItem T="string" Value="@("date")">Data especifica</MudSelectItem></MudSelect></MudItem>
                         @if (recommendationPeriod == "custom") { <MudItem xs="12" sm="6"><MudNumericField T="int?" Label="Intervalo em dias" Variant="Variant.Outlined" Required="true" @bind-Value="customIntervalDays" /></MudItem> }
                         @if (recommendationPeriod == "date") { <MudItem xs="12" sm="6"><MudDatePicker Label="Proxima manutencao" Variant="Variant.Outlined" Required="true" @bind-Date="recommendedDueDate" /></MudItem> }
-                        <MudItem xs="12" sm="6"><MudSelect T="Guid?" Label="Servico recomendado" Variant="Variant.Outlined" Required="true" @bind-Value="recommendedServiceId">@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect></MudItem>
+                        @foreach (var equipment in RecommendedEquipment)
+                        {
+                            <MudItem xs="12" sm="6"><MudSelect T="Guid?" Label="Serviço recomendado para @equipment.Description" Variant="Variant.Outlined" Required="true" @bind-Value="recommendedServiceIds[equipment.Id]">@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect></MudItem>
+                        }
                         <MudItem xs="12"><MudTextField Label="Observacoes da recomendacao" Variant="Variant.Outlined" Required="true" Lines="3" @bind-Value="recommendationNotes" /></MudItem>
                     </MudGrid>
                 }
@@ -230,6 +233,7 @@ else
     private int? customIntervalDays;
     private DateTime? recommendedDueDate;
     private Guid? recommendedServiceId;
+    private readonly Dictionary<Guid, Guid?> recommendedServiceIds = [];
     private string? recommendationNotes;
     private Guid? restoredStagedPhotosForWorkOrderId;
 
@@ -484,7 +488,8 @@ else
         }
 
         MaintenanceRecommendationInput? recommendation = null;
-        if (shouldRecommendMaintenance && !TryCreateRecommendation(out recommendation))
+        IReadOnlyList<MaintenanceRecommendationItemInput>? recommendationItems = null;
+        if (shouldRecommendMaintenance && !TryCreateRecommendation(out recommendation, out recommendationItems))
         {
             Snackbar.Add("Preencha os dados da próxima manutenção.", Severity.Warning);
             return;
@@ -515,7 +520,7 @@ else
         }
 
         var result = await OperationExecutor.ExecuteAsync(
-            (CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrder.Id, new CompleteWorkOrderCommand(recommendation, paymentDecision), cancellationToken));
+            (CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrder.Id, new CompleteWorkOrderCommand(recommendation, paymentDecision, recommendationItems), cancellationToken));
         if (result.IsSuccess)
         {
             isCompletionDialogOpen = false;
@@ -547,16 +552,29 @@ else
         PaymentMethod.Other => "Outro",
         _ => method.ToString()
     };
-    private bool TryCreateRecommendation(out MaintenanceRecommendationInput? recommendation)
+    private bool TryCreateRecommendation(out MaintenanceRecommendationInput? recommendation, out IReadOnlyList<MaintenanceRecommendationItemInput>? recommendationItems)
     {
         recommendation = null;
-        if (recommendedServiceId is null || string.IsNullOrWhiteSpace(recommendationNotes)) return false;
+        recommendationItems = null;
+        if (string.IsNullOrWhiteSpace(recommendationNotes)) return false;
         int? intervalDays = recommendationPeriod switch { "30" => 30, "60" => 60, "90" => 90, "180" => 180, "custom" => customIntervalDays, _ => null };
         DateOnly? dueDate = recommendationPeriod == "date" && recommendedDueDate is { } date ? DateOnly.FromDateTime(date) : null;
         if ((intervalDays is null) == (dueDate is null) || intervalDays is <= 0) return false;
-        recommendation = new MaintenanceRecommendationInput(intervalDays, dueDate, recommendedServiceId.Value, recommendationNotes);
+        var equipment = RecommendedEquipment;
+        foreach (var item in equipment) recommendedServiceIds.TryAdd(item.Id, recommendedServiceId ?? WorkOrder.ServiceId);
+        if (equipment.Any(item => recommendedServiceIds.GetValueOrDefault(item.Id) is not { } serviceId || serviceId == Guid.Empty)) return false;
+        recommendation = new MaintenanceRecommendationInput(intervalDays, dueDate, recommendedServiceIds[equipment[0].Id]!.Value, recommendationNotes);
+        recommendationItems = equipment.Select(item => new MaintenanceRecommendationItemInput(item.Id, recommendedServiceIds[item.Id]!.Value)).ToArray();
         return true;
     }
+
+    private IReadOnlyList<(Guid Id, string Description)> RecommendedEquipment => WorkOrder.Items
+        .Where(item => item.EquipmentId is not null)
+        .Select(item => (Id: item.EquipmentId!.Value, Description: item.EquipmentDescription ?? "Equipamento"))
+        .Append((WorkOrder.EquipmentId, "Equipamento principal"))
+        .GroupBy(item => item.Id)
+        .Select(group => (group.Key, group.First().Description))
+        .ToArray();
 
     private async Task UploadAsync(InputFileChangeEventArgs args, WorkOrderPhotoType type)
     {

@@ -22,5 +22,6 @@ public sealed record UpdateWorkOrderAdditionalItemsCommand(IReadOnlyList<WorkOrd
 public sealed record ChecklistProgressInput(Guid ChecklistItemId, bool IsCompleted);
 public sealed record SaveWorkOrderChecklistProgressCommand(IReadOnlyList<ChecklistProgressInput> ChecklistItems, string? ExecutionNotes);
 public sealed record MaintenanceRecommendationInput(int? IntervalDays, DateOnly? DueDate, Guid RecommendedServiceId, string? Notes);
-public sealed record CompleteWorkOrderCommand(MaintenanceRecommendationInput? MaintenanceRecommendation = null, WorkOrderPaymentDecisionInput? PaymentDecision = null);
+public sealed record MaintenanceRecommendationItemInput(Guid EquipmentId, Guid RecommendedServiceId);
+public sealed record CompleteWorkOrderCommand(MaintenanceRecommendationInput? MaintenanceRecommendation = null, WorkOrderPaymentDecisionInput? PaymentDecision = null, IReadOnlyList<MaintenanceRecommendationItemInput>? MaintenanceRecommendationItems = null);
 public sealed record GetWorkOrdersQuery(string? SearchFilter, WorkOrderStatus? Status);
