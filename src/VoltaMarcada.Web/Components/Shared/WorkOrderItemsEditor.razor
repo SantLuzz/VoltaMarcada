@@ -10,15 +10,29 @@
         <MudText Typo="Typo.h6">Itens e valores</MudText>
         @if (!ReadOnly)
         {
-            <MudButton Variant="Variant.Outlined" OnClick="AddItem">Adicionar item</MudButton>
+            <MudStack Row="true">
+                @if (AddEquipmentRequested.HasDelegate)
+                {
+                    <MudButton Variant="Variant.Text" OnClick="AddEquipmentRequested">Novo equipamento</MudButton>
+                }
+                <MudButton Variant="Variant.Outlined" OnClick="AddItem">Adicionar item</MudButton>
+            </MudStack>
         }
     </MudStack>
 
     @if (!string.IsNullOrWhiteSpace(ServiceName))
     {
         <MudGrid Class="work-order-item-row" AlignItems="AlignItems.Center">
-            <MudItem xs="12" sm="5">
+            <MudItem xs="12" sm="3">
                 <MudTextField T="string" Value="@ServiceName" Label="Serviço" ReadOnly="true" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudSelect T="Guid?" Value="@PrimaryEquipmentId" ValueChanged="PrimaryEquipmentIdChanged" Label="Equipamento" Required="true" RequiredError="Selecione o equipamento." Disabled="ReadOnly">
+                    @foreach (var equipment in EquipmentOptions)
+                    {
+                        <MudSelectItem Value="@((Guid?)equipment.Id)">@equipment.Type @equipment.Manufacturer @equipment.Model</MudSelectItem>
+                    }
+                </MudSelect>
             </MudItem>
             <MudItem xs="6" sm="2">
                 <MudNumericField T="decimal" Value="@(1m)" Label="Quantidade" ReadOnly="true" />
@@ -121,6 +135,15 @@
 
     [Parameter]
     public IReadOnlyList<EquipmentDto> EquipmentOptions { get; set; } = [];
+
+    [Parameter]
+    public Guid? PrimaryEquipmentId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> PrimaryEquipmentIdChanged { get; set; }
+
+    [Parameter]
+    public EventCallback AddEquipmentRequested { get; set; }
 
     [Parameter]
     public IReadOnlyList<ServiceDto> ServiceOptions { get; set; } = [];

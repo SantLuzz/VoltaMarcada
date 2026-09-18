@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using VoltaMarcada.Application.Abstractions.Persistence;
 using VoltaMarcada.Application.Abstractions.Storage;
 using VoltaMarcada.Application.Customers;
+using VoltaMarcada.Application.Equipment;
 using VoltaMarcada.Application.PublicBooking;
 using VoltaMarcada.Application.Quotes;
 using VoltaMarcada.Domain.Entities;
@@ -50,6 +51,7 @@ public sealed class QuotePdfUseCaseTests
         var factory = new QuotePdfDocumentFactory(
             new CompanyRepositoryProfileStub(profile),
             new CustomerRepositoryStub(customer),
+            new EquipmentRepositoryStub(),
             new UnavailableFileStorage());
 
         var document = await factory.CreateAsync(quote);
@@ -60,6 +62,33 @@ public sealed class QuotePdfUseCaseTests
         Assert.Equal("Customer", document.CustomerName);
         Assert.Equal("Service", document.Lines.Single().ItemTypeLabel);
         Assert.Equal(150, document.TotalAmount);
+        Assert.Empty(document.EquipmentDescriptions);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenQuoteItemsReferenceMultipleEquipment_ListsEveryEquipment()
+    {
+        var now = new DateTimeOffset(2026, 9, 1, 12, 0, 0, TimeSpan.Zero);
+        var companyId = Guid.NewGuid();
+        var customer = CreateCustomer(companyId, now);
+        var firstEquipment = Equipment.Create(companyId, customer.Id, "Air conditioner", "Brand", "A", null, null, null, null, null, now);
+        var secondEquipment = Equipment.Create(companyId, customer.Id, "Air conditioner", "Brand", "B", null, null, null, null, null, now);
+        var quote = Quote.Create(companyId, customer.Id, Guid.NewGuid(), firstEquipment.Id, Guid.NewGuid(), null, null,
+            [
+                new QuoteItemDefinition("Maintenance A", 1, 100, QuoteItemType.Service, firstEquipment.Id),
+                new QuoteItemDefinition("Maintenance B", 1, 100, QuoteItemType.Service, secondEquipment.Id)
+            ], 0, null, new DateOnly(2026, 9, 30), now);
+        var profile = new CompanyQuotePdfProfile(companyId, "Legal", "Trade", "11222333000181", "11999999999", "01001000", "Street", "Sao Paulo", "SP", null);
+        var factory = new QuotePdfDocumentFactory(
+            new CompanyRepositoryProfileStub(profile),
+            new CustomerRepositoryStub(customer),
+            new EquipmentRepositoryStub(firstEquipment, secondEquipment),
+            new UnavailableFileStorage());
+
+        var document = await factory.CreateAsync(quote);
+
+        Assert.NotNull(document);
+        Assert.Equal(["Air conditioner Brand A", "Air conditioner Brand B"], document!.EquipmentDescriptions);
     }
 
     [Fact]
@@ -174,5 +203,18 @@ public sealed class QuotePdfUseCaseTests
         public Task<FileStorageUploadResult> UploadAsync(FileStorageUploadRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<FileStorageDownloadResult> GetAsync(string key, CancellationToken cancellationToken) => throw new HttpRequestException();
         public Task DeleteAsync(string key, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    private sealed class EquipmentRepositoryStub(params Equipment[] equipment) : IEquipmentRepository
+    {
+        public Task AddAsync(Equipment equipment, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<EquipmentListItem>> GetAllForCompanyAsync(Guid companyId, GetEquipmentQuery query, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<EquipmentListItem>>([]);
+        public Task<IReadOnlyList<EquipmentListItem>> GetAllForCustomerAsync(Guid customerId, Guid companyId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<EquipmentListItem>>([]);
+        public Task<Equipment?> GetForCompanyAsync(Guid equipmentId, Guid companyId, CancellationToken cancellationToken = default) => Task.FromResult<Equipment?>(equipment.SingleOrDefault(item => item.Id == equipmentId && item.CompanyId == companyId));
+        public Task<EquipmentHistoryPageProjection?> GetHistoryPageForCompanyAsync(Guid equipmentId, Guid companyId, int offset, int pageSize, CancellationToken cancellationToken = default) => Task.FromResult<EquipmentHistoryPageProjection?>(null);
+        public Task<Equipment?> GetActiveForCustomerByTypeAndManufacturerAsync(Guid companyId, Guid customerId, string type, string? manufacturer, CancellationToken cancellationToken = default) => Task.FromResult<Equipment?>(null);
+        public Task<bool> ExistsForCustomerAsync(Guid customerId, Guid companyId, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public void Remove(Equipment equipment) { }
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

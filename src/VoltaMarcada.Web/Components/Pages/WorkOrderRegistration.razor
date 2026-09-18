@@ -57,22 +57,6 @@ else
                         </MudStack>
                     </MudItem>
                     <MudItem xs="12" md="6">
-                        <MudStack Row="true" AlignItems="AlignItems.End" Class="work-order-selection-row">
-                            <MudTooltip Text="@GetEquipmentTooltip()" Class="work-order-selection-tooltip">
-                                <MudSelect T="Guid?" Label="Equipamento" Placeholder="Selecione um equipamento" @bind-Value="equipmentId" Disabled="@(!CanEdit)" Class="work-order-selection-control">
-                                    @foreach (var equipmentOption in equipment)
-                                    {
-                                        <MudSelectItem Value="@((Guid?)equipmentOption.Id)">@equipmentOption.Type @equipmentOption.Manufacturer @equipmentOption.Model</MudSelectItem>
-                                    }
-                                </MudSelect>
-                            </MudTooltip>
-                            @if (CanEdit)
-                            {
-                                <MudTooltip Text="Novo equipamento"><MudIconButton Class="work-order-selection-action" Icon="@Icons.Material.Filled.Add" AriaLabel="Novo equipamento" Disabled="@(customerId is null)" OnClick="@(() => equipmentDialogOpen = true)" /></MudTooltip>
-                            }
-                        </MudStack>
-                    </MudItem>
-                    <MudItem xs="12" md="6">
                         <MudSelect T="Guid?" Label="Serviço" Placeholder="Selecione um serviço" @bind-Value="serviceId" @bind-Value:after="OnServiceChangedAsync" Disabled="@(WorkOrderId is not null || !CanEdit)">
                             @foreach (var service in services)
                             {
@@ -125,6 +109,8 @@ else
                     <MudItem xs="12">
                         <WorkOrderItemsEditor @bind-Items="items"
                                               EquipmentOptions="equipment"
+                                              @bind-PrimaryEquipmentId="equipmentId"
+                                              AddEquipmentRequested="@(() => equipmentDialogOpen = true)"
                                               ServiceOptions="services"
                                               ServiceName="@GetSelectedServiceName()"
                                               @bind-ServiceUnitPrice="serviceUnitPrice"

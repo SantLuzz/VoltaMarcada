@@ -25,6 +25,17 @@ public sealed class QuestPdfQuotePdfGenerator : IQuotePdfGenerator
                 column.Item().Text("ORÇAMENTO").SemiBold().FontSize(18).FontColor(Colors.Blue.Darken2);
                 column.Item().Text($"Cliente: {document.CustomerName}");
                 column.Item().Text($"Válido até: {document.ValidUntil:dd/MM/yyyy}");
+                if (document.EquipmentDescriptions.Count > 0)
+                {
+                    column.Item().Column(equipmentColumn =>
+                    {
+                        equipmentColumn.Item().Text("Equipamentos").SemiBold();
+                        foreach (var equipment in document.EquipmentDescriptions)
+                        {
+                            equipmentColumn.Item().Text($"• {equipment}");
+                        }
+                    });
+                }
                 column.Item().Element(container => ComposeItems(container, document));
                 if (document.DiscountAmount > 0)
                     column.Item().AlignRight().Text($"Desconto: -{FormatCurrency(document.DiscountAmount)}");

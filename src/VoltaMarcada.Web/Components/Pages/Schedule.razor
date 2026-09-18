@@ -8,6 +8,7 @@
 @using VoltaMarcada.Application.Services
 @using VoltaMarcada.Application.MaintenanceOpportunities
 @using VoltaMarcada.Application.ServiceRequests
+@using VoltaMarcada.Domain.Enums
 @using VoltaMarcada.Application.Abstractions.Routing
 @using VoltaMarcada.Application.Abstractions.Communication
 @using VoltaMarcada.Web.Formatting
@@ -468,7 +469,13 @@ else
                     </MudSelect>
                     <MudTextField @bind-Value="commercialAppointmentDescription" Label="Descrição para o cliente" Required="true" MaxLength="1000" />
                 }
-                <MudNumericField T="decimal?" @bind-Value="commercialServiceUnitPrice" Label="Valor do serviço" Adornment="Adornment.Start" AdornmentText="R$" />
+                <BrazilianCurrencyInput Id="commercial-service-unit-price"
+                                        Name="commercial-service-unit-price"
+                                        Label="Valor do serviço"
+                                        @bind-Value="commercialServiceUnitPrice"
+                                        Required="@(!isCommercialServicePriceFixed)"
+                                        RequiredError="Informe o valor do serviço."
+                                        Disabled="@isCommercialServicePriceFixed" />
                 @if (serviceRequestToResolve.HasCustomerProfileProposal)
                 {
                     <MudCheckBox T="bool" @bind-Value="applyCommercialCustomerProfileProposal" Color="Color.Primary">Aplicar os dados propostos pelo cliente ao cadastro</MudCheckBox>
@@ -568,6 +575,7 @@ else
     private Guid commercialProfessionalId;
     private string commercialAppointmentDescription = string.Empty;
     private decimal? commercialServiceUnitPrice;
+    private bool isCommercialServicePriceFixed;
     private bool applyCommercialCustomerProfileProposal;
     private bool isCommercialResolutionDialogOpen;
     private bool isResolvingCommercialRequest;
@@ -736,7 +744,11 @@ else
         commercialProfessionalId = Guid.Empty;
         commercialResolution = ServiceRequestResolution.PrepareQuote;
         commercialAppointmentDescription = $"Visita técnica para {serviceRequestToResolve.ServiceName}";
-        commercialServiceUnitPrice = null;
+        var commercialService = (await OperationExecutor.ExecuteAsync(
+            (GetServicesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken)))
+            .SingleOrDefault(service => service.Id == serviceRequestToResolve.ServiceId);
+        isCommercialServicePriceFixed = commercialService?.PriceType == ServicePriceType.Fixed;
+        commercialServiceUnitPrice = isCommercialServicePriceFixed ? commercialService?.BasePrice : null;
         applyCommercialCustomerProfileProposal = false;
         isCommercialResolutionDialogOpen = true;
     }

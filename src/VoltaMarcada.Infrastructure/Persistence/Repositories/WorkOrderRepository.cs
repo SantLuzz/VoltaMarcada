@@ -32,7 +32,7 @@ public sealed class WorkOrderRepository(AppDbContext dbContext) : IWorkOrderRepo
             var term = query.SearchFilter.Trim().ToLower();
             orders = orders.Where(x => dbContext.Customers.Any(c => c.Id == x.CustomerId && c.CompanyId == companyId && c.Name.ToLower().Contains(term)) || dbContext.Services.Any(s => s.Id == x.ServiceId && s.CompanyId == companyId && s.Name.ToLower().Contains(term)));
         }
-        return await orders
+        var result = await orders
             .GroupJoin(
                 dbContext.Appointments.AsNoTracking().Where(appointment => appointment.CompanyId == companyId && appointment.WorkOrderId != null),
                 order => order.Id,
@@ -45,6 +45,18 @@ public sealed class WorkOrderRepository(AppDbContext dbContext) : IWorkOrderRepo
             .Join(dbContext.Equipment.Where(equipment => equipment.CompanyId == companyId), item => item.Order.EquipmentId, equipment => equipment.Id, (item, equipment) => new { item.Order, item.ScheduledAtUtc, item.Customer, Equipment = equipment })
             .Join(dbContext.Services.Where(service => service.CompanyId == companyId), item => item.Order.ServiceId, service => service.Id, (item, service) => new WorkOrderListItem(item.Order.Id, item.Customer.Name, string.IsNullOrWhiteSpace(item.Equipment.Model) ? item.Equipment.Type : $"{item.Equipment.Type} - {item.Equipment.Model}", service.Name, item.Order.Status, item.Order.Priority, item.Order.CreatedAtUtc, item.Order.ProfessionalId, item.ScheduledAtUtc))
             .ToArrayAsync(cancellationToken);
+
+        var orderIds = result.Select(item => item.Id).ToArray();
+        var equipmentCounts = await dbContext.WorkOrderItems
+            .AsNoTracking()
+            .Where(item => item.CompanyId == companyId && orderIds.Contains(item.WorkOrderId) && item.EquipmentId != null)
+            .GroupBy(item => item.WorkOrderId)
+            .Select(group => new { WorkOrderId = group.Key, Count = group.Select(item => item.EquipmentId).Distinct().Count() })
+            .ToDictionaryAsync(item => item.WorkOrderId, item => item.Count, cancellationToken);
+
+        return result.Select(item => equipmentCounts.GetValueOrDefault(item.Id) > 1
+            ? item with { EquipmentDescription = $"{equipmentCounts[item.Id]} equipamentos selecionados" }
+            : item).ToArray();
     }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) => dbContext.SaveChangesAsync(cancellationToken);

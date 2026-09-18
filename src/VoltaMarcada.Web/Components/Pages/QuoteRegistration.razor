@@ -23,7 +23,6 @@ else
         @if (quote is null)
         {
             <MudSelect T="Guid?" Label="Cliente" @bind-Value="customerId" @bind-Value:after="LoadEquipmentAsync"><MudSelectItem Value="@((Guid?)null)">Selecione um cliente</MudSelectItem>@foreach (var customer in customers) { <MudSelectItem Value="@((Guid?)customer.Id)">@customer.Name</MudSelectItem> }</MudSelect>
-            <MudSelect T="Guid?" Label="Equipamento" @bind-Value="equipmentId"><MudSelectItem Value="@((Guid?)null)">Selecione um equipamento</MudSelectItem>@foreach (var option in equipment) { <MudSelectItem Value="@((Guid?)option.Id)">@option.Type @option.Model</MudSelectItem> }</MudSelect>
             <MudSelect T="Guid?" Label="Serviço" @bind-Value="primaryServiceId" @bind-Value:after="SetServiceItemAsync"><MudSelectItem Value="@((Guid?)null)">Selecione um serviço</MudSelectItem>@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect>
         }
         else
@@ -118,8 +117,14 @@ else
     {
         if (validUntil is null) return;
         if (items.Any(item => string.IsNullOrWhiteSpace(item.Description) || item.Quantity <= 0 || item.UnitPrice < 0 || item.Type == QuoteItemType.Service && (item.ServiceId is null || item.ServiceId == Guid.Empty))) { Snackbar.Add("Revise os itens e valores do orçamento.", Severity.Warning); return; }
-        if (quote is null && items.SingleOrDefault(item => item.IsPrimaryService) is { } primaryItem) { primaryItem.EquipmentId = equipmentId; primaryItem.ServiceId = primaryServiceId; }
+        if (quote is null && items.SingleOrDefault(item => item.IsPrimaryService) is { } primaryItem) { primaryItem.ServiceId = primaryServiceId; }
         var quoteItems = items.Select(item => new QuoteItemInput(item.EquipmentId, item.ServiceId, item.Description, item.Quantity, item.UnitPrice, item.Type)).ToArray();
+        var primaryItemForCreation = quoteItems.FirstOrDefault(item => item.EquipmentId is { } itemEquipmentId && itemEquipmentId != Guid.Empty && item.ServiceId is { } itemServiceId && itemServiceId != Guid.Empty);
+        if (quote is null && primaryItemForCreation is not null)
+        {
+            equipmentId = primaryItemForCreation.EquipmentId;
+            primaryServiceId = primaryItemForCreation.ServiceId;
+        }
         if (quote is null)
         {
             if (customerId is null || equipmentId is null || primaryServiceId is null) { Snackbar.Add("Selecione cliente, equipamento e serviço.", Severity.Warning); return; }

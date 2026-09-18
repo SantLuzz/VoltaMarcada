@@ -68,3 +68,7 @@ dotnet ef database update --project src/VoltaMarcada.Infrastructure --startup-pr
 dotnet restore
 dotnet run --project src/VoltaMarcada.Web
 ```
+
+## Help and support
+
+See [Help and support flows](docs/help-and-support-flows.md) for the internal support flow and production configuration.

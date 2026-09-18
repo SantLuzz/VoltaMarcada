@@ -200,7 +200,8 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
 }
 
 .servicesync-data-grid .mud-table-root {
-    table-layout: fixed;`r`n    width: 100%;
+    table-layout: fixed;
+    width: 100%;
 }
 
 .servicesync-data-grid .mud-table-container {
@@ -640,4 +641,54 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
     position: absolute;
 
     right: 24px;
+}
+
+.help-guide-actions {
+    display: grid;
+    gap: 4px;
+    margin-top: 12px;
+}
+
+.help-guide-topic {
+    justify-content: flex-start;
+    letter-spacing: .03em;
+    min-height: 38px;
+    padding-inline: 12px;
+}
+
+.help-guide-content {
+    color: var(--mud-palette-text-primary);
+    font-size: 1rem;
+    line-height: 1.65;
+}
+
+.help-guide-content h2 {
+    font-size: 1.35rem;
+    line-height: 1.25;
+    margin: 0 0 12px;
+}
+
+.help-guide-content h3 {
+    font-size: 1.05rem;
+    margin: 24px 0 8px;
+}
+
+.help-guide-content p {
+    margin: 0 0 14px;
+}
+
+.help-guide-content ol {
+    margin: 0 0 16px;
+    padding-left: 24px;
+}
+
+.help-guide-content li {
+    margin-bottom: 8px;
+    padding-left: 4px;
+}
+
+.help-guide-link {
+    display: inline-flex;
+    font-weight: 600;
+    margin-top: 8px;
 }

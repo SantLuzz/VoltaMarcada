@@ -17,6 +17,7 @@ using VoltaMarcada.Web.Errors;
 using VoltaMarcada.Web.Identity;
 using VoltaMarcada.Web.Operations;
 using VoltaMarcada.Web.Configuration;
+using VoltaMarcada.Web.Help;
 using VoltaMarcada.Web.Formatting;
 using VoltaMarcada.Application.Scheduling;
 using VoltaMarcada.Application.PublicBooking;
@@ -63,6 +64,12 @@ builder.Services.AddOptions<PublicBookingOptions>()
     .Validate(options => options.MaintenanceLinkLifetimeDays is > 0 and <= 365, "Maintenance link lifetime must be between 1 and 365 days.")
     .ValidateOnStart();
 builder.Services.AddSingleton<IPublicBookingConfiguration, PublicBookingConfiguration>();
+builder.Services.AddOptions<SupportOptions>()
+    .Bind(builder.Configuration.GetSection(SupportOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<ISupportConfiguration, SupportConfiguration>();
+builder.Services.AddSingleton<IHelpGuideProvider, HelpGuideProvider>();
+builder.Services.AddHttpClient();
 builder.Services.AddOptions<CompanyLicenseTrialOptions>()
     .Bind(builder.Configuration.GetSection(CompanyLicenseTrialOptions.SectionName))
     .Validate(options => options.FreeTrialDays > 0, "Free trial days must be positive.")
@@ -113,6 +120,15 @@ builder.Services.AddRateLimiter(options =>
             AutoReplenishment = true,
             PermitLimit = 120,
             Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        }));
+    options.AddPolicy("support-requests", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? Guid.NewGuid().ToString("N"),
+        _ => new FixedWindowRateLimiterOptions
+        {
+            AutoReplenishment = true,
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(10),
             QueueLimit = 0
         }));
 });
@@ -233,6 +249,7 @@ app.MapQuoteEndpoints();
 app.MapLicenseEndpoints();
 app.MapPlatformLicenseEndpoints();
 
+app.MapSupportEndpoints();
 app.MapGet("/health", () => Results.Text("Healthy"));
 
 app.MapRazorComponents<App>()

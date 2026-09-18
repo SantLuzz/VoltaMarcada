@@ -21,6 +21,8 @@ using VoltaMarcada.Application.Dashboard;
 using VoltaMarcada.Application.Abstractions.Payments;
 using VoltaMarcada.Infrastructure.Payments;
 using VoltaMarcada.Infrastructure.Licensing;
+using VoltaMarcada.Application.Support;
+using VoltaMarcada.Infrastructure.Support;
 using QuestPDF.Infrastructure;
 
 namespace VoltaMarcada.Infrastructure;
@@ -48,6 +50,8 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(SmtpOptions.SectionName))
             .Validate(options => !options.Enabled || (!string.IsNullOrWhiteSpace(options.Host) && options.Port is > 0 and <= 65535 && !string.IsNullOrWhiteSpace(options.SenderEmail)), "SMTP host, port, and sender email are required when SMTP is enabled.");
         services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<ISupportRequestContextReader, SupportRequestContextReader>();
+        services.AddSingleton<ISupportRequestDeliveryConfiguration, SmtpSupportRequestDeliveryConfiguration>();
         services.AddSingleton<OverdueLicenseNotificationService>();
         services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<OverdueLicenseNotificationService>());
         services.AddScoped<IPublicBookingNotificationSender, PublicBookingNotificationSender>();

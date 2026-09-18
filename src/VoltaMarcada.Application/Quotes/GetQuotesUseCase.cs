@@ -49,7 +49,9 @@ public sealed class GetQuotesUseCase(
 internal static class QuoteDtoMapper
 {
     public static QuoteDto Map(VoltaMarcada.Domain.Entities.Quote quote, string customerName, string equipmentDescription, IReadOnlyDictionary<Guid, string> equipmentDescriptions) => new(
-        quote.Id, quote.CustomerId, customerName, quote.EquipmentId, equipmentDescription, quote.PrimaryServiceId, quote.Status, quote.DiscountAmount,
+        quote.Id, quote.CustomerId, customerName, quote.EquipmentId,
+        EquipmentDisplaySummary.GetCompactDescription(quote.Items.Select(item => item.EquipmentId).ToArray(), equipmentDescriptions, equipmentDescription),
+        quote.PrimaryServiceId, quote.Status, quote.DiscountAmount,
         quote.TotalAmount, quote.Notes, quote.ValidUntil, quote.GeneratedWorkOrderId,
         quote.Items.OrderBy(item => item.DisplayOrder).Select(item => new QuoteItemDto(item.EquipmentId, item.EquipmentId is { } equipmentId ? equipmentDescriptions.GetValueOrDefault(equipmentId, "Equipamento indisponível") : null, item.ServiceId, item.Description, item.Quantity, item.UnitPrice, item.Type)).ToArray());
 
