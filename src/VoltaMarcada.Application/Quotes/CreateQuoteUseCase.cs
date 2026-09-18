@@ -60,7 +60,7 @@ public sealed class CreateQuoteUseCase(IQuoteRepository quotes, ICustomerReposit
         if (selectedEquipment is null || selectedEquipment.CustomerId != customer.Id) return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
         foreach (var item in effectiveCommand.Items)
         {
-            if (item.Type == QuoteItemType.Service && (item.ServiceId is null || item.ServiceId == Guid.Empty)) return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
+            if (item.Type == QuoteItemType.Service && (item.ServiceId is null || item.ServiceId == Guid.Empty || item.EquipmentId is null || item.EquipmentId == Guid.Empty)) return OperationResult<Guid>.Failure(QuoteErrors.InvalidInput);
             if (item.EquipmentId is { } equipmentId)
             {
                 var itemEquipment = await equipment.GetForCompanyAsync(equipmentId, scope.CompanyId, cancellationToken);

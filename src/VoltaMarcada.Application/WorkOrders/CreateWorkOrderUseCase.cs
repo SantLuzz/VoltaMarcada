@@ -25,7 +25,7 @@ public sealed class CreateWorkOrderUseCase(IWorkOrderRepository workOrderReposit
         {
             foreach (var item in command.Items)
             {
-                if (item.Type == WorkOrderItemType.Service && (item.ServiceId is null || item.ServiceId == Guid.Empty)) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
+                if (item.Type == WorkOrderItemType.Service && (item.ServiceId is null || item.ServiceId == Guid.Empty || item.EquipmentId is null || item.EquipmentId == Guid.Empty)) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
                 if (item.EquipmentId is { } equipmentId)
                 {
                     var itemEquipment = await equipmentRepository.GetForCompanyAsync(equipmentId, scope.CompanyId, cancellationToken);

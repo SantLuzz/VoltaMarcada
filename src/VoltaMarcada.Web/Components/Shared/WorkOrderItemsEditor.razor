@@ -72,7 +72,7 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="3">
-                    <MudSelect T="Guid?" Value="@item.value.EquipmentId" ValueChanged="@(value => UpdateItem(item.index, item.value with { EquipmentId = value }))" Label="Equipamento" Clearable="true" Disabled="ReadOnly">
+                    <MudSelect T="Guid?" Value="@item.value.EquipmentId" ValueChanged="@(value => UpdateItem(item.index, item.value with { EquipmentId = value }))" Label="Equipamento" Required="@(item.value.Type == WorkOrderItemType.Service)" RequiredError="Selecione o equipamento." Clearable="@(item.value.Type != WorkOrderItemType.Service)" Disabled="ReadOnly">
                         @foreach (var equipment in EquipmentOptions)
                         {
                             <MudSelectItem Value="@((Guid?)equipment.Id)">@equipment.Type @equipment.Manufacturer @equipment.Model</MudSelectItem>
@@ -82,7 +82,7 @@
                 @if (item.value.Type == WorkOrderItemType.Service)
                 {
                     <MudItem xs="12" sm="3">
-                        <MudSelect T="Guid?" Value="@item.value.ServiceId" ValueChanged="@(value => UpdateItem(item.index, item.value with { ServiceId = value }))" Label="Serviço" Required="true" RequiredError="Selecione o serviço." Disabled="ReadOnly">
+                        <MudSelect T="Guid?" Value="@item.value.ServiceId" ValueChanged="@(value => UpdateServiceItem(item.index, item.value, value))" Label="Serviço" Required="true" RequiredError="Selecione o serviço." Disabled="ReadOnly">
                             @foreach (var service in ServiceOptions)
                             {
                                 <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem>
@@ -193,6 +193,13 @@
     {
         var updated = Items.Select((item, currentIndex) => currentIndex == index ? updatedItem : item).ToList();
         await ItemsChanged.InvokeAsync(updated);
+    }
+
+    private Task UpdateServiceItem(int index, WorkOrderItemInput item, Guid? serviceId)
+    {
+        var service = ServiceOptions.SingleOrDefault(option => option.Id == serviceId);
+        var unitPrice = service?.PriceType is ServicePriceType.Fixed or ServicePriceType.StartingAt ? service.BasePrice ?? item.UnitPrice : item.UnitPrice;
+        return UpdateItem(index, item with { ServiceId = serviceId, UnitPrice = unitPrice });
     }
 
     private Task OnDiscountAmountChanged(decimal? value) => DiscountAmountChanged.InvokeAsync(value ?? 0m);

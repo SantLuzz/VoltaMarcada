@@ -666,7 +666,7 @@ else
         !string.IsNullOrWhiteSpace(item.Description) &&
         item.Quantity > 0 &&
         item.UnitPrice >= 0 &&
-        (item.Type != WorkOrderItemType.Service || item.ServiceId is { } serviceItemId && serviceItemId != Guid.Empty));
+        (item.Type != WorkOrderItemType.Service || item.ServiceId is { } serviceItemId && serviceItemId != Guid.Empty && item.EquipmentId is { } equipmentItemId && equipmentItemId != Guid.Empty));
 
     private IReadOnlyList<WorkOrderItemInput> BuildWorkOrderItems()
     {
