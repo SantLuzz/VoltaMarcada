@@ -45,6 +45,22 @@ public sealed class WorkOrderEnhancementsComponentTests
         Assert.Contains("<BrazilianCurrencyInput", cashSource, StringComparison.Ordinal);
         Assert.Contains("A confirmar", cashSource, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void WorkOrderExecutionPanel_ShouldInitializeRecommendedServiceForEachEquipment()
+    {
+        var executionSource = ReadSource("Components/Shared/WorkOrderExecutionPanel.razor");
+
+        Assert.Contains("recommendedServiceIds[equipment.Id] = WorkOrder.ServiceId;", executionSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WorkOrderExecutionPanel_ShouldGroupRecommendedServicesByEquipment()
+    {
+        var executionSource = ReadSource("Components/Shared/WorkOrderExecutionPanel.razor");
+
+        Assert.Contains("maintenance-recommendation-equipment", executionSource, StringComparison.Ordinal);
+    }
     private static string FindRepositoryRoot()
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)

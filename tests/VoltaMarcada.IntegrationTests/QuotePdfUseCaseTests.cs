@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using VoltaMarcada.Application.Abstractions.Documents;
 using VoltaMarcada.Application.Abstractions.Persistence;
 using VoltaMarcada.Application.Abstractions.Storage;
 using VoltaMarcada.Application.Customers;
@@ -30,6 +31,31 @@ public sealed class QuotePdfUseCaseTests
         Assert.Equal(PublicTokenGenerator.Hash("public-token"), repository.LastPublicTokenHash);
     }
 
+    [Fact]
+    public async Task GetPublicQuotePdfAsync_WhenQuoteIsAvailable_UsesTheStandardDownloadFileName()
+    {
+        var now = new DateTimeOffset(2026, 9, 1, 12, 0, 0, TimeSpan.Zero);
+        var companyId = Guid.NewGuid();
+        var customer = CreateCustomer(companyId, now);
+        var quote = CreateQuote(now, companyId, customer.Id);
+        quote.Send(PublicTokenGenerator.Hash("public-token"), now.AddDays(1), now);
+        var profile = new CompanyQuotePdfProfile(quote.CompanyId, "Legal", "Trade", "11222333000181", "11999999999", "01001000", "Street", "Sao Paulo", "SP", null);
+        var factory = new QuotePdfDocumentFactory(
+            new CompanyRepositoryProfileStub(profile),
+            new CustomerRepositoryStub(customer),
+            new EquipmentRepositoryStub(),
+            new UnavailableFileStorage());
+        var useCase = new GetPublicQuotePdfUseCase(
+            new PublicQuoteAccessService(new QuoteRepositoryStub(quote), new FixedTimeProvider(now)),
+            factory,
+            new PdfGeneratorStub(),
+            new FixedTimeProvider(now));
+
+        var result = await useCase.ExecuteAsync("public-token");
+
+        Assert.NotNull(result);
+        Assert.Equal($"Orçamento - {quote.Id.ToString("N")[..8].ToUpperInvariant()} - 01092026.pdf", result!.FileName);
+    }
     [Fact]
     public async Task CreateAsync_WhenLogoIsUnavailable_MapsCommercialDataWithoutLogo()
     {
@@ -198,6 +224,11 @@ public sealed class QuotePdfUseCaseTests
         public Task<CustomerPersistenceOutcome> SaveChangesAsync(CancellationToken cancellationToken = default) => Task.FromResult(CustomerPersistenceOutcome.Success);
     }
 
+    private sealed class PdfGeneratorStub : IQuotePdfGenerator
+    {
+        public Task<byte[]> GenerateAsync(QuotePdfDocument document, CancellationToken cancellationToken = default) =>
+            Task.FromResult<byte[]>([1, 2, 3]);
+    }
     private sealed class UnavailableFileStorage : IFileStorage
     {
         public Task<FileStorageUploadResult> UploadAsync(FileStorageUploadRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();

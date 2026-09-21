@@ -1,0 +1,33 @@
+Suporte e guias- Abra Ajuda e confirme os guias em lista, com títulos em maiúsculas.
+- Selecione cada guia: Cadastros e clientes, Equipamentos, Ordens de serviço, Agenda, Manutenção recorrente, Orçamentos e Solicitações públicas.
+- Confira a renderização do conteúdo Markdown e os links de ação ao final de cada guia.
+- Confirme o botão de WhatsApp para contato com suporte.
+- Envie uma solicitação de suporte com e sem anexo.
+
+Tela de empresa no celular- Abra a tela Empresa em largura mobile.
+- Confirme que não há rolagem horizontal e que campos, cartões e ações se adaptam à tela.
+
+Equipamentos em OS e orçamento- Crie uma OS ou orçamento para um cliente com mais de um equipamento.
+- Confirme que não há um único equipamento fixo no topo quando os itens podem usar equipamentos diferentes.
+- Adicione itens de serviço e associe cada um ao equipamento correspondente.
+- Confira que um item do tipo Serviço exige equipamento tanto na OS quanto no orçamento.
+- Na lista de OS, confirme que o equipamento aparece por descrição; com mais de um, deve mostrar “N equipamentos selecionados”, sem expor ID.
+
+Preço dos serviços- Cadastre serviços com os tipos de preço aplicáveis.
+- Ao selecionar um serviço em item da OS ou orçamento, confira se o valor unitário segue a regra/preço cadastrado.
+- Gere orçamento a partir de agendamento, informe o valor no modal e confirme que ele é mantido no orçamento criado.
+
+Manutenção recomendada ao concluir OS- Crie uma OS com dois ou mais equipamentos nos itens.
+- Ao concluir o serviço e ativar “Recomendar próxima manutenção”, confirme que aparece um serviço recomendado para cada equipamento.
+- Informe uma única periodicidade/data e uma única observação.
+- Conclua a OS e confira na manutenção recorrente que foi criada uma recomendação por equipamento, cada qual com seu serviço selecionado.
+- Valide também uma OS com apenas um equipamento.
+
+PDF do orçamento- Gere o PDF de um orçamento com serviços, peças ou outros itens.
+- Confirme que todos os equipamentos vinculados aparecem no documento.
+- Confirme que a coluna “Tipo” não aparece mais.
+- Confira descrição, quantidade, valor unitário, total e total geral.
+- Confira o download com o padrão Orçamento - CODIGO - ddMMyyyy.pdf.
+
+Validação técnica já executada- Compilação do projeto Web sem erros.
+- Teste de integração de manutenção: 5 de 5 aprovados.
