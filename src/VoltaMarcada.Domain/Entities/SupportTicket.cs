@@ -31,6 +31,11 @@ public sealed class SupportTicket
         return ticket;
     }
 
+    public void AddInitialAttachment(string fileKey, string fileName, string contentType, long length)
+    {
+        messages[0].AddAttachment(fileKey, fileName, contentType, length);
+    }
+
     public SupportTicketMessage AddPlatformMessage(string body, Guid sentByUserId, DateTimeOffset createdAtUtc)
     {
         if (Status != SupportTicketStatus.Open) throw new DomainException("Only an open ticket can receive a response.");

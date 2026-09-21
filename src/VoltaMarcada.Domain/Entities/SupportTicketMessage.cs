@@ -15,6 +15,11 @@ public sealed class SupportTicketMessage
     public Guid? SentByUserId { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
     public IReadOnlyCollection<SupportTicketAttachment> Attachments => attachments;
+    internal void AddAttachment(string fileKey, string fileName, string contentType, long length)
+    {
+        attachments.Add(SupportTicketAttachment.Create(Id, fileKey, fileName, contentType, length));
+    }
+
     internal static SupportTicketMessage Create(Guid ticketId, SupportTicketMessageDirection direction, string body, Guid sentByUserId, DateTimeOffset createdAtUtc)
     {
         if (ticketId == Guid.Empty || sentByUserId == Guid.Empty || string.IsNullOrWhiteSpace(body) || body.Trim().Length > 5000) throw new DomainException("Ticket message is invalid.");
