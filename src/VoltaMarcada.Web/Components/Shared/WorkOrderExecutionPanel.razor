@@ -145,7 +145,7 @@ else
                         @if (recommendationPeriod == "date") { <MudItem xs="12" sm="6"><MudDatePicker Label="Proxima manutencao" Variant="Variant.Outlined" Required="true" @bind-Date="recommendedDueDate" /></MudItem> }
                         @foreach (var equipment in RecommendedEquipment)
                         {
-                            <MudItem xs="12" sm="6"><MudSelect T="Guid?" Label="Serviço recomendado para @equipment.Description" Variant="Variant.Outlined" Required="true" @bind-Value="recommendedServiceIds[equipment.Id]">@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect></MudItem>
+                            <MudItem xs="12" sm="6"><MudSelect T="Guid?" Label="@GetRecommendedServiceLabel(equipment.Description)" Variant="Variant.Outlined" Required="true" @bind-Value="recommendedServiceIds[equipment.Id]">@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect></MudItem>
                         }
                         <MudItem xs="12"><MudTextField Label="Observacoes da recomendacao" Variant="Variant.Outlined" Required="true" Lines="3" @bind-Value="recommendationNotes" /></MudItem>
                     </MudGrid>
@@ -568,12 +568,14 @@ else
         return true;
     }
 
+    private static string GetRecommendedServiceLabel(string description) => $"Serviço recomendado para {description}";
+
     private IReadOnlyList<(Guid Id, string Description)> RecommendedEquipment => WorkOrder.Items
         .Where(item => item.EquipmentId is not null)
         .Select(item => (Id: item.EquipmentId!.Value, Description: item.EquipmentDescription ?? "Equipamento"))
-        .Append((WorkOrder.EquipmentId, "Equipamento principal"))
+        .Append((Id: WorkOrder.EquipmentId, Description: "Equipamento principal"))
         .GroupBy(item => item.Id)
-        .Select(group => (group.Key, group.First().Description))
+        .Select(group => (Id: group.Key, Description: group.First().Description))
         .ToArray();
 
     private async Task UploadAsync(InputFileChangeEventArgs args, WorkOrderPhotoType type)
