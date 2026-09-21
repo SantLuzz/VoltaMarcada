@@ -14,10 +14,19 @@ public static class SupportEndpoints
             .RequireAuthorization(AuthorizationPolicies.CompanyMember)
             .RequireRateLimiting("support-requests");
 
+endpoints.MapGet("/platform/support/attachments/{attachmentId:guid}", GetAttachmentAsync)
+            .RequireAuthorization(AuthorizationPolicies.PlatformAdministrator);
+
         return endpoints;
     }
 
-    private static async Task<IResult> SendAsync(HttpRequest request, SendSupportRequestUseCase useCase, CancellationToken cancellationToken)
+    private static async Task<IResult> GetAttachmentAsync(Guid attachmentId, GetPlatformSupportTicketAttachmentUseCase useCase, CancellationToken cancellationToken)
+    {
+        var result = await useCase.ExecuteAsync(attachmentId, cancellationToken);
+        return result.ToHttpResult(file => Results.File(file.Content, file.ContentType));
+    }
+
+    private static async Task<IResult> SendAsync(HttpRequest request, CreateSupportTicketUseCase useCase, CancellationToken cancellationToken)
     {
         if (!request.HasFormContentType) return Results.BadRequest();
 
@@ -37,6 +46,6 @@ public static class SupportEndpoints
             form["message"].ToString(),
             attachments), cancellationToken);
 
-        return result.ToHttpResult(() => Results.Ok());
+        return result.ToHttpResult(value => Results.Ok(new { ticketNumber = value.Number }));
     }
 }

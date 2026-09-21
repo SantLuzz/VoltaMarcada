@@ -16,9 +16,15 @@ public sealed record EmailAttachment
     private static string Sanitize(string value) => value.Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", string.Empty, StringComparison.Ordinal);
 }
 
+public sealed record EmailDeliveryResult(bool IsSuccess, string? Error)
+{
+    public static EmailDeliveryResult Success() => new(true, null);
+    public static EmailDeliveryResult Failure(string error) => new(false, error);
+}
+
 public interface IEmailSender
 {
-    Task SendAsync(EmailMessage email, CancellationToken cancellationToken = default);
+    Task<EmailDeliveryResult> SendAsync(EmailMessage email, CancellationToken cancellationToken = default);
 }
 
 public sealed record EmailMessage
@@ -47,6 +53,6 @@ public sealed record AccountPasswordResetEmail(string Subject, string HtmlBody)
     {
         var safeName = System.Net.WebUtility.HtmlEncode(recipientName);
         var safeUrl = System.Net.WebUtility.HtmlEncode(resetUrl.AbsoluteUri);
-        return new AccountPasswordResetEmail("Redefina sua senha", $"<p>Olá, {safeName}.</p><p>Recebemos uma solicitação para redefinir sua senha.</p><p><a href=\"{safeUrl}\">Redefinir senha</a></p><p>Se você não solicitou esta alteração, ignore este e-mail.</p>");
+        return new AccountPasswordResetEmail("Redefina sua senha", $"<p>Olï¿½, {safeName}.</p><p>Recebemos uma solicitaï¿½ï¿½o para redefinir sua senha.</p><p><a href=\"{safeUrl}\">Redefinir senha</a></p><p>Se vocï¿½ nï¿½o solicitou esta alteraï¿½ï¿½o, ignore este e-mail.</p>");
     }
 }

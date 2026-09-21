@@ -51,7 +51,6 @@ public static class DependencyInjection
             .Validate(options => !options.Enabled || (!string.IsNullOrWhiteSpace(options.Host) && options.Port is > 0 and <= 65535 && !string.IsNullOrWhiteSpace(options.SenderEmail)), "SMTP host, port, and sender email are required when SMTP is enabled.");
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<ISupportRequestContextReader, SupportRequestContextReader>();
-        services.AddSingleton<ISupportRequestDeliveryConfiguration, SmtpSupportRequestDeliveryConfiguration>();
         services.AddSingleton<OverdueLicenseNotificationService>();
         services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<OverdueLicenseNotificationService>());
         services.AddScoped<IPublicBookingNotificationSender, PublicBookingNotificationSender>();
@@ -74,6 +73,7 @@ public static class DependencyInjection
         services.AddScoped<ICustomerContactRepository, CustomerContactRepository>();
         services.AddScoped<IServiceRequestRepository, ServiceRequestRepository>();
         services.AddScoped<IQuoteRepository, QuoteRepository>();
+        services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
         services.AddScoped<IQuotePdfGenerator, QuestPdfQuotePdfGenerator>();
         services.AddScoped<IWhatsAppLinkBuilder, WhatsAppLinkBuilder>();
         services.AddScoped<IEmployeeInvitationRepository, EmployeeInvitationRepository>();

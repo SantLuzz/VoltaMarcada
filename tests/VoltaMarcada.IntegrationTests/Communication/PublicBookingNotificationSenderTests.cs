@@ -31,10 +31,10 @@ public sealed class PublicBookingNotificationSenderTests
     {
         public EmailMessage? Email { get; private set; }
 
-        public Task SendAsync(EmailMessage email, CancellationToken cancellationToken = default)
+        public Task<EmailDeliveryResult> SendAsync(EmailMessage email, CancellationToken cancellationToken = default)
         {
             Email = email;
-            return Task.CompletedTask;
+            return Task.FromResult(EmailDeliveryResult.Success());
         }
     }
 }

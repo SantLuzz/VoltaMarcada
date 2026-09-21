@@ -7,4 +7,3 @@ public interface ISupportRequestContextReader
     Task<SupportRequestContext?> GetAsync(Guid userId, Guid companyId, CancellationToken cancellationToken = default);
 }
 
-public interface ISupportRequestDeliveryConfiguration { string? RecipientEmail { get; } }

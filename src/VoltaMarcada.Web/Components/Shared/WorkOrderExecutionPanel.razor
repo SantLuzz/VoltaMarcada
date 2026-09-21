@@ -581,19 +581,14 @@ else
         recommendationItems = equipment.Select(item => new MaintenanceRecommendationItemInput(item.Id, recommendedServiceIds[item.Id]!.Value)).ToArray();
         return true;
     }
-
-    private IReadOnlyList<(Guid Id, string Description)> RecommendedEquipment => WorkOrder.Items
+private IReadOnlyList<(Guid Id, string Description)> RecommendedEquipment => WorkOrder.Items
         .Where(item => item.EquipmentId is not null)
         .Select(item => (Id: item.EquipmentId!.Value, Description: item.EquipmentDescription ?? "Equipamento"))
         .Append((Id: WorkOrder.EquipmentId, Description: "Equipamento principal"))
         .GroupBy(item => item.Id)
         .Select(group => (Id: group.Key, Description: group.First().Description))
         .ToArray();
-
-    private static string GetRecommendedServiceLabel(string description) =>
-        $"Serviço recomendado para {description}";
-
-    private async Task UploadAsync(InputFileChangeEventArgs args, WorkOrderPhotoType type)
+private async Task UploadAsync(InputFileChangeEventArgs args, WorkOrderPhotoType type)
     {
         if (isSaving || isUploadingPhoto)
         {

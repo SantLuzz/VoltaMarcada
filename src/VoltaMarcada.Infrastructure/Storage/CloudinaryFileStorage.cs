@@ -102,7 +102,7 @@ public sealed class CloudinaryFileStorage(
     }
 
     private static bool IsPrivatePaymentKey(string key) =>
-        key.StartsWith("pagamentos/", StringComparison.Ordinal);
+        key.StartsWith("pagamentos/", StringComparison.Ordinal) || key.StartsWith("support/", StringComparison.Ordinal);
 
     private static bool IsRawDocument(string contentType) =>
         string.Equals(contentType, "application/pdf", StringComparison.OrdinalIgnoreCase);

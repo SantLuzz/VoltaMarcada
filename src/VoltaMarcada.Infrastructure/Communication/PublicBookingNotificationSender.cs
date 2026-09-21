@@ -6,7 +6,7 @@ namespace VoltaMarcada.Infrastructure.Communication;
 
 public sealed class PublicBookingNotificationSender(IEmailSender emailSender) : IPublicBookingNotificationSender
 {
-    public Task SendNewAppointmentRequestAsync(
+    public async Task SendNewAppointmentRequestAsync(
         string recipientEmail,
         string companyDisplayName,
         string customerName,
@@ -27,6 +27,6 @@ public sealed class PublicBookingNotificationSender(IEmailSender emailSender) : 
             $"Nova solicita\u00e7\u00e3o de agendamento - {companyDisplayName}",
             $"<p>Ol\u00e1, {safeCompanyName}.</p><p>Uma nova solicita\u00e7\u00e3o de agendamento foi recebida.</p><p><strong>Cliente:</strong> {safeCustomerName}<br /><strong>Servi\u00e7o:</strong> {safeServiceName}<br /><strong>Prefer\u00eancia:</strong> {requestedAt}</p><p><a href=\"{safeAgendaUrl}\">Abrir solicita\u00e7\u00e3o na agenda</a></p>");
 
-        return emailSender.SendAsync(email, cancellationToken);
+        await emailSender.SendAsync(email, cancellationToken);
     }
 }

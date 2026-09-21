@@ -58,6 +58,6 @@ public sealed class OverdueLicenseNotificationServiceTests
         }
         public ValueTask DisposeAsync() => Services.DisposeAsync();
     }
-    private sealed class EmailSenderStub(bool throwOnSend) : IEmailSender { public List<EmailMessage> Messages { get; } = []; public Task SendAsync(EmailMessage email, CancellationToken cancellationToken = default) { if (throwOnSend) { throw new InvalidOperationException("Simulated email delivery failure."); } Messages.Add(email); return Task.CompletedTask; } }
+    private sealed class EmailSenderStub(bool throwOnSend) : IEmailSender { public List<EmailMessage> Messages { get; } = []; public Task<EmailDeliveryResult> SendAsync(EmailMessage email, CancellationToken cancellationToken = default) { if (throwOnSend) { throw new InvalidOperationException("Simulated email delivery failure."); } Messages.Add(email); return Task.FromResult(EmailDeliveryResult.Success()); } }
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider { public override DateTimeOffset GetUtcNow() => now; }
 }
