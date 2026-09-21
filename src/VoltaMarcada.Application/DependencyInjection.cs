@@ -150,7 +150,7 @@ public static class DependencyInjection
         services.AddScoped<ApprovePublicQuoteUseCase>();
         services.AddScoped<RejectPublicQuoteUseCase>();
         services.AddScoped<GetServiceRequestsUseCase>();
-        services.AddScoped<SendSupportRequestUseCase>();
+        services.AddScoped<CreateSupportTicketUseCase>();
         services.AddScoped<ResolveServiceRequestUseCase>();
         return services;
     }

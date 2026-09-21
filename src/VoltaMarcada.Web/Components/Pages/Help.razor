@@ -1,6 +1,7 @@
 @page "/ajuda"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
 @using System.Net.Http.Headers
+@using System.Net.Http.Json
 @using VoltaMarcada.Web.Configuration
 @using VoltaMarcada.Web.Help
 @inject NavigationManager NavigationManager
@@ -49,8 +50,8 @@
             <MudText Typo="Typo.h6">Enviar uma solicitação</MudText>
             @if (successMessage is not null) { <MudAlert Severity="Severity.Success" Class="my-3">@successMessage</MudAlert> }
             @if (errorMessage is not null) { <MudAlert Severity="Severity.Error" Class="my-3">@errorMessage</MudAlert> }
-            <MudTextField @bind-Value="subject" Label="Assunto" Required="true" Variant="Variant.Outlined" Class="mt-3" />
-            <MudTextField @bind-Value="message" Label="Mensagem" Required="true" Lines="6" Variant="Variant.Outlined" Class="mt-3" />
+            <MudTextField @bind-Value="subject" Label="Assunto*" Variant="Variant.Outlined" Class="mt-3" />
+            <MudTextField @bind-Value="message" Label="Mensagem*" Lines="6" Variant="Variant.Outlined" Class="mt-3" />
             <InputFile OnChange="SelectFiles" accept="image/png,image/jpeg,image/webp" multiple class="mt-4" />
             <MudText Typo="Typo.caption" Class="d-block mt-2">Até 5 imagens PNG, JPEG ou WEBP, com até 5 MB cada e 20 MB no total.</MudText>
             <MudButton OnClick="SendAsync" Disabled="@isSending" Color="Color.Primary" Variant="Variant.Filled" Class="mt-4">@(isSending ? "Enviando..." : "Enviar solicitação")</MudButton>
@@ -67,6 +68,8 @@
     private bool isSending;
     private string selectedGuideId = "cadastros-clientes";
     private MarkupString guideContent;
+
+    private sealed record SupportTicketResponse(long TicketNumber);
 
     protected override async Task OnInitializedAsync()
     {
@@ -104,10 +107,12 @@
                 content.Add(fileContent, "attachments", file.Name);
             }
             var response = await HttpClientFactory.CreateClient().PostAsync(NavigationManager.ToAbsoluteUri("support/requests"), content);
-            if (!response.IsSuccessStatusCode) { errorMessage = "Não foi possível enviar sua solicitação. Tente novamente."; return; }
-            subject = string.Empty; message = string.Empty; attachments.Clear(); successMessage = "Solicitação enviada. Retornaremos em breve.";
+            if (!response.IsSuccessStatusCode) { errorMessage = "Não foi possível abrir seu chamado. Tente novamente."; return; }
+            var responseContent = await response.Content.ReadFromJsonAsync<SupportTicketResponse>();
+            if (responseContent is null) { errorMessage = "Não foi possível identificar o chamado aberto. Tente novamente."; return; }
+            subject = string.Empty; message = string.Empty; attachments.Clear(); successMessage = $"Chamado nº {responseContent.TicketNumber} aberto.";
         }
-        catch { errorMessage = "Não foi possível enviar sua solicitação. Tente novamente."; }
+        catch { errorMessage = "Não foi possível abrir seu chamado. Tente novamente."; }
         finally { isSending = false; }
     }
 }

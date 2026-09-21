@@ -17,7 +17,7 @@ public static class SupportEndpoints
         return endpoints;
     }
 
-    private static async Task<IResult> SendAsync(HttpRequest request, SendSupportRequestUseCase useCase, CancellationToken cancellationToken)
+    private static async Task<IResult> SendAsync(HttpRequest request, CreateSupportTicketUseCase useCase, CancellationToken cancellationToken)
     {
         if (!request.HasFormContentType) return Results.BadRequest();
 
@@ -37,6 +37,6 @@ public static class SupportEndpoints
             form["message"].ToString(),
             attachments), cancellationToken);
 
-        return result.ToHttpResult(() => Results.Ok());
+        return result.ToHttpResult(value => Results.Ok(new { ticketNumber = value.Number }));
     }
 }

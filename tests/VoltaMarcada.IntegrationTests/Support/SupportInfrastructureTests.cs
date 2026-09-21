@@ -39,14 +39,6 @@ public sealed class SupportInfrastructureTests
         Assert.Null(unrelatedContext);
     }
 
-    [Fact]
-    public void RecipientEmail_UsesConfiguredSmtpSender()
-    {
-        var configuration = new SmtpSupportRequestDeliveryConfiguration(
-            Options.Create(new SmtpOptions { SenderEmail = "support@voltamarcada.com" }));
-
-        Assert.Equal("support@voltamarcada.com", configuration.RecipientEmail);
-    }
 
     private static AppDbContext CreateDatabase()
     {
