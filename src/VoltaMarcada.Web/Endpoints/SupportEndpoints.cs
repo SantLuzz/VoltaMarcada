@@ -14,7 +14,16 @@ public static class SupportEndpoints
             .RequireAuthorization(AuthorizationPolicies.CompanyMember)
             .RequireRateLimiting("support-requests");
 
+endpoints.MapGet("/platform/support/attachments/{attachmentId:guid}", GetAttachmentAsync)
+            .RequireAuthorization(AuthorizationPolicies.PlatformAdministrator);
+
         return endpoints;
+    }
+
+    private static async Task<IResult> GetAttachmentAsync(Guid attachmentId, GetPlatformSupportTicketAttachmentUseCase useCase, CancellationToken cancellationToken)
+    {
+        var result = await useCase.ExecuteAsync(attachmentId, cancellationToken);
+        return result.ToHttpResult(file => Results.File(file.Content, file.ContentType));
     }
 
     private static async Task<IResult> SendAsync(HttpRequest request, CreateSupportTicketUseCase useCase, CancellationToken cancellationToken)

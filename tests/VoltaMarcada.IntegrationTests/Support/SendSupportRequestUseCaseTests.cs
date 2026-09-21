@@ -88,6 +88,9 @@ public sealed class CreateSupportTicketUseCaseTests
         public Task<ISupportTicketTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) => Task.FromResult<ISupportTicketTransaction>(new TransactionStub());
         public Task<long> GetNextNumberAsync(CancellationToken cancellationToken = default) => Task.FromResult((long)Tickets.Count + 1);
         public Task AddAsync(SupportTicket ticket, CancellationToken cancellationToken = default) { Tickets.Add(ticket); return Task.CompletedTask; }
+        public Task<IReadOnlyList<PlatformSupportTicketListItem>> GetAllAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<PlatformSupportTicketListItem>>([]);
+        public Task<SupportTicket?> GetForUpdateAsync(Guid ticketId, CancellationToken cancellationToken = default) => Task.FromResult<SupportTicket?>(Tickets.SingleOrDefault(ticket => ticket.Id == ticketId));
+        public Task<SupportTicketAttachment?> GetAttachmentAsync(Guid attachmentId, CancellationToken cancellationToken = default) => Task.FromResult<SupportTicketAttachment?>(null);
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 

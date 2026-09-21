@@ -9,5 +9,7 @@ public static class SupportErrors
     public static readonly OperationError InvalidInput = new("Support.InvalidInput", OperationErrorType.Validation, "The support request text is invalid.");
     public static readonly OperationError InvalidAttachment = new("Support.InvalidAttachment", OperationErrorType.Validation, "An attachment is invalid.");
     public static readonly OperationError UserEmailUnavailable = new("Support.UserEmailUnavailable", OperationErrorType.Validation, "The authenticated user email is unavailable.");
-    public static readonly OperationError RecipientUnavailable = new("Support.RecipientUnavailable", OperationErrorType.Validation, "The support recipient is unavailable.");
+    public static readonly OperationError TicketNotFound = new("Support.TicketNotFound", OperationErrorType.NotFound, "The support ticket was not found.");
+    public static readonly OperationError TicketClosed = new("Support.TicketClosed", OperationErrorType.Conflict, "The support ticket is closed.");
+    public static readonly OperationError EmailDeliveryFailed = new("Support.EmailDeliveryFailed", OperationErrorType.Conflict, "The support response could not be delivered by email.");
 }
