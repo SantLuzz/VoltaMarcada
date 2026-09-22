@@ -4,7 +4,7 @@ Suporte e guias- Abra Ajuda e confirme os guias em lista, com títulos em maiús
 - Confirme o botão de WhatsApp para contato com suporte.
 - Envie uma solicitação de suporte com e sem anexo.
 
-Tela de empresa no celular- Abra a tela Empresa em largura mobile.
+Tela de empresa no celular- Abra a tela Empresa em largura mobile. OK
 - Confirme que não há rolagem horizontal e que campos, cartões e ações se adaptam à tela.
 
 Equipamentos em OS e orçamento- Crie uma OS ou orçamento para um cliente com mais de um equipamento.
@@ -31,3 +31,72 @@ PDF do orçamento- Gere o PDF de um orçamento com serviços, peças ou outros i
 
 Validação técnica já executada- Compilação do projeto Web sem erros.
 - Teste de integração de manutenção: 5 de 5 aprovados.
+ROTEIRO ATUALIZADO — revisão da branch em 22/09/2026
+
+Preparação
+- Usar uma empresa de teste, um membro da empresa e um administrador da plataforma.
+- Cadastrar cliente com dois equipamentos e dois serviços de preços diferentes.
+- Configurar SMTP de teste e armazenamento de arquivos. Aplicar a migration AddSupportTickets.
+- Registrar resultado, evidência e os números de OS, orçamento ou chamado criados.
+
+P0 — itens por equipamento em OS e orçamento
+[ ] Criar OS com dois itens de serviço, cada um associado ao equipamento correto.
+    Esperado: cada item preserva o equipamento; não há equipamento único obrigatório no cabeçalho.
+[ ] Tentar salvar serviço sem equipamento, na OS e no orçamento.
+    Esperado: validação bloqueia; itens não-serviço respeitam sua regra própria.
+[ ] Tentar vincular equipamento de outro cliente ou empresa (inclusive alterando a requisição).
+    Esperado: bloqueio e nenhum vazamento entre clientes/tenants.
+[ ] Conferir valores ao selecionar serviços com cada tipo de preço e os totais com quantidade/desconto.
+    Esperado: preço e totais corretos e persistidos.
+[ ] Criar orçamento/OS a partir de agendamento ou itens comerciais.
+    Esperado: equipamentos, serviços, preços e desconto são mantidos.
+[ ] Consultar OS com um e vários equipamentos.
+    Esperado: descrição para um equipamento; “N equipamentos selecionados” para vários, sem GUID.
+
+P0 — conclusão de OS e manutenção recorrente
+[ ] Concluir OS com dois equipamentos e ativar recomendação de próxima manutenção.
+    Esperado: há serviço recomendado por equipamento, com uma periodicidade/data e observação comuns.
+[ ] Conferir Manutenção recorrente após concluir.
+    Esperado: uma oportunidade por equipamento, ligada ao serviço e à OS certos.
+[ ] Repetir com um equipamento e com recomendação desmarcada.
+    Esperado: uma oportunidade no primeiro caso; nenhuma no segundo.
+[ ] Informar data/intervalo inválido ou deixar serviço sem escolha para algum equipamento.
+    Esperado: nenhuma criação parcial; a conclusão inválida é bloqueada.
+
+P0 — PDF de orçamento
+[ ] Gerar PDF com serviços, peças/outros itens, vários equipamentos e desconto.
+    Esperado: equipamentos, descrição, quantidade, valor unitário, total do item e total geral corretos; sem coluna “Tipo”.
+[ ] Baixar como usuário autenticado e pela URL pública válida.
+    Esperado: documento abre e usa “Orçamento - CODIGO - ddMMyyyy.pdf”.
+[ ] Usar token público inválido, expirado ou de outro orçamento.
+    Esperado: nenhum dado/PDF é exposto.
+
+P0 — abertura de chamado pela empresa
+[ ] Em Ajuda, enviar assunto e mensagem sem anexo.
+    Esperado: “Chamado nº X aberto”, formulário limpo e ticket aberto com empresa, solicitante e mensagem inicial corretos.
+[ ] Enviar imagens PNG, JPEG e WEBP válidas.
+    Esperado: anexos ficam privados e disponíveis ao administrador da plataforma.
+[ ] Testar seis arquivos, arquivo >5 MB, total >20 MB, vazio e conteúdo não-imagem disfarçado.
+    Esperado: rejeição segura sem ticket incompleto ou arquivo órfão/acessível.
+[ ] Testar assunto/mensagem vazios, assunto >200 e mensagem >5.000 caracteres.
+    Esperado: validação e nenhuma persistência.
+[ ] Repetir envios até o limite e enviar sem sessão.
+    Esperado: rate limiting e autorização aplicados, sem duplicação.
+
+P0 — painel de chamados da plataforma
+[ ] Como administrador, abrir /plataforma/chamados e selecionar tickets com e sem anexos.
+    Esperado: lista, contador, status e conversa cronológica corretos; anexo abre em nova aba.
+[ ] Como membro de empresa/anônimo, acessar a rota e uma URL de anexo.
+    Esperado: acesso negado e anexos privados.
+[ ] Responder ticket aberto com texto e quebra de linha.
+    Esperado: e-mail chega ao solicitante e mensagem “Equipe VoltaMarcada” aparece na conversa.
+[ ] Simular SMTP indisponível e responder.
+    Esperado: erro informado e resposta não é persistida.
+[ ] Fechar chamado, recarregar e tentar responder/fechar de novo.
+    Esperado: status persiste, contador atualiza e operações posteriores são recusadas.
+
+P1 — ajuda, responsividade e regressão
+[ ] Abrir todos os sete guias de Ajuda, validar Markdown, links e WhatsApp configurado/não configurado.
+[ ] Revisar Ajuda, Empresa, OS, Orçamento e Chamados em desktop e mobile.
+    Esperado: sem rolagem horizontal, sobreposição ou controles inalcançáveis.
+[ ] Conferir todos os textos e e-mails alterados.

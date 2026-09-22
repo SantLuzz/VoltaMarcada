@@ -1,13 +1,12 @@
 @page "/ajuda"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
-@using System.Net.Http.Headers
-@using System.Net.Http.Json
+@using VoltaMarcada.Application.Abstractions.Operations
+@using VoltaMarcada.Application.Support
 @using VoltaMarcada.Web.Configuration
 @using VoltaMarcada.Web.Help
-@inject NavigationManager NavigationManager
 @inject ISupportConfiguration SupportConfiguration
-@inject IHttpClientFactory HttpClientFactory
 @inject IHelpGuideProvider HelpGuideProvider
+@inject IComponentOperationExecutor OperationExecutor
 
 <PageTitle>Ajuda e suporte | VoltaMarcada</PageTitle>
 
@@ -100,24 +99,30 @@
         isSending = true;
         try
         {
-            using var content = new MultipartFormDataContent();
-            content.Add(new StringContent(subject), "subject");
-            content.Add(new StringContent(message), "message");
+            var supportAttachments = new List<SupportAttachmentInput>(attachments.Count);
             foreach (var file in attachments)
             {
-                var fileContent = new StreamContent(file.OpenReadStream(5L * 1024 * 1024 + 1));
-                fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
-                content.Add(fileContent, "attachments", file.Name);
+                await using var input = file.OpenReadStream(5L * 1024 * 1024 + 1);
+                using var content = new MemoryStream();
+                await input.CopyToAsync(content);
+                supportAttachments.Add(new SupportAttachmentInput(file.Name, file.ContentType, content.ToArray()));
             }
-            var response = await HttpClientFactory.CreateClient().PostAsync(NavigationManager.ToAbsoluteUri("support/requests"), content);
-            if (!response.IsSuccessStatusCode) { errorMessage = "Não foi possível abrir seu chamado. Tente novamente."; return; }
-            var responseContent = await response.Content.ReadFromJsonAsync<SupportTicketResponse>();
-            if (responseContent is null) { errorMessage = "Não foi possível identificar o chamado aberto. Tente novamente."; return; }
+
+            var result = await OperationExecutor.ExecuteAsync(
+                (CreateSupportTicketUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    new SendSupportRequestCommand(subject, message, supportAttachments),
+                    cancellationToken));
+
+            if (!result.IsSuccess || result.Value is null)
+            {
+                errorMessage = OperationErrorMessages.GetMessage(result.Error?.Code);
+                return;
+            }
             subject = string.Empty;
             message = string.Empty;
             attachments.Clear();
             await supportForm.ResetValidationAsync();
-            successMessage = $"Chamado nº {responseContent.TicketNumber} aberto.";
+            successMessage = $"Chamado nº {result.Value.Number} aberto.";
         }
         catch { errorMessage = "Não foi possível abrir seu chamado. Tente novamente."; }
         finally { isSending = false; }
