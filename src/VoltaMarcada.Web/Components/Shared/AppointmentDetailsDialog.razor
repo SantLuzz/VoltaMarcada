@@ -61,6 +61,7 @@
         }
     </DialogContent>
     <DialogActions>
+        <MudStack Row="true" Breakpoint="Breakpoint.SmAndDown" Class="appointment-details-actions">
         @if (appointmentDetails?.Status == VoltaMarcada.Domain.Enums.AppointmentStatus.Scheduled)
         {
             <MudButton Href="@($"/agenda?appointmentId={appointmentDetails.Id}")" Variant="Variant.Outlined">Ver na agenda</MudButton>
@@ -84,6 +85,7 @@
             <MudButton Href="@($"/ordens-servico/registro?id={workOrderId}")" Color="Color.Primary" Variant="Variant.Filled">Abrir OS</MudButton>
         }
         <MudButton OnClick="CloseAsync">Fechar</MudButton>
+        </MudStack>
     </DialogActions>
 </MudDialog>
 

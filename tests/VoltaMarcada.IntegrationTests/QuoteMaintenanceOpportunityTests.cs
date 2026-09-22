@@ -52,6 +52,40 @@ public sealed class QuoteMaintenanceOpportunityTests
     }
 
     [Fact]
+    public void ToWorkOrderItemDefinitions_WithMultipleServiceItems_PreservesTypesAndAssociations()
+    {
+        var equipmentA = Guid.NewGuid();
+        var equipmentB = Guid.NewGuid();
+        var serviceA = Guid.NewGuid();
+        var serviceB = Guid.NewGuid();
+        var quote = Quote.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            equipmentA,
+            serviceA,
+            null,
+            null,
+            [
+                new QuoteItemDefinition("Clean A", 1, 120m, QuoteItemType.Service, equipmentA, serviceA),
+                new QuoteItemDefinition("Clean B", 1, 150m, QuoteItemType.Service, equipmentB, serviceB),
+                new QuoteItemDefinition("Part", 1, 30m, QuoteItemType.Part, equipmentA)
+            ],
+            0,
+            null,
+            new DateOnly(2026, 10, 2),
+            new DateTimeOffset(2026, 9, 2, 12, 0, 0, TimeSpan.Zero));
+
+        var result = QuoteWorkOrderItemMapper.ToWorkOrderItemDefinitions(quote.Items);
+
+        Assert.Collection(
+            result,
+            item => Assert.Equal(new WorkOrderItemDefinition("Clean A", 1, 120m, WorkOrderItemType.Service, equipmentA, serviceA), item),
+            item => Assert.Equal(new WorkOrderItemDefinition("Clean B", 1, 150m, WorkOrderItemType.Service, equipmentB, serviceB), item),
+            item => Assert.Equal(new WorkOrderItemDefinition("Part", 1, 30m, WorkOrderItemType.Part, equipmentA), item));
+    }
+
+    [Fact]
     public async Task CreateQuote_WithMultipleServiceItems_PersistsEveryServiceAssociation()
     {
         await using var fixture = await Fixture.CreateAsync();

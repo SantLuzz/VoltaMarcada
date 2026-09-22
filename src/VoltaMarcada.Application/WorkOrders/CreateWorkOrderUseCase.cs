@@ -8,7 +8,7 @@ using VoltaMarcada.Domain.ValueObjects;
 
 namespace VoltaMarcada.Application.WorkOrders;
 
-public sealed class CreateWorkOrderUseCase(IWorkOrderRepository workOrderRepository, ICustomerRepository customerRepository, IEquipmentRepository equipmentRepository, IServiceRepository serviceRepository, IProfessionalRepository professionalRepository, IAppointmentRepository appointmentRepository, AppointmentAvailability appointmentAvailability, WorkOrderAuthorization authorization, ICurrentUser currentUser, IValidator<CreateWorkOrderCommand> validator, TimeProvider timeProvider)
+public sealed class CreateWorkOrderUseCase(IWorkOrderRepository workOrderRepository, ICustomerRepository customerRepository, IEquipmentRepository equipmentRepository, IServiceRepository serviceRepository, IProfessionalRepository professionalRepository, IAppointmentRepository appointmentRepository, AppointmentAvailability appointmentAvailability, WorkOrderAuthorization authorization, ICurrentUser currentUser, IValidator<CreateWorkOrderCommand> validator, WorkOrderChecklistFactory checklistFactory, TimeProvider timeProvider)
 {
     public async Task<OperationResult<WorkOrderOperationValue>> ExecuteAsync(CreateWorkOrderCommand command, CancellationToken cancellationToken = default)
     {
@@ -79,8 +79,9 @@ public sealed class CreateWorkOrderUseCase(IWorkOrderRepository workOrderReposit
         {
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
         }
+        var checklistItems = await checklistFactory.CreateAsync(scope.CompanyId, items, cancellationToken);
         var now = timeProvider.GetUtcNow();
-        var workOrder = global::VoltaMarcada.Domain.Entities.WorkOrder.Create(scope.CompanyId, customer.Id, equipment.Id, service.Id, professionalId, currentUser.UserId, command.Priority, command.ReportedProblem, items, service.ChecklistItems.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderChecklistItemDefinition(x.Description, x.IsRequired, x.DisplayOrder)).ToArray(), now, discountAmount: command.DiscountAmount, sourceAppointmentId: command.SourceAppointmentId);
+        var workOrder = global::VoltaMarcada.Domain.Entities.WorkOrder.Create(scope.CompanyId, customer.Id, equipment.Id, service.Id, professionalId, currentUser.UserId, command.Priority, command.ReportedProblem, items, checklistItems, now, discountAmount: command.DiscountAmount, sourceAppointmentId: command.SourceAppointmentId);
         workOrder.RecordHistory(WorkOrderHistoryEventType.Created, currentUser.UserId == Guid.Empty ? null : currentUser.UserId, WorkOrderHistoryDescriptions.Created(), now);
         await workOrderRepository.AddAsync(workOrder, cancellationToken);
         if (command.Appointment is not null)

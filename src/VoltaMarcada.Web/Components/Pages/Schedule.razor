@@ -156,7 +156,7 @@ else if (appointments.Count == 0)
 }
 else
 {
-    <MudList T="AppointmentDto" Class="mt-4">
+    <MudList T="AppointmentDto" Class="mt-4 agenda-appointment-list">
         @foreach (var appointment in appointments)
         {
             <MudListItem T="AppointmentDto" Value="@appointment" Icon="@Icons.Material.Filled.Event" OnClick="@(() => OpenAppointmentDetails(appointment.Id))">
@@ -175,7 +175,7 @@ else
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@appointment.Notes</MudText>
                     }
                     <div @onclick:stopPropagation="true">
-                        <MudStack Row="true" Spacing="1">
+                        <MudStack Row="true" Breakpoint="Breakpoint.SmAndDown" Spacing="1" Class="agenda-appointment-actions">
                         @if (appointment.WorkOrderId is { } workOrderId)
                         {
                             <MudButton Href="@($"/ordens-servico/registro?id={workOrderId}")" Size="Size.Small" Variant="Variant.Text">Abrir OS</MudButton>
@@ -248,7 +248,7 @@ else
                     <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Opcional: vincule a uma OS" Clearable="true" @bind-Value="appointmentWorkOrderId" @bind-Value:after="OnAppointmentWorkOrderChangedAsync" Disabled="@isCreatingAppointment">
                         @foreach (var workOrder in appointmentWorkOrders)
                         {
-                            <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
+                            <MudSelectItem Value="@((Guid?)workOrder.Id)">@WorkOrderDisplayFormatter.FormatOption(workOrder)</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>
@@ -291,7 +291,7 @@ else
                         <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Selecione uma ordem de serviço" @bind-Value="appointmentWorkOrderId" @bind-Value:after="OnAppointmentWorkOrderChangedAsync" Disabled="@isCreatingAppointment">
                             @foreach (var workOrder in appointmentWorkOrders)
                             {
-                                <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
+                                <MudSelectItem Value="@((Guid?)workOrder.Id)">@WorkOrderDisplayFormatter.FormatOption(workOrder)</MudSelectItem>
                             }
                         </MudSelect>
                     </MudItem>
@@ -341,7 +341,7 @@ else
                     <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Opcional" Clearable="true" @bind-Value="adjustmentWorkOrderId" @bind-Value:after="OnAdjustmentWorkOrderChangedAsync" Disabled="@isAdjusting">
                         @foreach (var workOrder in adjustmentWorkOrders)
                         {
-                            <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
+                            <MudSelectItem Value="@((Guid?)workOrder.Id)">@WorkOrderDisplayFormatter.FormatOption(workOrder)</MudSelectItem>
                         }
                     </MudSelect>
                 </MudItem>

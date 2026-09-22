@@ -171,18 +171,45 @@ else
                     else
                     {
                         <MudText Typo="Typo.subtitle2" Class="mt-3">Valor da OS: @WorkOrder.TotalAmount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))</MudText>
-                        <MudSelect T="PaymentMethod" Label="Forma de pagamento" Variant="Variant.Outlined" @bind-Value="selectedPaymentMethod" FullWidth="true" Class="mt-3">
-                            @foreach (var method in AvailablePaymentMethods) { <MudSelectItem Value="@method">@GetPaymentMethodLabel(method)</MudSelectItem> }
-                        </MudSelect>
-                        @if (selectedPaymentMethod == PaymentMethod.Other) { <MudTextField @bind-Value="otherPaymentMethodDescription" Label="Descreva a forma de pagamento" Required="true" Variant="Variant.Outlined" Class="mt-3" /> }
-                        @if (selectedPaymentMethod == PaymentMethod.Pix)
+                        @foreach (var installment in paymentInstallments)
                         {
-                            @if (isLoadingPixPayment) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-3" /> }
-                            else if (pixPayment is { } currentPixPayment)
-                            {
-                                <MudPaper Outlined="true" Class="pa-3 mt-3"><MudStack AlignItems="AlignItems.Center" Spacing="2"><PixQrCode Payload="@currentPixPayment.CopyAndPasteCode" Size="180" /><MudText Typo="Typo.subtitle2">PIX Copia e Cola</MudText><MudTextField T="string" Value="@currentPixPayment.CopyAndPasteCode" ReadOnly="true" Lines="3" Variant="Variant.Outlined" FullWidth="true" /><MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap"><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="CopyPixAsync">Copiar código PIX</MudButton>@if (currentPixPayment.WhatsAppShareLink is not null) { <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.Send" Href="@currentPixPayment.WhatsAppShareLink" Target="_blank">Enviar no WhatsApp</MudButton> }</MudStack></MudStack></MudPaper>
-                            }
-                            else { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">Configure a chave Pix da empresa para gerar a cobrança.</MudAlert> }
+                            <MudPaper Outlined="true" Class="pa-3 mt-3">
+                                <MudGrid Spacing="2">
+                                    <MudItem xs="12" sm="5">
+                                        <MudSelect T="PaymentMethod" Label="Forma de pagamento" Variant="Variant.Outlined" Value="@installment.PaymentMethod" ValueChanged="@(value => OnPaymentMethodChangedAsync(installment, value))" FullWidth="true">
+                                            @foreach (var method in AvailablePaymentMethods) { <MudSelectItem Value="@method">@GetPaymentMethodLabel(method)</MudSelectItem> }
+                                        </MudSelect>
+                                    </MudItem>
+                                    <MudItem xs="10" sm="5"><BrazilianCurrencyInput Id="@($"payment-installment-{paymentInstallments.IndexOf(installment)}-amount")" Name="@($"payment-installment-{paymentInstallments.IndexOf(installment)}-amount")" Label="Valor" Required="true" Value="@installment.Amount" ValueChanged="@(value => OnPaymentAmountChangedAsync(installment, value))" /></MudItem>
+                                    <MudItem xs="2" sm="2" Class="d-flex align-center justify-end"><MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover parcela" Disabled="@(paymentInstallments.Count == 1)" OnClick="@(() => RemovePaymentInstallment(installment))" /></MudItem>
+                                    @if (installment.PaymentMethod == PaymentMethod.Other) { <MudItem xs="12"><MudTextField @bind-Value="installment.OtherPaymentMethodDescription" Label="Descreva a forma de pagamento" Required="true" Variant="Variant.Outlined" FullWidth="true" /></MudItem> }
+                                </MudGrid>
+                                @if (installment.PaymentMethod == PaymentMethod.Pix)
+                                {
+                                    @if (installment.IsLoadingPixPayment) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-3" /> }
+                                    else if (installment.PixPayment is { } currentPixPayment)
+                                    {
+                                        <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="mt-3"><PixQrCode Payload="@currentPixPayment.CopyAndPasteCode" Size="180" /><MudText Typo="Typo.subtitle2">PIX Copia e Cola</MudText><MudTextField T="string" Value="@currentPixPayment.CopyAndPasteCode" ReadOnly="true" Lines="3" Variant="Variant.Outlined" FullWidth="true" /><MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap"><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="@(() => CopyPixAsync(currentPixPayment))">Copiar código PIX</MudButton>@if (currentPixPayment.WhatsAppShareLink is not null) { <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.Send" Href="@currentPixPayment.WhatsAppShareLink" Target="_blank">Enviar no WhatsApp</MudButton> }</MudStack></MudStack>
+                                    }
+                                    else { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">Configure a chave Pix da empresa para gerar a cobrança.</MudAlert> }
+                                }
+                            </MudPaper>
+                        }
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap" Class="mt-3">
+                            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" OnClick="AddPaymentInstallment">Adicionar pagamento</MudButton>
+                            <MudText>Subtotal: @PaymentInstallmentsTotal.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) de @WorkOrder.TotalAmount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))</MudText>
+                        </MudStack>
+                        @if (HasInvalidPaymentInstallments)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">Informe um valor maior que zero para cada pagamento.</MudAlert>
+                        }
+                        else if (PaymentInstallmentsTotal > WorkOrder.TotalAmount)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">A soma dos pagamentos não pode ultrapassar o valor da OS.</MudAlert>
+                        }
+                        else if (PaymentInstallmentsTotal < WorkOrder.TotalAmount)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">Complete o valor restante para concluir o serviço.</MudAlert>
                         }
                         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">A cobrança será incluída no Caixa como pendência para confirmação posterior.</MudAlert>
                     }
@@ -230,12 +257,16 @@ else
     private bool isCompletionDialogOpen;
     private bool isNoCharge;
     private string? noChargeReason;
-    private PaymentMethod selectedPaymentMethod = PaymentMethod.Pix;
-    private string? otherPaymentMethodDescription;
-    private WorkOrderPixPaymentDto? pixPayment;
-    private bool isLoadingPixPayment;
+    private readonly List<PaymentInstallmentFormModel> paymentInstallments = [];
+    private bool isPixPaymentAvailable;
+    private bool isLoadingPixPayment => paymentInstallments.Any(item => item.IsLoadingPixPayment) ||
+        (!isNoCharge && WorkOrder.PaymentControlEnabled && WorkOrder.TotalAmount > 0 && !ArePaymentInstallmentsValid);
 
-    private IEnumerable<PaymentMethod> AvailablePaymentMethods => pixPayment is null
+    private bool HasInvalidPaymentInstallments => paymentInstallments.Count == 0 || paymentInstallments.Any(item => item.Amount <= 0);
+    private bool ArePaymentInstallmentsValid =>
+        !HasInvalidPaymentInstallments && PaymentInstallmentsTotal == WorkOrder.TotalAmount;
+
+    private IEnumerable<PaymentMethod> AvailablePaymentMethods => !isPixPaymentAvailable
         ? Enum.GetValues<PaymentMethod>().Where(method => method != PaymentMethod.Pix)
         : Enum.GetValues<PaymentMethod>();
     private string? recommendationPeriod;
@@ -474,19 +505,24 @@ else
 
         isNoCharge = false;
         noChargeReason = null;
-        otherPaymentMethodDescription = null;
-        pixPayment = null;
-        isLoadingPixPayment = true;
+        paymentInstallments.Clear();
+        isPixPaymentAvailable = false;
         try
         {
-            pixPayment = await OperationExecutor.ExecuteAsync(
+            var pixPayment = await OperationExecutor.ExecuteAsync(
                 (GetWorkOrderPixPaymentUseCase useCase, CancellationToken cancellationToken) =>
                     useCase.ExecuteAsync(WorkOrder.Id, WorkOrder.TotalAmount, cancellationToken));
-            selectedPaymentMethod = pixPayment is null ? PaymentMethod.Cash : PaymentMethod.Pix;
+            isPixPaymentAvailable = pixPayment is not null;
+            paymentInstallments.Add(new PaymentInstallmentFormModel
+            {
+                PaymentMethod = isPixPaymentAvailable ? PaymentMethod.Pix : PaymentMethod.Cash,
+                Amount = WorkOrder.TotalAmount,
+                PixPayment = pixPayment
+            });
         }
-        finally
+        catch
         {
-            isLoadingPixPayment = false;
+            paymentInstallments.Add(new PaymentInstallmentFormModel { PaymentMethod = PaymentMethod.Cash, Amount = WorkOrder.TotalAmount });
         }
 
         isCompletionDialogOpen = true;
@@ -522,14 +558,20 @@ else
         }
         else if (WorkOrder.PaymentControlEnabled && WorkOrder.TotalAmount > 0)
         {
-            if (selectedPaymentMethod == PaymentMethod.Other && string.IsNullOrWhiteSpace(otherPaymentMethodDescription))
+            if (paymentInstallments.Any(item => item.Amount <= 0 || (item.PaymentMethod == PaymentMethod.Other && string.IsNullOrWhiteSpace(item.OtherPaymentMethodDescription))))
             {
-                Snackbar.Add("Descreva a forma de pagamento.", Severity.Warning);
+                Snackbar.Add("Informe valores válidos e descreva as outras formas de pagamento.", Severity.Warning);
+                return;
+            }
+
+            if (PaymentInstallmentsTotal != WorkOrder.TotalAmount)
+            {
+                Snackbar.Add("As parcelas devem totalizar o valor da OS.", Severity.Warning);
                 return;
             }
 
             paymentDecision = new WorkOrderPaymentDecisionInput(
-                [new VoltaMarcada.Domain.ValueObjects.WorkOrderChargeInstallmentDefinition(selectedPaymentMethod, WorkOrder.TotalAmount, otherPaymentMethodDescription)],
+                paymentInstallments.Select(item => new VoltaMarcada.Domain.ValueObjects.WorkOrderChargeInstallmentDefinition(item.PaymentMethod, item.Amount, item.OtherPaymentMethodDescription)).ToArray(),
                 null);
         }
 
@@ -545,16 +587,102 @@ else
 
         ShowOperationError(result.Error?.Code);
     }
-    private async Task CopyPixAsync()
+    private async Task CopyPixAsync(WorkOrderPixPaymentDto payment)
     {
-        if (pixPayment is null)
+        await JsRuntime.InvokeVoidAsync("serviceSync.copyText", payment.CopyAndPasteCode);
+        Snackbar.Add("Código Pix copiado.", Severity.Success);
+    }
+
+    private async Task AddPaymentInstallment()
+    {
+        if (WorkOrder.TotalAmount < (paymentInstallments.Count + 1) * 0.01m)
+        {
+            Snackbar.Add("Não é possível criar um pagamento com valor zero.", Severity.Warning);
+            return;
+        }
+
+        paymentInstallments.Add(new PaymentInstallmentFormModel
+        {
+            PaymentMethod = PaymentMethod.Cash,
+            Amount = 0m
+        });
+
+        await RedistributePaymentInstallmentsAsync();
+    }
+
+    private async Task RemovePaymentInstallment(PaymentInstallmentFormModel installment)
+    {
+        if (paymentInstallments.Count > 1)
+        {
+            paymentInstallments.Remove(installment);
+            await RedistributePaymentInstallmentsAsync();
+        }
+    }
+
+    private async Task RedistributePaymentInstallmentsAsync()
+    {
+        var amountPerInstallment = decimal.Floor((WorkOrder.TotalAmount / paymentInstallments.Count) * 100m) / 100m;
+        var allocatedAmount = 0m;
+
+        for (var index = 0; index < paymentInstallments.Count; index++)
+        {
+            var installment = paymentInstallments[index];
+            installment.Amount = index == paymentInstallments.Count - 1
+                ? WorkOrder.TotalAmount - allocatedAmount
+                : amountPerInstallment;
+            allocatedAmount += installment.Amount;
+            installment.PixPayment = null;
+        }
+
+        foreach (var installment in paymentInstallments.Where(item => item.PaymentMethod == PaymentMethod.Pix))
+        {
+            await LoadPixPaymentAsync(installment);
+        }
+    }
+
+    private async Task OnPaymentMethodChangedAsync(PaymentInstallmentFormModel installment, PaymentMethod paymentMethod)
+    {
+        installment.PaymentMethod = paymentMethod;
+        installment.PixPayment = null;
+        if (paymentMethod == PaymentMethod.Pix)
+        {
+            await LoadPixPaymentAsync(installment);
+        }
+    }
+
+    private async Task OnPaymentAmountChangedAsync(PaymentInstallmentFormModel installment, decimal? amount)
+    {
+        var otherInstallmentsTotal = PaymentInstallmentsTotal - installment.Amount;
+        var availableAmount = Math.Max(0m, WorkOrder.TotalAmount - otherInstallmentsTotal);
+        installment.Amount = Math.Min(amount ?? 0m, availableAmount);
+        installment.PixPayment = null;
+        if (installment.PaymentMethod == PaymentMethod.Pix)
+        {
+            await LoadPixPaymentAsync(installment);
+        }
+    }
+
+    private async Task LoadPixPaymentAsync(PaymentInstallmentFormModel installment)
+    {
+        if (!isPixPaymentAvailable || installment.Amount <= 0)
         {
             return;
         }
 
-        await JsRuntime.InvokeVoidAsync("serviceSync.copyText", pixPayment.CopyAndPasteCode);
-        Snackbar.Add("Código Pix copiado.", Severity.Success);
+        installment.IsLoadingPixPayment = true;
+        try
+        {
+            installment.PixPayment = await OperationExecutor.ExecuteAsync(
+                (GetWorkOrderPixPaymentUseCase useCase, CancellationToken cancellationToken) =>
+                    useCase.ExecuteAsync(WorkOrder.Id, installment.Amount, cancellationToken));
+        }
+        finally
+        {
+            installment.IsLoadingPixPayment = false;
+        }
     }
+
+    private decimal PaymentInstallmentsTotal => paymentInstallments.Sum(item => item.Amount);
 
     private static string GetPaymentMethodLabel(PaymentMethod method) => method switch
     {
@@ -566,6 +694,15 @@ else
         PaymentMethod.Other => "Outro",
         _ => method.ToString()
     };
+
+    private sealed class PaymentInstallmentFormModel
+    {
+        public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Pix;
+        public decimal Amount { get; set; }
+        public string? OtherPaymentMethodDescription { get; set; }
+        public WorkOrderPixPaymentDto? PixPayment { get; set; }
+        public bool IsLoadingPixPayment { get; set; }
+    }
     private bool TryCreateRecommendation(out MaintenanceRecommendationInput? recommendation, out IReadOnlyList<MaintenanceRecommendationItemInput>? recommendationItems)
     {
         recommendation = null;

@@ -13,7 +13,7 @@ public sealed class MultiEquipmentItemUiTests
         Assert.Contains("EquipmentOptions=\"equipment\"", registrationSource, StringComparison.Ordinal);
         Assert.Contains("ServiceOptions=\"services\"", registrationSource, StringComparison.Ordinal);
         Assert.Contains("BuildWorkOrderItems()", registrationSource, StringComparison.Ordinal);
-        Assert.Contains("new WorkOrderItemInput(item.EquipmentId, item.ServiceId", registrationSource, StringComparison.Ordinal);
+        Assert.Contains("WorkOrderItemFormMapper.ToInputs(detail.Items)", registrationSource, StringComparison.Ordinal);
         Assert.Contains("Label=\"Equipamento\"", editorSource, StringComparison.Ordinal);
         Assert.Contains("Label=\"Servi\u00e7o\"", editorSource, StringComparison.Ordinal);
     }

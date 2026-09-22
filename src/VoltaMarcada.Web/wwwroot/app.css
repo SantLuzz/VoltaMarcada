@@ -263,20 +263,36 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
         justify-content: flex-start;
         width: 100%;
     }
+
+    .agenda-appointment-list .mud-list-item-icon {
+        align-self: flex-start;
+        margin-top: 4px;
+    }
+
+    .agenda-appointment-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .agenda-appointment-actions .mud-button-root {
+        justify-content: flex-start;
+        width: 100%;
+    }
 }
 
 .work-order-photo-preview-pending > img { height: 120px; object-fit: cover; width: 160px; }
 
 .equipment-history-drawer {
     max-width: 100vw;
+}
+
 @media (max-width: 599.95px) {
-    .agenda-request-actions { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .agenda-request-actions { display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
     .agenda-request-actions .mud-button-root,
     .agenda-request-actions .mud-select {
         min-width: 0;
         width: 100%;
     }
-}
 }
 
 .equipment-history-loading,
@@ -580,6 +596,18 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
    ========================================================= */
 
 @media (max-width: 599.95px) {
+
+    .appointment-details-actions {
+        align-items: stretch;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .appointment-details-actions .mud-button-root {
+        width: 100%;
+    }
 
     .drawer-brand {
         height: 120px;

@@ -196,6 +196,7 @@ public sealed class WorkOrderOrderingTests
                 authorization,
                 user,
                 new CreateWorkOrderCommandValidator(),
+                new WorkOrderChecklistFactory(new ServiceRepository(dbContext), new EquipmentRepository(dbContext)),
                 new FixedTimeProvider(Now));
             return new WorkOrderFixture(dbContext, companyId, repository, createUseCase, customer, equipmentA, equipmentB, serviceA, serviceB);
         }

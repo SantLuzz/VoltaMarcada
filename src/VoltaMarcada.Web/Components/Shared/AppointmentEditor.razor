@@ -5,6 +5,7 @@
 @using VoltaMarcada.Application.Services
 @using VoltaMarcada.Application.WorkOrders
 @using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Web.Formatting
 @inject IComponentOperationExecutor OperationExecutor
 @inject ISchedulingConfiguration SchedulingConfiguration
 @inject ISnackbar Snackbar
@@ -42,7 +43,7 @@
                         <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Obrigatória para execução de serviço" Clearable="true" @bind-Value="workOrderId" @bind-Value:after="OnWorkOrderChangedAsync" Disabled="@(isCreating || appointmentType != AppointmentType.Service)">
                             @foreach (var workOrder in workOrders)
                             {
-                                <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
+                                <MudSelectItem Value="@((Guid?)workOrder.Id)">@WorkOrderDisplayFormatter.FormatOption(workOrder)</MudSelectItem>
                             }
                         </MudSelect>
                     </MudItem>
@@ -53,7 +54,7 @@
                         <MudSelect T="Guid?" Label="Ordem de serviço" Placeholder="Obrigatória para execução de serviço" @bind-Value="workOrderId" @bind-Value:after="OnWorkOrderChangedAsync" Disabled="@(isCreating || appointmentType != AppointmentType.Service)">
                             @foreach (var workOrder in workOrders)
                             {
-                                <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem>
+                                <MudSelectItem Value="@((Guid?)workOrder.Id)">@WorkOrderDisplayFormatter.FormatOption(workOrder)</MudSelectItem>
                             }
                         </MudSelect>
                     </MudItem>

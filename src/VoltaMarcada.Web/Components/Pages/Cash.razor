@@ -78,7 +78,7 @@ else if (cash is { } currentCash)
     <DialogContent>
         <MudSelect T="Guid?" Label="Vincular a uma OS (opcional)" Variant="Variant.Outlined" @bind-Value="manualWorkOrderId" FullWidth="true">
             <MudSelectItem Value="@((Guid?)null)">Sem vínculo</MudSelectItem>
-            @foreach (var workOrder in workOrders) { <MudSelectItem Value="@((Guid?)workOrder.Id)">@workOrder.CustomerName — @workOrder.ServiceName</MudSelectItem> }
+            @foreach (var workOrder in workOrders) { <MudSelectItem Value="@((Guid?)workOrder.Id)">@WorkOrderDisplayFormatter.FormatOption(workOrder)</MudSelectItem> }
         </MudSelect>
         <BrazilianCurrencyInput Id="manual-cash-amount" Name="manual-cash-amount" Label="Valor" Required="true" Value="@manualAmount" ValueChanged="@(value => manualAmount = value)" />
         <MudSelect T="PaymentMethod" Label="Forma de pagamento" Variant="Variant.Outlined" @bind-Value="manualPaymentMethod" FullWidth="true" Class="mt-3">

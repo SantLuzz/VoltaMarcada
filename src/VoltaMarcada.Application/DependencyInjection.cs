@@ -62,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<ConfirmMaintenanceOpportunityContactSentUseCase>();
         services.AddScoped<DiscardMaintenanceOpportunityUseCase>();
         services.AddScoped<CreateWorkOrderUseCase>();
+        services.AddScoped<WorkOrderChecklistFactory>();
         services.AddScoped<GetWorkOrdersUseCase>();
         services.AddScoped<GetWorkOrderDetailsUseCase>();
         services.AddScoped<UpdateWorkOrderUseCase>();

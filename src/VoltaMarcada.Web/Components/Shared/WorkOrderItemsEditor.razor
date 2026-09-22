@@ -20,7 +20,7 @@
         }
     </MudStack>
 
-    @if (!string.IsNullOrWhiteSpace(ServiceName))
+    @if (ShowPrimaryService && !string.IsNullOrWhiteSpace(ServiceName))
     {
         <MudGrid Class="work-order-item-row" AlignItems="AlignItems.Center">
             <MudItem xs="12" sm="3">
@@ -158,6 +158,9 @@
     public string ServiceName { get; set; } = string.Empty;
 
     [Parameter]
+    public bool ShowPrimaryService { get; set; } = true;
+
+    [Parameter]
     public decimal? ServiceUnitPrice { get; set; }
 
     [Parameter]
@@ -175,7 +178,7 @@
     public EventCallback<decimal> DiscountAmountChanged { get; set; }
 
 
-    private decimal ServiceSubtotal => ServiceUnitPrice ?? 0m;
+    private decimal ServiceSubtotal => ShowPrimaryService ? ServiceUnitPrice ?? 0m : 0m;
 
     private async Task AddItem()
     {

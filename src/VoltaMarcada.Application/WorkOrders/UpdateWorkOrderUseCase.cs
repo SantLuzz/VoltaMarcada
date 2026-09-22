@@ -16,6 +16,7 @@ public sealed class UpdateWorkOrderUseCase(
     WorkOrderAuthorization authorization,
     ICurrentUser currentUser,
     IValidator<UpdateWorkOrderCommand> validator,
+    WorkOrderChecklistFactory checklistFactory,
     TimeProvider timeProvider)
 {
     public async Task<OperationResult<WorkOrderOperationValue>> ExecuteAsync(
@@ -114,10 +115,6 @@ public sealed class UpdateWorkOrderUseCase(
             }
         }
 
-        var checklistItems = service.ChecklistItems
-            .OrderBy(x => x.DisplayOrder)
-            .Select(x => new WorkOrderChecklistItemDefinition(x.Description, x.IsRequired, x.DisplayOrder))
-            .ToArray();
         IReadOnlyCollection<WorkOrderItemDefinition> items;
         if (command.Items is not null)
         {
@@ -130,6 +127,8 @@ public sealed class UpdateWorkOrderUseCase(
         {
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
         }
+
+        var checklistItems = await checklistFactory.CreateAsync(scope.CompanyId, items, cancellationToken);
 
         var now = timeProvider.GetUtcNow();
         var professionalChanged = workOrder.ProfessionalId != professionalId;

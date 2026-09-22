@@ -30,7 +30,7 @@ public sealed class GetWorkOrderPixPaymentUseCase(
             scope.CompanyId,
             scope.IsOwner ? null : scope.ProfessionalId ?? Guid.Empty,
             cancellationToken);
-        if (workOrder is null || workOrder.TotalAmount != amount)
+        if (workOrder is null || amount > workOrder.TotalAmount)
         {
             return null;
         }

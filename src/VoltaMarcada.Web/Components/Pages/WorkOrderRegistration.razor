@@ -113,6 +113,7 @@ else
                                               AddEquipmentRequested="@(() => equipmentDialogOpen = true)"
                                               ServiceOptions="services"
                                               ServiceName="@GetSelectedServiceName()"
+                                              ShowPrimaryService="@(WorkOrderId is null)"
                                               @bind-ServiceUnitPrice="serviceUnitPrice"
                                               @bind-DiscountAmount="discountAmount"
                                               IsServicePriceFixed="@IsServicePriceFixed"
@@ -345,11 +346,7 @@ else
         reportedProblem = detail.ReportedProblem ?? string.Empty;
         serviceUnitPrice = detail.Items.FirstOrDefault(item => item.Type == WorkOrderItemType.Service)?.UnitPrice
             ?? (GetSelectedService()?.PriceType == ServicePriceType.Fixed ? GetSelectedService()?.BasePrice : null);
-        var primaryServiceItemId = detail.Items.FirstOrDefault(item => item.Type == WorkOrderItemType.Service)?.Id;
-        items = detail.Items
-            .Where(item => item.Id != primaryServiceItemId)
-            .Select(item => new WorkOrderItemInput(item.EquipmentId, item.ServiceId, item.Description, item.Quantity, item.UnitPrice, item.Type))
-            .ToList();
+        items = WorkOrderItemFormMapper.ToInputs(detail.Items);
         discountAmount = detail.DiscountAmount;
         await LoadEquipmentAsync(false);
         await LoadProfessionalOptions();
@@ -670,6 +667,11 @@ else
 
     private IReadOnlyList<WorkOrderItemInput> BuildWorkOrderItems()
     {
+        if (WorkOrderId is not null)
+        {
+            return items;
+        }
+
         var primaryItem = new WorkOrderItemInput(
             equipmentId,
             serviceId,
