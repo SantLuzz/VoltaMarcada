@@ -18,6 +18,36 @@ namespace VoltaMarcada.IntegrationTests.Components;
 public sealed class CompanyRenderingTests
 {
     [Fact]
+    public void MobileLayout_ShouldMakeMainContentScrollable()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (!File.Exists(Path.Combine(directory.FullName, "VoltaMarcada.sln")))
+        {
+            directory = directory.Parent ?? throw new DirectoryNotFoundException("Repository root was not found.");
+        }
+
+        var stylesheet = File.ReadAllText(Path.Combine(directory.FullName, "src", "VoltaMarcada.Web", "wwwroot", "app.css"));
+
+        Assert.Contains(
+            ".mud-main-content { height: 100dvh; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; }",
+            stylesheet,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CompanyTabs_ShouldUseAMobileFriendlyMinimumWidth()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            GetRepositoryRoot(),
+            "src",
+            "VoltaMarcada.Web",
+            "Components",
+            "Pages",
+            "Company.razor"));
+
+        Assert.Contains("<MudTabs Class=\"company-tabs\" Rounded=\"true\" Elevation=\"0\" MinimumTabWidth=\"100\">", source, StringComparison.Ordinal);
+    }
+    [Fact]
     public void BusinessHoursPickers_ShouldNotForwardFullWidthAsAnHtmlAttribute()
     {
         var component = new Company();
@@ -113,6 +143,16 @@ public sealed class CompanyRenderingTests
         Assert.Contains(headerAttributes, frame =>
             frame.AttributeName == "Class" &&
             string.Equals(frame.AttributeValue as string, "public-company-header", StringComparison.Ordinal));
+    }
+    private static string GetRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (!File.Exists(Path.Combine(directory.FullName, "VoltaMarcada.sln")))
+        {
+            directory = directory.Parent ?? throw new DirectoryNotFoundException("Repository root was not found.");
+        }
+
+        return directory.FullName;
     }
     private static void SetPublicSettings(Company component)
     {

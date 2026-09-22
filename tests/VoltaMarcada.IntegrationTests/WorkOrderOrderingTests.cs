@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using VoltaMarcada.Application.Abstractions.Identity;
+using VoltaMarcada.Application.Abstractions.Tenancy;
+using VoltaMarcada.Application.Scheduling;
 using VoltaMarcada.Application.WorkOrders;
 using VoltaMarcada.Domain.Entities;
 using VoltaMarcada.Domain.Enums;
@@ -11,6 +14,49 @@ namespace VoltaMarcada.IntegrationTests;
 
 public sealed class WorkOrderOrderingTests
 {
+    [Fact]
+    public async Task CreateWorkOrder_WithMultipleServiceItems_PersistsEveryServiceAssociation()
+    {
+        await using var fixture = await WorkOrderFixture.CreateAsync();
+
+        var result = await fixture.CreateUseCase.ExecuteAsync(fixture.ValidCommand with
+        {
+            Items =
+            [
+                new WorkOrderServiceItemInput(fixture.EquipmentA.Id, fixture.ServiceA.Id, "Maintenance", 1, 100m),
+                new WorkOrderServiceItemInput(fixture.EquipmentB.Id, fixture.ServiceB.Id, "Repair", 1, 150m)
+            ]
+        });
+
+        Assert.True(result.IsSuccess);
+        var workOrder = await fixture.Repository.GetForAccessAsync(result.Value!.WorkOrderId!.Value, fixture.CompanyId, null);
+        Assert.NotNull(workOrder);
+        Assert.Equal(2, workOrder!.Items.Count(item => item.ServiceId is not null));
+        Assert.Equal(fixture.EquipmentB.Id, workOrder.Items.Single(item => item.ServiceId == fixture.ServiceB.Id).EquipmentId);
+    }
+
+    [Fact]
+    public async Task CreateWorkOrder_WithServiceItemEquipmentFromAnotherCustomer_RejectsTheCommand()
+    {
+        await using var fixture = await WorkOrderFixture.CreateAsync();
+        var anotherCustomer = CreateCustomer(fixture.CompanyId);
+        var equipmentForAnotherCustomer = Equipment.Create(fixture.CompanyId, anotherCustomer.Id, "Freezer", null, null, null, null, null, null, null, Now);
+        fixture.DbContext.AddRange(anotherCustomer, equipmentForAnotherCustomer);
+        await fixture.DbContext.SaveChangesAsync();
+
+        var result = await fixture.CreateUseCase.ExecuteAsync(fixture.ValidCommand with
+        {
+            Items =
+            [
+                new WorkOrderServiceItemInput(fixture.EquipmentA.Id, fixture.ServiceA.Id, "Maintenance", 1, 100m),
+                new WorkOrderServiceItemInput(equipmentForAnotherCustomer.Id, fixture.ServiceB.Id, "Repair", 1, 150m)
+            ]
+        });
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(WorkOrderErrors.InvalidEquipmentCustomer.Code, result.Error?.Code);
+    }
+
     [Fact]
     public async Task GetAllForAccessAsync_ShouldOrderActiveWorkOrdersByScheduleAndKeepCompletedLast()
     {
@@ -96,4 +142,83 @@ public sealed class WorkOrderOrderingTests
         Now,
         AppointmentOrigin.Internal,
         AppointmentType.Service);
+    private sealed class WorkOrderFixture : IAsyncDisposable
+    {
+        private WorkOrderFixture(AppDbContext dbContext, Guid companyId, WorkOrderRepository repository, CreateWorkOrderUseCase createUseCase, Customer customer, Equipment equipmentA, Equipment equipmentB, Service serviceA, Service serviceB)
+        {
+            DbContext = dbContext;
+            CompanyId = companyId;
+            Repository = repository;
+            CreateUseCase = createUseCase;
+            EquipmentA = equipmentA;
+            EquipmentB = equipmentB;
+            ServiceA = serviceA;
+            ServiceB = serviceB;
+            ValidCommand = new CreateWorkOrderCommand(customer.Id, equipmentA.Id, serviceA.Id, null, WorkOrderPriority.Normal, null, null, 0, []);
+        }
+
+        public AppDbContext DbContext { get; }
+        public Guid CompanyId { get; }
+        public WorkOrderRepository Repository { get; }
+        public CreateWorkOrderUseCase CreateUseCase { get; }
+        public Equipment EquipmentA { get; }
+        public Equipment EquipmentB { get; }
+        public Service ServiceA { get; }
+        public Service ServiceB { get; }
+        public CreateWorkOrderCommand ValidCommand { get; }
+
+        public static async Task<WorkOrderFixture> CreateAsync()
+        {
+            var dbContext = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .Options);
+            var companyId = Guid.NewGuid();
+            var user = new CurrentUserStub();
+            var customer = CreateCustomer(companyId);
+            var equipmentA = Equipment.Create(companyId, customer.Id, "Air conditioner", null, null, null, null, null, null, null, Now);
+            var equipmentB = Equipment.Create(companyId, customer.Id, "Freezer", null, null, null, null, null, null, null, Now);
+            var serviceA = Service.Create(companyId, "Maintenance", null, 60, ServicePriceType.Fixed, 100m, true, false, false, [], Now);
+            var serviceB = Service.Create(companyId, "Repair", null, 60, ServicePriceType.Fixed, 150m, true, false, false, [], Now);
+            dbContext.AddRange(customer, equipmentA, equipmentB, serviceA, serviceB, CompanyUser.Create(user.UserId, companyId, CompanyUserRole.Owner, Now));
+            await dbContext.SaveChangesAsync();
+
+            var repository = new WorkOrderRepository(dbContext);
+            var appointments = new AppointmentRepository(dbContext);
+            var authorization = new WorkOrderAuthorization(new CurrentCompanyStub(companyId), user, new EmployeeInvitationRepository(dbContext), new ProfessionalRepository(dbContext));
+            var createUseCase = new CreateWorkOrderUseCase(
+                repository,
+                new CustomerRepository(dbContext),
+                new EquipmentRepository(dbContext),
+                new ServiceRepository(dbContext),
+                new ProfessionalRepository(dbContext),
+                appointments,
+                new AppointmentAvailability(new ProfessionalAvailabilityRepository(dbContext), appointments),
+                authorization,
+                user,
+                new CreateWorkOrderCommandValidator(),
+                new WorkOrderChecklistFactory(new ServiceRepository(dbContext), new EquipmentRepository(dbContext)),
+                new FixedTimeProvider(Now));
+            return new WorkOrderFixture(dbContext, companyId, repository, createUseCase, customer, equipmentA, equipmentB, serviceA, serviceB);
+        }
+
+        public ValueTask DisposeAsync() => DbContext.DisposeAsync();
+    }
+
+    private sealed class CurrentCompanyStub(Guid companyId) : ICurrentCompany
+    {
+        public Task<Guid?> FindCompanyIdAsync(CancellationToken cancellationToken = default) => Task.FromResult<Guid?>(companyId);
+        public Task<Guid> GetCompanyIdAsync(CancellationToken cancellationToken = default) => Task.FromResult(companyId);
+    }
+
+    private sealed class CurrentUserStub : ICurrentUser
+    {
+        public bool IsAuthenticated => true;
+        public Guid UserId { get; } = Guid.NewGuid();
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
 }

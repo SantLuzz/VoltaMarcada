@@ -1353,11 +1353,17 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("EquipmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
                     b.Property<Guid>("QuoteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ServiceId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Type")
@@ -1368,6 +1374,10 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(18,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "EquipmentId");
+
+                    b.HasIndex("CompanyId", "ServiceId");
 
                     b.HasIndex("CompanyId", "QuoteId", "DisplayOrder");
 
@@ -1641,6 +1651,122 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("UX_States_Abbreviation");
 
                     b.ToTable("States", (string)null);
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.SupportTicket", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ClosedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ClosedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CompanyTradeName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<long>("Number")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("OpenedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequesterEmail")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("RequesterName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("RequesterUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.ToTable("SupportTickets", (string)null);
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.SupportTicketAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("FileKey")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<long>("Length")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("SupportTicketMessageId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupportTicketMessageId");
+
+                    b.ToTable("SupportTicketAttachments", (string)null);
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.SupportTicketMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SentByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SupportTicketId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupportTicketId", "CreatedAtUtc");
+
+                    b.ToTable("SupportTicketMessages", (string)null);
                 });
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrder", b =>
@@ -1972,9 +2098,15 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("EquipmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid?>("ServiceId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");
@@ -1990,6 +2122,10 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId", "EquipmentId");
+
+                    b.HasIndex("CompanyId", "ServiceId");
 
                     b.HasIndex("CompanyId", "WorkOrderId", "DisplayOrder");
 
@@ -2546,12 +2682,24 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.QuoteItem", b =>
                 {
+                    b.HasOne("VoltaMarcada.Domain.Entities.Equipment", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "EquipmentId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("VoltaMarcada.Domain.Entities.Quote", null)
                         .WithMany("Items")
                         .HasForeignKey("CompanyId", "QuoteId")
                         .HasPrincipalKey("CompanyId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("VoltaMarcada.Domain.Entities.Service", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "ServiceId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.ScheduleBlock", b =>
@@ -2620,6 +2768,24 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CompanyId", "WorkOrderId")
                         .HasPrincipalKey("CompanyId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.SupportTicketAttachment", b =>
+                {
+                    b.HasOne("VoltaMarcada.Domain.Entities.SupportTicketMessage", null)
+                        .WithMany("Attachments")
+                        .HasForeignKey("SupportTicketMessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.SupportTicketMessage", b =>
+                {
+                    b.HasOne("VoltaMarcada.Domain.Entities.SupportTicket", null)
+                        .WithMany("Messages")
+                        .HasForeignKey("SupportTicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrder", b =>
@@ -2726,6 +2892,18 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrderItem", b =>
                 {
+                    b.HasOne("VoltaMarcada.Domain.Entities.Equipment", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "EquipmentId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("VoltaMarcada.Domain.Entities.Service", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId", "ServiceId")
+                        .HasPrincipalKey("CompanyId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("VoltaMarcada.Domain.Entities.WorkOrder", null)
                         .WithMany("Items")
                         .HasForeignKey("CompanyId", "WorkOrderId")
@@ -2777,6 +2955,16 @@ namespace VoltaMarcada.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.Service", b =>
                 {
                     b.Navigation("ChecklistItems");
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.SupportTicket", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("VoltaMarcada.Domain.Entities.SupportTicketMessage", b =>
+                {
+                    b.Navigation("Attachments");
                 });
 
             modelBuilder.Entity("VoltaMarcada.Domain.Entities.WorkOrder", b =>

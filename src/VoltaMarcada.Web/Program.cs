@@ -1,6 +1,8 @@
 using MudBlazor.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Localization;
+using System.Globalization;
 using VoltaMarcada.Application.CompanyOnboarding;
 using VoltaMarcada.Application;
 using VoltaMarcada.Application.Abstractions.Identity;
@@ -15,6 +17,7 @@ using VoltaMarcada.Web.Errors;
 using VoltaMarcada.Web.Identity;
 using VoltaMarcada.Web.Operations;
 using VoltaMarcada.Web.Configuration;
+using VoltaMarcada.Web.Help;
 using VoltaMarcada.Web.Formatting;
 using VoltaMarcada.Application.Scheduling;
 using VoltaMarcada.Application.PublicBooking;
@@ -24,6 +27,16 @@ using Microsoft.AspNetCore.Components.Server;
 using VoltaMarcada.Application.Licensing;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var brazilianCulture = CultureInfo.GetCultureInfo("pt-BR");
+CultureInfo.DefaultThreadCurrentCulture = brazilianCulture;
+CultureInfo.DefaultThreadCurrentUICulture = brazilianCulture;
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    options.DefaultRequestCulture = new RequestCulture(brazilianCulture);
+    options.SupportedCultures = [brazilianCulture];
+    options.SupportedUICultures = [brazilianCulture];
+});
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options =>
@@ -51,6 +64,12 @@ builder.Services.AddOptions<PublicBookingOptions>()
     .Validate(options => options.MaintenanceLinkLifetimeDays is > 0 and <= 365, "Maintenance link lifetime must be between 1 and 365 days.")
     .ValidateOnStart();
 builder.Services.AddSingleton<IPublicBookingConfiguration, PublicBookingConfiguration>();
+builder.Services.AddOptions<SupportOptions>()
+    .Bind(builder.Configuration.GetSection(SupportOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton<ISupportConfiguration, SupportConfiguration>();
+builder.Services.AddSingleton<IHelpGuideProvider, HelpGuideProvider>();
+builder.Services.AddHttpClient();
 builder.Services.AddOptions<CompanyLicenseTrialOptions>()
     .Bind(builder.Configuration.GetSection(CompanyLicenseTrialOptions.SectionName))
     .Validate(options => options.FreeTrialDays > 0, "Free trial days must be positive.")
@@ -101,6 +120,15 @@ builder.Services.AddRateLimiter(options =>
             AutoReplenishment = true,
             PermitLimit = 120,
             Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        }));
+    options.AddPolicy("support-requests", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? Guid.NewGuid().ToString("N"),
+        _ => new FixedWindowRateLimiterOptions
+        {
+            AutoReplenishment = true,
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(10),
             QueueLimit = 0
         }));
 });
@@ -163,6 +191,7 @@ catch (Exception exception)
 }
 await PlatformAdministratorInitializer.InitializeAsync(app.Services, builder.Configuration);
 
+app.UseRequestLocalization();
 app.UseExceptionHandler();
 
 if (!app.Environment.IsDevelopment())
@@ -228,6 +257,7 @@ app.MapQuoteEndpoints();
 app.MapLicenseEndpoints();
 app.MapPlatformLicenseEndpoints();
 
+app.MapSupportEndpoints();
 app.MapGet("/health", () => Results.Text("Healthy"));
 
 app.MapRazorComponents<App>()

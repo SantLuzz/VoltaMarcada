@@ -23,6 +23,24 @@ public sealed class WorkOrderPaymentDomainTests
             Now));
     }
 
+    [Fact]
+    public void CreateAutomaticCharge_WithSelectedPaymentMethod_PreservesThePendingInstallment()
+    {
+        var companyId = Guid.NewGuid();
+        var workOrderId = Guid.NewGuid();
+
+        var charge = WorkOrderCharge.CreateAutomatic(
+            companyId,
+            workOrderId,
+            100m,
+            [new WorkOrderChargeInstallmentDefinition(PaymentMethod.CreditCard, 100m, null)],
+            new DateOnly(2026, 9, 10),
+            Now);
+
+        var installment = Assert.Single(charge.Installments);
+        Assert.Equal(PaymentMethod.CreditCard, installment.PaymentMethod);
+        Assert.Equal(100m, installment.Amount);
+    }
     private static WorkOrder CreateWorkOrder(decimal amount) => WorkOrder.Create(
         Guid.NewGuid(),
         Guid.NewGuid(),

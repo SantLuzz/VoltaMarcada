@@ -7,6 +7,7 @@
 @inject IComponentOperationExecutor OperationExecutor
 @inject ISnackbar Snackbar
 @inject IJSRuntime JsRuntime
+@inject GetWorkOrderPixPaymentUseCase GetWorkOrderPixPayment
 
 @if (WorkOrder.Status == WorkOrderStatus.Pending)
 {
@@ -142,7 +143,19 @@ else
                         <MudItem xs="12" sm="6"><MudSelect T="string" Label="Quando?" Variant="Variant.Outlined" Required="true" @bind-Value="recommendationPeriod"><MudSelectItem T="string" Value="@("30")">30 dias</MudSelectItem><MudSelectItem T="string" Value="@("60")">60 dias</MudSelectItem><MudSelectItem T="string" Value="@("90")">90 dias</MudSelectItem><MudSelectItem T="string" Value="@("180")">180 dias</MudSelectItem><MudSelectItem T="string" Value="@("custom")">Personalizado</MudSelectItem><MudSelectItem T="string" Value="@("date")">Data especifica</MudSelectItem></MudSelect></MudItem>
                         @if (recommendationPeriod == "custom") { <MudItem xs="12" sm="6"><MudNumericField T="int?" Label="Intervalo em dias" Variant="Variant.Outlined" Required="true" @bind-Value="customIntervalDays" /></MudItem> }
                         @if (recommendationPeriod == "date") { <MudItem xs="12" sm="6"><MudDatePicker Label="Proxima manutencao" Variant="Variant.Outlined" Required="true" @bind-Date="recommendedDueDate" /></MudItem> }
-                        <MudItem xs="12" sm="6"><MudSelect T="Guid?" Label="Servico recomendado" Variant="Variant.Outlined" Required="true" @bind-Value="recommendedServiceId">@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect></MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle1">Equipamentos incluídos na recomendação</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Escolha o serviço recomendado para cada equipamento.</MudText>
+                        </MudItem>
+                        @foreach (var equipment in RecommendedEquipment)
+                        {
+                            <MudItem xs="12">
+                                <MudPaper Outlined="true" Class="pa-3 maintenance-recommendation-equipment">
+                                    <MudText Typo="Typo.subtitle2">@equipment.Description</MudText>
+                                    <MudSelect T="Guid?" Label="Serviço recomendado" Variant="Variant.Outlined" Required="true" FullWidth="true" @bind-Value="recommendedServiceIds[equipment.Id]">@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect>
+                                </MudPaper>
+                            </MudItem>
+                        }
                         <MudItem xs="12"><MudTextField Label="Observacoes da recomendacao" Variant="Variant.Outlined" Required="true" Lines="3" @bind-Value="recommendationNotes" /></MudItem>
                     </MudGrid>
                 }
@@ -155,16 +168,57 @@ else
                     {
                         <MudTextField @bind-Value="noChargeReason" Label="Motivo de não cobrança" Required="true" Lines="3" Variant="Variant.Outlined" Class="mt-3" />
                     }
-                    else if (WorkOrder.TotalAmount > 0)
+                    else
                     {
-                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">Será criada uma pendência de @WorkOrder.TotalAmount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) no Caixa para confirmação posterior.</MudAlert>
+                        <MudText Typo="Typo.subtitle2" Class="mt-3">Valor da OS: @WorkOrder.TotalAmount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))</MudText>
+                        @foreach (var installment in paymentInstallments)
+                        {
+                            <MudPaper Outlined="true" Class="pa-3 mt-3">
+                                <MudGrid Spacing="2">
+                                    <MudItem xs="12" sm="5">
+                                        <MudSelect T="PaymentMethod" Label="Forma de pagamento" Variant="Variant.Outlined" Value="@installment.PaymentMethod" ValueChanged="@(value => OnPaymentMethodChangedAsync(installment, value))" FullWidth="true">
+                                            @foreach (var method in AvailablePaymentMethods) { <MudSelectItem Value="@method">@GetPaymentMethodLabel(method)</MudSelectItem> }
+                                        </MudSelect>
+                                    </MudItem>
+                                    <MudItem xs="10" sm="5"><BrazilianCurrencyInput Id="@($"payment-installment-{paymentInstallments.IndexOf(installment)}-amount")" Name="@($"payment-installment-{paymentInstallments.IndexOf(installment)}-amount")" Label="Valor" Required="true" Value="@installment.Amount" ValueChanged="@(value => OnPaymentAmountChangedAsync(installment, value))" /></MudItem>
+                                    <MudItem xs="2" sm="2" Class="d-flex align-center justify-end"><MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" AriaLabel="Remover parcela" Disabled="@(paymentInstallments.Count == 1)" OnClick="@(() => RemovePaymentInstallment(installment))" /></MudItem>
+                                    @if (installment.PaymentMethod == PaymentMethod.Other) { <MudItem xs="12"><MudTextField @bind-Value="installment.OtherPaymentMethodDescription" Label="Descreva a forma de pagamento" Required="true" Variant="Variant.Outlined" FullWidth="true" /></MudItem> }
+                                </MudGrid>
+                                @if (installment.PaymentMethod == PaymentMethod.Pix)
+                                {
+                                    @if (installment.IsLoadingPixPayment) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-3" /> }
+                                    else if (installment.PixPayment is { } currentPixPayment)
+                                    {
+                                        <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="mt-3"><PixQrCode Payload="@currentPixPayment.CopyAndPasteCode" Size="180" /><MudText Typo="Typo.subtitle2">PIX Copia e Cola</MudText><MudTextField T="string" Value="@currentPixPayment.CopyAndPasteCode" ReadOnly="true" Lines="3" Variant="Variant.Outlined" FullWidth="true" /><MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap"><MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="@(() => CopyPixAsync(currentPixPayment))">Copiar código PIX</MudButton>@if (currentPixPayment.WhatsAppShareLink is not null) { <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.Send" Href="@currentPixPayment.WhatsAppShareLink" Target="_blank">Enviar no WhatsApp</MudButton> }</MudStack></MudStack>
+                                    }
+                                    else { <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">Configure a chave Pix da empresa para gerar a cobrança.</MudAlert> }
+                                }
+                            </MudPaper>
+                        }
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap" Class="mt-3">
+                            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" OnClick="AddPaymentInstallment">Adicionar pagamento</MudButton>
+                            <MudText>Subtotal: @PaymentInstallmentsTotal.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) de @WorkOrder.TotalAmount.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))</MudText>
+                        </MudStack>
+                        @if (HasInvalidPaymentInstallments)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">Informe um valor maior que zero para cada pagamento.</MudAlert>
+                        }
+                        else if (PaymentInstallmentsTotal > WorkOrder.TotalAmount)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">A soma dos pagamentos não pode ultrapassar o valor da OS.</MudAlert>
+                        }
+                        else if (PaymentInstallmentsTotal < WorkOrder.TotalAmount)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">Complete o valor restante para concluir o serviço.</MudAlert>
+                        }
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-3">A cobrança será incluída no Caixa como pendência para confirmação posterior.</MudAlert>
                     }
                 </DialogContent>
-                <DialogActions><MudButton OnClick="CloseCompletionDialog">Cancelar</MudButton><MudButton OnClick="CompleteAsync" Color="Color.Success" Variant="Variant.Filled">Concluir serviço</MudButton></DialogActions>
+                <DialogActions><MudButton OnClick="CloseCompletionDialog">Cancelar</MudButton><MudButton OnClick="CompleteAsync" Color="Color.Success" Variant="Variant.Filled" Disabled="@isLoadingPixPayment">Concluir serviço</MudButton></DialogActions>
             </MudDialog>
             <MudStack Row="true">
                 <MudButton OnClick="SaveAsync" Variant="Variant.Outlined" Disabled="@(isSaving || isUploadingPhoto)">Salvar progresso</MudButton>
-                <MudButton OnClick="OpenCompletionDialog" Color="Color.Success" Variant="Variant.Filled" Disabled="@(!CanComplete)">Concluir serviço</MudButton>
+                <MudButton OnClick="OpenCompletionDialogAsync" Color="Color.Success" Variant="Variant.Filled" Disabled="@(!CanComplete)">Concluir serviço</MudButton>
             </MudStack>
         }
     </MudStack>
@@ -203,10 +257,23 @@ else
     private bool isCompletionDialogOpen;
     private bool isNoCharge;
     private string? noChargeReason;
+    private readonly List<PaymentInstallmentFormModel> paymentInstallments = [];
+    private bool isPixPaymentAvailable;
+    private bool isLoadingPixPayment => paymentInstallments.Any(item => item.IsLoadingPixPayment) ||
+        (!isNoCharge && WorkOrder.PaymentControlEnabled && WorkOrder.TotalAmount > 0 && !ArePaymentInstallmentsValid);
+
+    private bool HasInvalidPaymentInstallments => paymentInstallments.Count == 0 || paymentInstallments.Any(item => item.Amount <= 0);
+    private bool ArePaymentInstallmentsValid =>
+        !HasInvalidPaymentInstallments && PaymentInstallmentsTotal == WorkOrder.TotalAmount;
+
+    private IEnumerable<PaymentMethod> AvailablePaymentMethods => !isPixPaymentAvailable
+        ? Enum.GetValues<PaymentMethod>().Where(method => method != PaymentMethod.Pix)
+        : Enum.GetValues<PaymentMethod>();
     private string? recommendationPeriod;
     private int? customIntervalDays;
     private DateTime? recommendedDueDate;
     private Guid? recommendedServiceId;
+    private readonly Dictionary<Guid, Guid?> recommendedServiceIds = [];
     private string? recommendationNotes;
     private Guid? restoredStagedPhotosForWorkOrderId;
 
@@ -256,6 +323,11 @@ else
         changeVersion = 0;
         savedChangeVersion = 0;
         recommendedServiceId = WorkOrder.ServiceId;
+        recommendedServiceIds.Clear();
+        foreach (var equipment in RecommendedEquipment)
+        {
+            recommendedServiceIds[equipment.Id] = WorkOrder.ServiceId;
+        }
     }
 
     protected override async Task OnInitializedAsync()
@@ -423,7 +495,38 @@ else
         }
     }
 
-    private void OpenCompletionDialog() => isCompletionDialogOpen = true;
+    private async Task OpenCompletionDialogAsync()
+    {
+        if (!WorkOrder.PaymentControlEnabled || WorkOrder.TotalAmount <= 0)
+        {
+            await CompleteAsync();
+            return;
+        }
+
+        isNoCharge = false;
+        noChargeReason = null;
+        paymentInstallments.Clear();
+        isPixPaymentAvailable = false;
+        try
+        {
+            var pixPayment = await OperationExecutor.ExecuteAsync(
+                (GetWorkOrderPixPaymentUseCase useCase, CancellationToken cancellationToken) =>
+                    useCase.ExecuteAsync(WorkOrder.Id, WorkOrder.TotalAmount, cancellationToken));
+            isPixPaymentAvailable = pixPayment is not null;
+            paymentInstallments.Add(new PaymentInstallmentFormModel
+            {
+                PaymentMethod = isPixPaymentAvailable ? PaymentMethod.Pix : PaymentMethod.Cash,
+                Amount = WorkOrder.TotalAmount,
+                PixPayment = pixPayment
+            });
+        }
+        catch
+        {
+            paymentInstallments.Add(new PaymentInstallmentFormModel { PaymentMethod = PaymentMethod.Cash, Amount = WorkOrder.TotalAmount });
+        }
+
+        isCompletionDialogOpen = true;
+    }
 
     private void CloseCompletionDialog() => isCompletionDialogOpen = false;
 
@@ -435,7 +538,8 @@ else
         }
 
         MaintenanceRecommendationInput? recommendation = null;
-        if (shouldRecommendMaintenance && !TryCreateRecommendation(out recommendation))
+        IReadOnlyList<MaintenanceRecommendationItemInput>? recommendationItems = null;
+        if (shouldRecommendMaintenance && !TryCreateRecommendation(out recommendation, out recommendationItems))
         {
             Snackbar.Add("Preencha os dados da próxima manutenção.", Severity.Warning);
             return;
@@ -452,9 +556,27 @@ else
 
             paymentDecision = new WorkOrderPaymentDecisionInput(null, noChargeReason);
         }
+        else if (WorkOrder.PaymentControlEnabled && WorkOrder.TotalAmount > 0)
+        {
+            if (paymentInstallments.Any(item => item.Amount <= 0 || (item.PaymentMethod == PaymentMethod.Other && string.IsNullOrWhiteSpace(item.OtherPaymentMethodDescription))))
+            {
+                Snackbar.Add("Informe valores válidos e descreva as outras formas de pagamento.", Severity.Warning);
+                return;
+            }
+
+            if (PaymentInstallmentsTotal != WorkOrder.TotalAmount)
+            {
+                Snackbar.Add("As parcelas devem totalizar o valor da OS.", Severity.Warning);
+                return;
+            }
+
+            paymentDecision = new WorkOrderPaymentDecisionInput(
+                paymentInstallments.Select(item => new VoltaMarcada.Domain.ValueObjects.WorkOrderChargeInstallmentDefinition(item.PaymentMethod, item.Amount, item.OtherPaymentMethodDescription)).ToArray(),
+                null);
+        }
 
         var result = await OperationExecutor.ExecuteAsync(
-            (CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrder.Id, new CompleteWorkOrderCommand(recommendation, paymentDecision), cancellationToken));
+            (CompleteWorkOrderUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(WorkOrder.Id, new CompleteWorkOrderCommand(recommendation, paymentDecision, recommendationItems), cancellationToken));
         if (result.IsSuccess)
         {
             isCompletionDialogOpen = false;
@@ -465,18 +587,145 @@ else
 
         ShowOperationError(result.Error?.Code);
     }
-    private bool TryCreateRecommendation(out MaintenanceRecommendationInput? recommendation)
+    private async Task CopyPixAsync(WorkOrderPixPaymentDto payment)
+    {
+        await JsRuntime.InvokeVoidAsync("serviceSync.copyText", payment.CopyAndPasteCode);
+        Snackbar.Add("Código Pix copiado.", Severity.Success);
+    }
+
+    private async Task AddPaymentInstallment()
+    {
+        if (WorkOrder.TotalAmount < (paymentInstallments.Count + 1) * 0.01m)
+        {
+            Snackbar.Add("Não é possível criar um pagamento com valor zero.", Severity.Warning);
+            return;
+        }
+
+        paymentInstallments.Add(new PaymentInstallmentFormModel
+        {
+            PaymentMethod = PaymentMethod.Cash,
+            Amount = 0m
+        });
+
+        await RedistributePaymentInstallmentsAsync();
+    }
+
+    private async Task RemovePaymentInstallment(PaymentInstallmentFormModel installment)
+    {
+        if (paymentInstallments.Count > 1)
+        {
+            paymentInstallments.Remove(installment);
+            await RedistributePaymentInstallmentsAsync();
+        }
+    }
+
+    private async Task RedistributePaymentInstallmentsAsync()
+    {
+        var amountPerInstallment = decimal.Floor((WorkOrder.TotalAmount / paymentInstallments.Count) * 100m) / 100m;
+        var allocatedAmount = 0m;
+
+        for (var index = 0; index < paymentInstallments.Count; index++)
+        {
+            var installment = paymentInstallments[index];
+            installment.Amount = index == paymentInstallments.Count - 1
+                ? WorkOrder.TotalAmount - allocatedAmount
+                : amountPerInstallment;
+            allocatedAmount += installment.Amount;
+            installment.PixPayment = null;
+        }
+
+        foreach (var installment in paymentInstallments.Where(item => item.PaymentMethod == PaymentMethod.Pix))
+        {
+            await LoadPixPaymentAsync(installment);
+        }
+    }
+
+    private async Task OnPaymentMethodChangedAsync(PaymentInstallmentFormModel installment, PaymentMethod paymentMethod)
+    {
+        installment.PaymentMethod = paymentMethod;
+        installment.PixPayment = null;
+        if (paymentMethod == PaymentMethod.Pix)
+        {
+            await LoadPixPaymentAsync(installment);
+        }
+    }
+
+    private async Task OnPaymentAmountChangedAsync(PaymentInstallmentFormModel installment, decimal? amount)
+    {
+        var otherInstallmentsTotal = PaymentInstallmentsTotal - installment.Amount;
+        var availableAmount = Math.Max(0m, WorkOrder.TotalAmount - otherInstallmentsTotal);
+        installment.Amount = Math.Min(amount ?? 0m, availableAmount);
+        installment.PixPayment = null;
+        if (installment.PaymentMethod == PaymentMethod.Pix)
+        {
+            await LoadPixPaymentAsync(installment);
+        }
+    }
+
+    private async Task LoadPixPaymentAsync(PaymentInstallmentFormModel installment)
+    {
+        if (!isPixPaymentAvailable || installment.Amount <= 0)
+        {
+            return;
+        }
+
+        installment.IsLoadingPixPayment = true;
+        try
+        {
+            installment.PixPayment = await OperationExecutor.ExecuteAsync(
+                (GetWorkOrderPixPaymentUseCase useCase, CancellationToken cancellationToken) =>
+                    useCase.ExecuteAsync(WorkOrder.Id, installment.Amount, cancellationToken));
+        }
+        finally
+        {
+            installment.IsLoadingPixPayment = false;
+        }
+    }
+
+    private decimal PaymentInstallmentsTotal => paymentInstallments.Sum(item => item.Amount);
+
+    private static string GetPaymentMethodLabel(PaymentMethod method) => method switch
+    {
+        PaymentMethod.Pix => "Pix",
+        PaymentMethod.Cash => "Dinheiro",
+        PaymentMethod.DebitCard => "Cartão de débito",
+        PaymentMethod.CreditCard => "Cartão de crédito",
+        PaymentMethod.BankTransfer => "Transferência bancária",
+        PaymentMethod.Other => "Outro",
+        _ => method.ToString()
+    };
+
+    private sealed class PaymentInstallmentFormModel
+    {
+        public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Pix;
+        public decimal Amount { get; set; }
+        public string? OtherPaymentMethodDescription { get; set; }
+        public WorkOrderPixPaymentDto? PixPayment { get; set; }
+        public bool IsLoadingPixPayment { get; set; }
+    }
+    private bool TryCreateRecommendation(out MaintenanceRecommendationInput? recommendation, out IReadOnlyList<MaintenanceRecommendationItemInput>? recommendationItems)
     {
         recommendation = null;
-        if (recommendedServiceId is null || string.IsNullOrWhiteSpace(recommendationNotes)) return false;
+        recommendationItems = null;
+        if (string.IsNullOrWhiteSpace(recommendationNotes)) return false;
         int? intervalDays = recommendationPeriod switch { "30" => 30, "60" => 60, "90" => 90, "180" => 180, "custom" => customIntervalDays, _ => null };
         DateOnly? dueDate = recommendationPeriod == "date" && recommendedDueDate is { } date ? DateOnly.FromDateTime(date) : null;
         if ((intervalDays is null) == (dueDate is null) || intervalDays is <= 0) return false;
-        recommendation = new MaintenanceRecommendationInput(intervalDays, dueDate, recommendedServiceId.Value, recommendationNotes);
+        var equipment = RecommendedEquipment;
+        foreach (var item in equipment) recommendedServiceIds.TryAdd(item.Id, recommendedServiceId ?? WorkOrder.ServiceId);
+        if (equipment.Any(item => recommendedServiceIds.GetValueOrDefault(item.Id) is not { } serviceId || serviceId == Guid.Empty)) return false;
+        recommendation = new MaintenanceRecommendationInput(intervalDays, dueDate, recommendedServiceIds[equipment[0].Id]!.Value, recommendationNotes);
+        recommendationItems = equipment.Select(item => new MaintenanceRecommendationItemInput(item.Id, recommendedServiceIds[item.Id]!.Value)).ToArray();
         return true;
     }
-
-    private async Task UploadAsync(InputFileChangeEventArgs args, WorkOrderPhotoType type)
+private IReadOnlyList<(Guid Id, string Description)> RecommendedEquipment => WorkOrder.Items
+        .Where(item => item.EquipmentId is not null)
+        .Select(item => (Id: item.EquipmentId!.Value, Description: item.EquipmentDescription ?? "Equipamento"))
+        .Append((Id: WorkOrder.EquipmentId, Description: "Equipamento principal"))
+        .GroupBy(item => item.Id)
+        .Select(group => (Id: group.Key, Description: group.First().Description))
+        .ToArray();
+private async Task UploadAsync(InputFileChangeEventArgs args, WorkOrderPhotoType type)
     {
         if (isSaving || isUploadingPhoto)
         {

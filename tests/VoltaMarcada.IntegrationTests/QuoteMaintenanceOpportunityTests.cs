@@ -17,6 +17,113 @@ namespace VoltaMarcada.IntegrationTests;
 public sealed class QuoteMaintenanceOpportunityTests
 {
     [Fact]
+    public void Create_WithItemsLinkedToDifferentEquipmentAndServices_PreservesEachAssociation()
+    {
+        var companyId = Guid.NewGuid();
+        var equipmentA = Guid.NewGuid();
+        var equipmentB = Guid.NewGuid();
+        var serviceA = Guid.NewGuid();
+        var serviceB = Guid.NewGuid();
+        var items = new[]
+        {
+            new QuoteItemDefinition("Clean A", 1, 120m, QuoteItemType.Service, equipmentA, serviceA),
+            new QuoteItemDefinition("Repair B", 1, 150m, QuoteItemType.Service, equipmentB, serviceB),
+            new QuoteItemDefinition("Travel", 1, 30m, QuoteItemType.Travel, null, null)
+        };
+
+        var quote = Quote.Create(
+            companyId,
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            equipmentA,
+            serviceA,
+            null,
+            null,
+            items,
+            0,
+            null,
+            new DateOnly(2026, 10, 2),
+            new DateTimeOffset(2026, 9, 2, 12, 0, 0, TimeSpan.Zero));
+
+        Assert.Equal(equipmentA, quote.Items.ElementAt(0).EquipmentId);
+        Assert.Equal(serviceB, quote.Items.ElementAt(1).ServiceId);
+        Assert.Null(quote.Items.ElementAt(2).EquipmentId);
+        Assert.Null(quote.Items.ElementAt(2).ServiceId);
+    }
+
+    [Fact]
+    public void ToWorkOrderItemDefinitions_WithMultipleServiceItems_PreservesTypesAndAssociations()
+    {
+        var equipmentA = Guid.NewGuid();
+        var equipmentB = Guid.NewGuid();
+        var serviceA = Guid.NewGuid();
+        var serviceB = Guid.NewGuid();
+        var quote = Quote.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            equipmentA,
+            serviceA,
+            null,
+            null,
+            [
+                new QuoteItemDefinition("Clean A", 1, 120m, QuoteItemType.Service, equipmentA, serviceA),
+                new QuoteItemDefinition("Clean B", 1, 150m, QuoteItemType.Service, equipmentB, serviceB),
+                new QuoteItemDefinition("Part", 1, 30m, QuoteItemType.Part, equipmentA)
+            ],
+            0,
+            null,
+            new DateOnly(2026, 10, 2),
+            new DateTimeOffset(2026, 9, 2, 12, 0, 0, TimeSpan.Zero));
+
+        var result = QuoteWorkOrderItemMapper.ToWorkOrderItemDefinitions(quote.Items);
+
+        Assert.Collection(
+            result,
+            item => Assert.Equal(new WorkOrderItemDefinition("Clean A", 1, 120m, WorkOrderItemType.Service, equipmentA, serviceA), item),
+            item => Assert.Equal(new WorkOrderItemDefinition("Clean B", 1, 150m, WorkOrderItemType.Service, equipmentB, serviceB), item),
+            item => Assert.Equal(new WorkOrderItemDefinition("Part", 1, 30m, WorkOrderItemType.Part, equipmentA), item));
+    }
+
+    [Fact]
+    public async Task CreateQuote_WithMultipleServiceItems_PersistsEveryServiceAssociation()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var equipmentB = Equipment.Create(fixture.Opportunity.CompanyId, fixture.Opportunity.CustomerId, "Freezer", null, null, null, null, null, null, null, new DateTimeOffset(2026, 9, 2, 12, 0, 0, TimeSpan.Zero));
+        var serviceB = Service.Create(fixture.Opportunity.CompanyId, "Repair", null, 60, ServicePriceType.Fixed, 150m, true, false, false, [], new DateTimeOffset(2026, 9, 2, 12, 0, 0, TimeSpan.Zero));
+        fixture.DbContext.AddRange(equipmentB, serviceB);
+        await fixture.DbContext.SaveChangesAsync();
+
+        var useCase = new CreateQuoteUseCase(
+            fixture.Quotes,
+            new CustomerRepository(fixture.DbContext),
+            new EquipmentRepository(fixture.DbContext),
+            new ServiceRepository(fixture.DbContext),
+            new AppointmentRepository(fixture.DbContext),
+            new MaintenanceOpportunityRepository(fixture.DbContext),
+            fixture.WorkOrderAuthorization,
+            fixture.CurrentUser,
+            fixture.TimeProvider);
+
+        var result = await useCase.ExecuteAsync(new CreateQuoteCommand(
+            fixture.Opportunity.CustomerId,
+            fixture.Opportunity.EquipmentId,
+            fixture.Opportunity.RecommendedServiceId,
+            [
+                new QuoteItemInput(fixture.Opportunity.EquipmentId, fixture.Opportunity.RecommendedServiceId, "Filter replacement", 1, 150m, QuoteItemType.Service),
+                new QuoteItemInput(equipmentB.Id, serviceB.Id, "Repair", 1, 150m, QuoteItemType.Service)
+            ],
+            0,
+            null,
+            new DateOnly(2026, 10, 2)));
+
+        Assert.True(result.IsSuccess);
+        var quote = Assert.Single(fixture.Quotes.Added);
+        Assert.Equal(2, quote.Items.Count(item => item.ServiceId is not null));
+        Assert.Equal(equipmentB.Id, quote.Items.Single(item => item.ServiceId == serviceB.Id).EquipmentId);
+    }
+
+    [Fact]
     public async Task CreateQuote_converts_manual_opportunity()
     {
         await using var fixture = await Fixture.CreateAsync();

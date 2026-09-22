@@ -39,6 +39,15 @@ public sealed class WorkOrderCharge : ICompanyScopedEntity
         DateTimeOffset now) =>
         CreateInternal(companyId, workOrderId, totalAmount, [new WorkOrderChargeInstallmentDefinition(null, totalAmount, null)], businessDate, false, null, now);
 
+    public static WorkOrderCharge CreateAutomatic(
+        Guid companyId,
+        Guid workOrderId,
+        decimal totalAmount,
+        IReadOnlyCollection<WorkOrderChargeInstallmentDefinition> installments,
+        DateOnly businessDate,
+        DateTimeOffset now) =>
+        CreateInternal(companyId, workOrderId, totalAmount, installments, businessDate, false, null, now);
+
     public static WorkOrderCharge CreateManual(
         Guid companyId,
         Guid? workOrderId,

@@ -14,6 +14,7 @@ using VoltaMarcada.Application.PublicBooking;
 using VoltaMarcada.Application.Quotes;
 using VoltaMarcada.Application.ServiceRequests;
 using VoltaMarcada.Application.Dashboard;
+using VoltaMarcada.Application.Support;
 
 namespace VoltaMarcada.Application;
 
@@ -61,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<ConfirmMaintenanceOpportunityContactSentUseCase>();
         services.AddScoped<DiscardMaintenanceOpportunityUseCase>();
         services.AddScoped<CreateWorkOrderUseCase>();
+        services.AddScoped<WorkOrderChecklistFactory>();
         services.AddScoped<GetWorkOrdersUseCase>();
         services.AddScoped<GetWorkOrderDetailsUseCase>();
         services.AddScoped<UpdateWorkOrderUseCase>();
@@ -121,6 +123,7 @@ public static class DependencyInjection
         services.AddScoped<Payments.ConfirmWorkOrderChargeInstallmentUseCase>();
         services.AddScoped<Payments.UpdateWorkOrderChargeInstallmentUseCase>();
         services.AddScoped<Payments.DeleteWorkOrderChargeInstallmentUseCase>();
+        services.AddScoped<GetWorkOrderPixPaymentUseCase>();
         services.AddScoped<GetPublicCompanyPageUseCase>();
         services.AddScoped<GetPublicAvailableSlotsUseCase>();
         services.AddScoped<SubmitPublicAppointmentRequestUseCase>();
@@ -148,6 +151,12 @@ public static class DependencyInjection
         services.AddScoped<ApprovePublicQuoteUseCase>();
         services.AddScoped<RejectPublicQuoteUseCase>();
         services.AddScoped<GetServiceRequestsUseCase>();
+        services.AddScoped<CreateSupportTicketUseCase>();
+        services.AddScoped<GetPlatformSupportTicketsUseCase>();
+        services.AddScoped<GetPlatformSupportTicketDetailsUseCase>();
+        services.AddScoped<GetPlatformSupportTicketAttachmentUseCase>();
+        services.AddScoped<ReplyToSupportTicketUseCase>();
+        services.AddScoped<CloseSupportTicketUseCase>();
         services.AddScoped<ResolveServiceRequestUseCase>();
         return services;
     }

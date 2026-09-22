@@ -1,13 +1,14 @@
 using VoltaMarcada.Application.Abstractions.Operations;
 using VoltaMarcada.Application.Abstractions.Persistence;
 using VoltaMarcada.Application.PublicBooking;
+using VoltaMarcada.Application.WorkOrders;
 using VoltaMarcada.Domain.Entities;
 using VoltaMarcada.Domain.Enums;
 using VoltaMarcada.Domain.ValueObjects;
 
 namespace VoltaMarcada.Application.Quotes;
 
-public sealed class ApprovePublicQuoteUseCase(IQuoteRepository quotes, IWorkOrderRepository workOrders, IServiceRequestRepository serviceRequests, IServiceRepository services, TimeProvider timeProvider)
+public sealed class ApprovePublicQuoteUseCase(IQuoteRepository quotes, IWorkOrderRepository workOrders, IServiceRequestRepository serviceRequests, IServiceRepository services, WorkOrderChecklistFactory checklistFactory, TimeProvider timeProvider)
 {
     public async Task<OperationResult<QuoteApprovalResult>> ExecuteAsync(string? token, CancellationToken cancellationToken = default)
     {
@@ -29,14 +30,9 @@ public sealed class ApprovePublicQuoteUseCase(IQuoteRepository quotes, IWorkOrde
         }
         var service = await services.GetForCompanyAsync(quote.PrimaryServiceId, quote.CompanyId, cancellationToken);
         if (service is null) return OperationResult<QuoteApprovalResult>.Failure(QuoteErrors.InvalidInput);
-        var serviceSeen = false;
-        var items = quote.Items.Select(item =>
-        {
-            var type = item.Type switch { QuoteItemType.Part => WorkOrderItemType.Part, QuoteItemType.Material => WorkOrderItemType.Material, QuoteItemType.Travel => WorkOrderItemType.Travel, QuoteItemType.Service when !serviceSeen => WorkOrderItemType.Service, _ => WorkOrderItemType.Additional };
-            if (item.Type == QuoteItemType.Service && !serviceSeen) serviceSeen = true;
-            return new WorkOrderItemDefinition(item.Description, item.Quantity, item.UnitPrice, type);
-        }).ToArray();
-        var order = WorkOrder.Create(quote.CompanyId, quote.CustomerId, quote.EquipmentId, quote.PrimaryServiceId, null, quote.CreatedByUserId, WorkOrderPriority.Normal, null, items, service.ChecklistItems.OrderBy(x => x.DisplayOrder).Select(x => new WorkOrderChecklistItemDefinition(x.Description, x.IsRequired, x.DisplayOrder)).ToArray(), now, quote.Id, quote.DiscountAmount);
+        var items = QuoteWorkOrderItemMapper.ToWorkOrderItemDefinitions(quote.Items);
+        var checklistItems = await checklistFactory.CreateAsync(quote.CompanyId, items, cancellationToken);
+        var order = WorkOrder.Create(quote.CompanyId, quote.CustomerId, quote.EquipmentId, quote.PrimaryServiceId, null, quote.CreatedByUserId, WorkOrderPriority.Normal, null, items, checklistItems, now, quote.Id, quote.DiscountAmount);
         quote.Approve(order.Id, now);
         if (quote.ServiceRequestId is { } serviceRequestId)
         {

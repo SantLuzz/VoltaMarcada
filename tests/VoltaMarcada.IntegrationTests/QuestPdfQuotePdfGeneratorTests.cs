@@ -16,6 +16,7 @@ public sealed class QuestPdfQuotePdfGeneratorTests
             "Volta Marcada", "Volta Marcada Ltda", "11222333000181", "11999999999",
             "Praca da Se, 1", "01001000", "Sao Paulo", "SP", "Customer",
             new DateOnly(2026, 9, 30), null, 10, 140, null,
+            ["Air conditioner A", "Air conditioner B"],
             [new QuotePdfLine("Maintenance", "Service", 1, 150, 150)]);
 
         var content = await generator.GenerateAsync(document);

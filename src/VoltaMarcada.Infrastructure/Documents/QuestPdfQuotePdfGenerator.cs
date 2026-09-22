@@ -25,6 +25,17 @@ public sealed class QuestPdfQuotePdfGenerator : IQuotePdfGenerator
                 column.Item().Text("ORÇAMENTO").SemiBold().FontSize(18).FontColor(Colors.Blue.Darken2);
                 column.Item().Text($"Cliente: {document.CustomerName}");
                 column.Item().Text($"Válido até: {document.ValidUntil:dd/MM/yyyy}");
+                if (document.EquipmentDescriptions.Count > 0)
+                {
+                    column.Item().Column(equipmentColumn =>
+                    {
+                        equipmentColumn.Item().Text("Equipamentos").SemiBold();
+                        foreach (var equipment in document.EquipmentDescriptions)
+                        {
+                            equipmentColumn.Item().Text($"• {equipment}");
+                        }
+                    });
+                }
                 column.Item().Element(container => ComposeItems(container, document));
                 if (document.DiscountAmount > 0)
                     column.Item().AlignRight().Text($"Desconto: -{FormatCurrency(document.DiscountAmount)}");
@@ -60,8 +71,7 @@ public sealed class QuestPdfQuotePdfGenerator : IQuotePdfGenerator
     {
         table.ColumnsDefinition(columns =>
         {
-            columns.RelativeColumn(4);
-            columns.RelativeColumn(2);
+            columns.RelativeColumn(5);
             columns.RelativeColumn();
             columns.RelativeColumn(2);
             columns.RelativeColumn(2);
@@ -69,7 +79,6 @@ public sealed class QuestPdfQuotePdfGenerator : IQuotePdfGenerator
         table.Header(header =>
         {
             header.Cell().Element(HeaderCell).Text("Descrição");
-            header.Cell().Element(HeaderCell).Text("Tipo");
             header.Cell().Element(HeaderCell).AlignRight().Text("Qtd.");
             header.Cell().Element(HeaderCell).AlignRight().Text("Valor unitário");
             header.Cell().Element(HeaderCell).AlignRight().Text("Total");
@@ -77,7 +86,6 @@ public sealed class QuestPdfQuotePdfGenerator : IQuotePdfGenerator
         foreach (var line in document.Lines)
         {
             table.Cell().Element(BodyCell).Text(line.Description);
-            table.Cell().Element(BodyCell).Text(line.ItemTypeLabel);
             table.Cell().Element(BodyCell).AlignRight().Text(line.Quantity.ToString("N2", BrazilianCulture));
             table.Cell().Element(BodyCell).AlignRight().Text(FormatCurrency(line.UnitPrice));
             table.Cell().Element(BodyCell).AlignRight().Text(FormatCurrency(line.TotalAmount));

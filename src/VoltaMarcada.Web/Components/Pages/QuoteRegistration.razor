@@ -22,18 +22,39 @@ else
     <MudPaper Class="pa-4" Outlined="true"><MudStack Spacing="3">
         @if (quote is null)
         {
-            <MudSelect T="Guid?" Label="Cliente" @bind-Value="customerId" @bind-Value:after="LoadEquipmentAsync"><MudSelectItem Value="@((Guid?)null)">Selecione um cliente</MudSelectItem>@foreach (var customer in customers) { <MudSelectItem Value="@((Guid?)customer.Id)">@customer.Name</MudSelectItem> }</MudSelect>
-            <MudSelect T="Guid?" Label="Equipamento" @bind-Value="equipmentId"><MudSelectItem Value="@((Guid?)null)">Selecione um equipamento</MudSelectItem>@foreach (var option in equipment) { <MudSelectItem Value="@((Guid?)option.Id)">@option.Type @option.Model</MudSelectItem> }</MudSelect>
-            <MudSelect T="Guid?" Label="Serviço" @bind-Value="primaryServiceId" @bind-Value:after="SetServiceItemAsync"><MudSelectItem Value="@((Guid?)null)">Selecione um serviço</MudSelectItem>@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect>
+            <MudSelect T="Guid?" Label="Cliente" Required="true" RequiredError="Selecione o cliente." @bind-Value="customerId" @bind-Value:after="LoadEquipmentAsync"><MudSelectItem Value="@((Guid?)null)">Selecione um cliente</MudSelectItem>@foreach (var customer in customers) { <MudSelectItem Value="@((Guid?)customer.Id)">@customer.Name</MudSelectItem> }</MudSelect>
+            <MudSelect T="Guid?" Label="Serviço" Required="true" RequiredError="Selecione o serviço." @bind-Value="primaryServiceId" @bind-Value:after="SetServiceItemAsync"><MudSelectItem Value="@((Guid?)null)">Selecione um serviço</MudSelectItem>@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect>
         }
         else
         {
             <MudGrid><MudItem xs="12" sm="6"><MudTextField Label="Cliente" Value="@quote.CustomerName" ReadOnly="true" /></MudItem><MudItem xs="12" sm="6"><MudTextField Label="Equipamento" Value="@quote.EquipmentDescription" ReadOnly="true" /></MudItem></MudGrid>
         }
         <MudTextField @bind-Value="notes" Label="Observações para o cliente" Lines="4" Disabled="@IsReadOnly" />
-        <MudDatePicker @bind-Date="validUntil" Label="Válido até" Disabled="@IsReadOnly" />
+        <MudDatePicker @bind-Date="validUntil" Label="Válido até" Required="true" RequiredError="Informe a validade do orçamento." Disabled="@IsReadOnly" />
         <BrazilianCurrencyInput Id="quote-discount" Name="quote-discount" Label="Desconto" Value="@discountAmount" ValueChanged="@(value => discountAmount = value ?? 0m)" Disabled="@IsReadOnly" />
-        @foreach (var item in items) { <MudPaper Outlined="true" Class="pa-3"><MudGrid><MudItem xs="12" md="5"><MudTextField @bind-Value="item.Description" Label="Descrição" Disabled="@IsReadOnly" /></MudItem><MudItem xs="12" md="2"><MudNumericField T="decimal" @bind-Value="item.Quantity" Label="Quantidade" Disabled="@IsReadOnly" /></MudItem><MudItem xs="12" md="3"><BrazilianCurrencyInput Id="@($"quote-item-{items.IndexOf(item)}-unit-price")" Name="@($"quote-item-{items.IndexOf(item)}-unit-price")" Label="Valor unitário" Value="@item.UnitPrice" ValueChanged="@(value => item.UnitPrice = value ?? 0m)" Disabled="@IsReadOnly" /></MudItem><MudItem xs="12" md="2"><MudSelect T="QuoteItemType" @bind-Value="item.Type" Label="Tipo" Disabled="@(IsReadOnly || item.Type == QuoteItemType.Service)">@foreach (var type in Enum.GetValues<QuoteItemType>()) { <MudSelectItem Value="@type">@GetQuoteItemTypeName(type)</MudSelectItem> }</MudSelect></MudItem></MudGrid>@if (!IsReadOnly && item.Type != QuoteItemType.Service) { <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@(() => RemoveItem(item))">Remover item</MudButton> }</MudPaper> }
+        @foreach (var item in items)
+        {
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudGrid>
+                    <MudItem xs="12" md="3"><MudSelect T="QuoteItemType" @bind-Value="item.Type" Label="Tipo" Disabled="@(IsReadOnly || item.IsPrimaryService)">@foreach (var type in Enum.GetValues<QuoteItemType>()) { <MudSelectItem Value="@type">@GetQuoteItemTypeName(type)</MudSelectItem> }</MudSelect></MudItem>
+                    <MudItem xs="12" md="3"><MudSelect T="Guid?" @bind-Value="item.EquipmentId" Label="Equipamento" Required="@(item.Type == QuoteItemType.Service)" RequiredError="Selecione o equipamento." Clearable="@(item.Type != QuoteItemType.Service)" Disabled="@IsReadOnly">@foreach (var option in equipment) { <MudSelectItem Value="@((Guid?)option.Id)">@option.Type @option.Model</MudSelectItem> }</MudSelect></MudItem>
+                    @if (item.Type == QuoteItemType.Service)
+                    {
+                        <MudItem xs="12" md="3"><MudSelect T="Guid?" @bind-Value="item.ServiceId" @bind-Value:after="@(() => ApplyServicePrice(item))" Label="Serviço" Required="true" RequiredError="Selecione o serviço." Disabled="@IsReadOnly">@foreach (var service in services) { <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem> }</MudSelect></MudItem>
+                    }
+                    <MudItem xs="12" md="@(item.Type == QuoteItemType.Service ? 3 : 6)">
+                        <MudTextField @bind-Value="item.Description"
+                                    Label="Descrição"
+                                    Required="@(item.Type != QuoteItemType.Service)"
+                                    RequiredError="Informe a descrição."
+                                    Disabled="@IsReadOnly" />
+                    </MudItem>
+                    <MudItem xs="12" md="2"><MudNumericField T="decimal" @bind-Value="item.Quantity" Label="Quantidade" Required="true" RequiredError="Informe uma quantidade." Min="0.01m" Disabled="@IsReadOnly" /></MudItem>
+                    <MudItem xs="12" md="3"><BrazilianCurrencyInput Id="@($"quote-item-{items.IndexOf(item)}-unit-price")" Name="@($"quote-item-{items.IndexOf(item)}-unit-price")" Label="Valor unitário" Value="@item.UnitPrice" ValueChanged="@(value => item.UnitPrice = value ?? 0m)" Disabled="@(IsReadOnly || IsFixedPriceService(item))" /></MudItem>
+                </MudGrid>
+                @if (!IsReadOnly && !item.IsPrimaryService) { <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@(() => RemoveItem(item))">Remover item</MudButton> }
+            </MudPaper>
+        }
         @if (!IsReadOnly) { <MudButton Variant="Variant.Outlined" OnClick="AddItem">Adicionar item</MudButton> }
         <MudText Typo="Typo.h6">Total: @DisplayFormatter.FormatCurrency(GetTotal())</MudText>
         <MudStack Row="true"><MudButton Variant="Variant.Outlined" OnClick="@(() => NavigationManager.NavigateTo("/orcamentos"))">Voltar</MudButton>@if (quote is not null) { <MudButton Variant="Variant.Outlined" Href="@($"/quotes/{quote.Id}/pdf")" Target="_blank">Baixar PDF</MudButton> }@if (!IsReadOnly) { <MudButton Color="Color.Primary" OnClick="SaveAsync">@(quote is null ? "Criar orçamento" : "Salvar alterações")</MudButton> }</MudStack>
@@ -67,7 +88,9 @@ else
             }
             else if (quote is not null)
             {
-                items = quote.Items.Select(item => new QuoteItemForm { Description = item.Description, Quantity = item.Quantity, UnitPrice = item.UnitPrice, Type = item.Type }).ToList();
+                services = (await OperationExecutor.ExecuteAsync((GetServicesUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(null, cancellationToken))).Where(item => item.IsActive).ToArray();
+                equipment = await OperationExecutor.ExecuteAsync((GetCustomerEquipmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(quote.CustomerId, cancellationToken));
+                items = quote.Items.Select((item, index) => new QuoteItemForm { EquipmentId = item.EquipmentId, ServiceId = item.ServiceId, Description = item.Description, Quantity = item.Quantity, UnitPrice = item.UnitPrice, Type = item.Type, IsPrimaryService = index == 0 && item.Type == QuoteItemType.Service }).ToList();
                 notes = quote.Notes; validUntil = quote.ValidUntil.ToDateTime(TimeOnly.MinValue); discountAmount = quote.DiscountAmount;
             }
         }
@@ -90,16 +113,44 @@ else
     }
 
     private async Task LoadEquipmentAsync() { equipment = customerId is { } id ? await OperationExecutor.ExecuteAsync((GetCustomerEquipmentUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(id, cancellationToken)) : []; equipmentId = null; }
-    private Task SetServiceItemAsync() { var service = services.SingleOrDefault(item => item.Id == primaryServiceId); items = service is null ? [] : [new QuoteItemForm { Description = service.Name, Quantity = 1, UnitPrice = service.BasePrice ?? 0, Type = QuoteItemType.Service }]; return Task.CompletedTask; }
+    private Task SetServiceItemAsync() { var service = services.SingleOrDefault(item => item.Id == primaryServiceId); items = service is null ? [] : [new QuoteItemForm { EquipmentId = equipmentId, ServiceId = service.Id, Description = service.Name, Quantity = 1, UnitPrice = service.BasePrice ?? 0, Type = QuoteItemType.Service, IsPrimaryService = true }]; return Task.CompletedTask; }
     private decimal GetTotal() => items.Sum(item => item.Quantity * item.UnitPrice) - discountAmount;
     private static string GetQuoteItemTypeName(QuoteItemType type) => type switch { QuoteItemType.Service => "Serviço", QuoteItemType.Part => "Peça", QuoteItemType.Material => "Material", QuoteItemType.Travel => "Deslocamento", _ => "Outro" };
     private void AddItem() => items.Add(new QuoteItemForm { Type = QuoteItemType.Custom });
     private void RemoveItem(QuoteItemForm item) => items.Remove(item);
+    private void ApplyServicePrice(QuoteItemForm item)
+    {
+        var service = services.SingleOrDefault(option => option.Id == item.ServiceId);
+
+        if (service is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(item.Description))
+        {
+            item.Description = service.Name;
+        }
+
+        if (service.PriceType is ServicePriceType.Fixed or ServicePriceType.StartingAt)
+        {
+            item.UnitPrice = service.BasePrice ?? item.UnitPrice;
+        }
+    }
+    private bool IsFixedPriceService(QuoteItemForm item) => item.Type == QuoteItemType.Service && services.SingleOrDefault(service => service.Id == item.ServiceId)?.PriceType == ServicePriceType.Fixed;
 
     private async Task SaveAsync()
     {
-        if (validUntil is null) return;
-        var quoteItems = items.Select(item => new QuoteItemInput(item.Description, item.Quantity, item.UnitPrice, item.Type)).ToArray();
+        if (validUntil is null) { Snackbar.Add("Informe a validade do orçamento.", Severity.Warning); return; }
+        if (items.Any(item => (item.Type != QuoteItemType.Service && string.IsNullOrWhiteSpace(item.Description)) || item.Quantity <= 0 || item.UnitPrice < 0 || (item.Type == QuoteItemType.Service && (item.ServiceId is null || item.ServiceId == Guid.Empty || item.EquipmentId is null || item.EquipmentId == Guid.Empty)))) { Snackbar.Add("Revise os itens e valores do orçamento.", Severity.Warning); return; }
+        if (quote is null && items.SingleOrDefault(item => item.IsPrimaryService) is { } primaryItem) { primaryItem.ServiceId = primaryServiceId; }
+        var quoteItems = items.Select(item => new QuoteItemInput(item.EquipmentId, item.ServiceId, item.Description, item.Quantity, item.UnitPrice, item.Type)).ToArray();
+        var primaryItemForCreation = quoteItems.FirstOrDefault(item => item.EquipmentId is { } itemEquipmentId && itemEquipmentId != Guid.Empty && item.ServiceId is { } itemServiceId && itemServiceId != Guid.Empty);
+        if (quote is null && primaryItemForCreation is not null)
+        {
+            equipmentId = primaryItemForCreation.EquipmentId;
+            primaryServiceId = primaryItemForCreation.ServiceId;
+        }
         if (quote is null)
         {
             if (customerId is null || equipmentId is null || primaryServiceId is null) { Snackbar.Add("Selecione cliente, equipamento e serviço.", Severity.Warning); return; }
@@ -112,5 +163,5 @@ else
         Snackbar.Add("Orçamento atualizado.", Severity.Success);
     }
 
-    private sealed class QuoteItemForm { public string Description { get; set; } = string.Empty; public decimal Quantity { get; set; } = 1; public decimal UnitPrice { get; set; } public QuoteItemType Type { get; set; } }
+    private sealed class QuoteItemForm { public Guid? EquipmentId { get; set; } public Guid? ServiceId { get; set; } public string Description { get; set; } = string.Empty; public decimal Quantity { get; set; } = 1; public decimal UnitPrice { get; set; } public QuoteItemType Type { get; set; } public bool IsPrimaryService { get; set; } }
 }

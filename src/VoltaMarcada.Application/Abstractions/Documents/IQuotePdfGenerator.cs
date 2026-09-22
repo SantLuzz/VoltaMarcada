@@ -22,6 +22,7 @@ public sealed record QuotePdfDocument(
     decimal DiscountAmount,
     decimal TotalAmount,
     byte[]? LogoContent,
+    IReadOnlyList<string> EquipmentDescriptions,
     IReadOnlyList<QuotePdfLine> Lines);
 
 public sealed record QuotePdfFile(byte[] Content, string FileName);

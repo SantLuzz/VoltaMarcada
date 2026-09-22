@@ -1,4 +1,4 @@
-﻿@page "/empresa"
+@page "/empresa"
 @attribute [Authorize(Policy = AuthorizationPolicies.CompanyOwner)]
 @using VoltaMarcada.Application.EmployeeInvitations
 @using VoltaMarcada.Application.CompanySettings
@@ -37,7 +37,7 @@ else if (overview is not null)
             <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@operationError</MudAlert>
         }
 
-        <MudTabs Rounded="true" Elevation="0">
+        <MudTabs Class="company-tabs" Rounded="true" Elevation="0" MinimumTabWidth="100">
             <MudTabPanel Text="Visão geral">
         <MudPaper Class="company-section" Elevation="0" Outlined="true">
             @if (companyLogoDataUrl is not null)

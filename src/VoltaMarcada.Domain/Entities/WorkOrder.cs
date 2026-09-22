@@ -61,14 +61,16 @@ public sealed class WorkOrder : ICompanyScopedEntity
         EnsurePending(); RequireId(customerId, "Customer"); RequireId(equipmentId, "Equipment"); RequireId(serviceId, "Service");
         if (serviceId != ServiceId) throw new DomainException("Work order service cannot be changed.");
         if (items is null) throw new DomainException("Work order items are required.");
-        var existingServiceItem = _items.Single(item => item.Type == WorkOrderItemType.Service);
-        var submittedServiceItem = items.SingleOrDefault(item => item.Type == WorkOrderItemType.Service);
-        if (submittedServiceItem is null ||
-            !string.Equals(submittedServiceItem.Description.Trim(), existingServiceItem.Description, StringComparison.Ordinal) ||
-            submittedServiceItem.Quantity != existingServiceItem.Quantity ||
-            submittedServiceItem.UnitPrice != existingServiceItem.UnitPrice)
+        var existingPrimaryServiceItem = _items.FirstOrDefault(item => item.Type == WorkOrderItemType.Service);
+        var submittedPrimaryServiceItem = items.FirstOrDefault(item => item.Type == WorkOrderItemType.Service);
+        if (existingPrimaryServiceItem is null || submittedPrimaryServiceItem is null ||
+            !string.Equals(submittedPrimaryServiceItem.Description.Trim(), existingPrimaryServiceItem.Description, StringComparison.Ordinal) ||
+            submittedPrimaryServiceItem.Quantity != existingPrimaryServiceItem.Quantity ||
+            submittedPrimaryServiceItem.UnitPrice != existingPrimaryServiceItem.UnitPrice ||
+            existingPrimaryServiceItem.EquipmentId != (NormalizeOptionalId(submittedPrimaryServiceItem.EquipmentId) ?? EquipmentId) ||
+            existingPrimaryServiceItem.ServiceId != (NormalizeOptionalId(submittedPrimaryServiceItem.ServiceId) ?? ServiceId))
         {
-            throw new DomainException("Work order service item cannot be changed.");
+            throw new DomainException("Work order service items cannot be changed.");
         }
         if (!Enum.IsDefined(priority)) throw new DomainException("Work order priority is invalid."); if (discountAmount < 0) throw new DomainException("Work order discount cannot be negative.");
         CustomerId = customerId; EquipmentId = equipmentId; ServiceId = serviceId; ProfessionalId = professionalId; Priority = priority; ReportedProblem = NormalizeOptionalText(reportedProblem); DiscountAmount = discountAmount;
@@ -182,9 +184,13 @@ public sealed class WorkOrder : ICompanyScopedEntity
     {
         if (items is null) throw new DomainException("Work order items are required.");
         var utcNow = now.ToUniversalTime(); var normalized = items.ToArray();
-        if (normalized.Count(item => item.Type == WorkOrderItemType.Service) != 1 || normalized.Any(item => !Enum.IsDefined(item.Type))) throw new DomainException("Work order items must contain exactly one service item.");
+        if (normalized.Count(item => item.Type == WorkOrderItemType.Service) == 0 || normalized.Any(item => !Enum.IsDefined(item.Type))) throw new DomainException("Work order items must contain at least one service item.");
         _items.Clear();
-        for (var index = 0; index < normalized.Length; index++) _items.Add(WorkOrderItem.Create(CompanyId, Id, normalized[index], index, utcNow));
+        for (var index = 0; index < normalized.Length; index++)
+        {
+            var definition = normalized[index];
+            _items.Add(WorkOrderItem.Create(CompanyId, Id, definition.Type == WorkOrderItemType.Service ? definition with { EquipmentId = NormalizeOptionalId(definition.EquipmentId) ?? EquipmentId, ServiceId = NormalizeOptionalId(definition.ServiceId) ?? ServiceId } : definition, index, utcNow));
+        }
     }
 
     private void ReplaceChecklistItems(IReadOnlyCollection<WorkOrderChecklistItemDefinition> items)

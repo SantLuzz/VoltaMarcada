@@ -81,6 +81,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Quote> Quotes => Set<Quote>();
 
     public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
+    public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+    public DbSet<SupportTicketMessage> SupportTicketMessages => Set<SupportTicketMessage>();
+    public DbSet<SupportTicketAttachment> SupportTicketAttachments => Set<SupportTicketAttachment>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -9,6 +9,7 @@ namespace VoltaMarcada.Application.Quotes;
 public sealed class QuotePdfDocumentFactory(
     ICompanyRepository companies,
     ICustomerRepository customers,
+    IEquipmentRepository equipment,
     IFileStorage fileStorage)
 {
     public async Task<QuotePdfDocument?> CreateAsync(Quote quote, CancellationToken cancellationToken = default)
@@ -21,6 +22,24 @@ public sealed class QuotePdfDocumentFactory(
         }
 
         var logoContent = await GetLogoContentAsync(profile.LogoKey, cancellationToken);
+        var equipmentDescriptions = new List<string>();
+        foreach (var equipmentId in quote.Items.Select(item => item.EquipmentId).Where(item => item is not null).Select(item => item!.Value).Distinct())
+        {
+            var equipmentItem = await equipment.GetForCompanyAsync(equipmentId, quote.CompanyId, cancellationToken);
+            if (equipmentItem is not null)
+            {
+                equipmentDescriptions.Add(FormatEquipment(equipmentItem.Type, equipmentItem.Manufacturer, equipmentItem.Model));
+            }
+        }
+
+        if (equipmentDescriptions.Count == 0)
+        {
+            var primaryEquipment = await equipment.GetForCompanyAsync(quote.EquipmentId, quote.CompanyId, cancellationToken);
+            if (primaryEquipment is not null)
+            {
+                equipmentDescriptions.Add(FormatEquipment(primaryEquipment.Type, primaryEquipment.Manufacturer, primaryEquipment.Model));
+            }
+        }
         var lines = quote.Items
             .OrderBy(item => item.DisplayOrder)
             .Select(item => new QuotePdfLine(
@@ -46,6 +65,7 @@ public sealed class QuotePdfDocumentFactory(
             quote.DiscountAmount,
             quote.TotalAmount,
             logoContent,
+            equipmentDescriptions,
             lines);
     }
 
@@ -83,4 +103,8 @@ public sealed class QuotePdfDocumentFactory(
         QuoteItemType.Custom => "Other",
         _ => "Other"
     };
+
+    private static string FormatEquipment(string type, string? manufacturer, string? model) => string.Join(
+        " ",
+        new[] { type, manufacturer, model }.Where(value => !string.IsNullOrWhiteSpace(value)));
 }

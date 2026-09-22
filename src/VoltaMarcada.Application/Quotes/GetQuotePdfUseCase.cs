@@ -27,6 +27,6 @@ public sealed class GetQuotePdfUseCase(
 
         return new QuotePdfFile(
             await generator.GenerateAsync(document, cancellationToken),
-            "orcamento.pdf");
+            $"Orçamento - {quote.Id.ToString("N")[..8].ToUpperInvariant()} - {DateOnly.FromDateTime(DateTime.UtcNow):ddMMyyyy}.pdf");
     }
 }

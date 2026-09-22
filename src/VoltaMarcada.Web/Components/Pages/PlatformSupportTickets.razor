@@ -1,0 +1,142 @@
+@page "/plataforma/chamados"
+@attribute [Authorize(Policy = AuthorizationPolicies.PlatformAdministrator)]
+@layout PlatformLayout
+@using VoltaMarcada.Application.Support
+@using VoltaMarcada.Domain.Enums
+@using VoltaMarcada.Web.Authorization
+@inject GetPlatformSupportTicketsUseCase GetTickets
+@inject GetPlatformSupportTicketDetailsUseCase GetTicketDetails
+@inject ReplyToSupportTicketUseCase ReplyToTicket
+@inject CloseSupportTicketUseCase CloseTicket
+@inject ISnackbar Snackbar
+
+<PageTitle>Chamados de suporte</PageTitle>
+
+<PageHeader Title="Chamados de suporte" Description="Acompanhe solicitações recebidas, responda por e-mail e encerre os atendimentos." />
+
+@if (loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-4" />
+}
+else
+{
+    <MudGrid Class="mt-4">
+        <MudItem xs="12" md="5">
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                    <MudText Typo="Typo.h6">Chamados</MudText>
+                    <MudSpacer />
+                    <MudChip T="string" Color="Color.Warning">@tickets.Count(ticket => ticket.Status == SupportTicketStatus.Open) abertos</MudChip>
+                </MudStack>
+                <MudTable Items="@tickets" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm">
+                    <HeaderContent><MudTh>Nº</MudTh><MudTh>Empresa / solicitante</MudTh><MudTh>Assunto</MudTh><MudTh>Status</MudTh></HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Nº"><MudButton Variant="Variant.Text" OnClick="@(() => SelectAsync(context.Id))">#@context.Number</MudButton><br /><MudText Typo="Typo.caption">@context.OpenedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudText></MudTd>
+                        <MudTd DataLabel="Solicitante"><MudText>@context.CompanyTradeName</MudText><MudText Typo="Typo.caption">@context.RequesterName</MudText></MudTd>
+                        <MudTd DataLabel="Assunto">@context.Subject</MudTd>
+                        <MudTd DataLabel="Status"><MudChip T="string" Color="@StatusColor(context.Status)">@StatusText(context.Status)</MudChip></MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="7">
+            @if (selectedTicket is null)
+            {
+                <MudPaper Outlined="true" Class="pa-5"><MudText Color="Color.Secondary">Selecione um chamado para visualizar a conversa.</MudText></MudPaper>
+            }
+            else
+            {
+                <MudPaper Outlined="true" Class="pa-4">
+                    <MudStack Row="true" AlignItems="AlignItems.Start">
+                        <div><MudText Typo="Typo.h6">Chamado nº @selectedTicket.Number — @selectedTicket.Subject</MudText><MudText Typo="Typo.caption">@selectedTicket.CompanyTradeName · @selectedTicket.RequesterName (@selectedTicket.RequesterEmail) · aberto em @selectedTicket.OpenedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudText></div>
+                        <MudSpacer /><MudChip T="string" Color="@StatusColor(selectedTicket.Status)">@StatusText(selectedTicket.Status)</MudChip>
+                    </MudStack>
+                    <MudDivider Class="my-4" />
+                    @foreach (var item in selectedTicket.Messages)
+                    {
+                        <MudPaper Outlined="true" Class="pa-3 mb-3" Style="@(item.Direction == SupportTicketMessageDirection.Platform ? "border-left: 4px solid #1976d2;" : "border-left: 4px solid #ff9800;")">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@(item.Direction == SupportTicketMessageDirection.Platform ? "Equipe VoltaMarcada" : "Solicitante") · @item.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudText>
+                            <MudText Style="white-space: pre-wrap">@item.Body</MudText>
+                            @if (item.Attachments.Count > 0)
+                            {
+                                <MudStack Row="true" Wrap="Wrap.Wrap" Class="mt-2">
+                                    @foreach (var attachment in item.Attachments)
+                                    {
+                                        <MudButton Href="@($"/platform/support/attachments/{attachment.Id}")" Target="_blank" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Image">@attachment.OriginalFileName</MudButton>
+                                    }
+                                </MudStack>
+                            }
+                        </MudPaper>
+                    }
+                    @if (selectedTicket.Status == SupportTicketStatus.Open)
+                    {
+                        <MudTextField @bind-Value="response" Label="Resposta" Lines="6" Variant="Variant.Outlined" FullWidth="true" Class="mt-4" />
+                        <MudStack Row="true" Class="mt-3">
+                            <MudButton OnClick="ReplyAsync" Disabled="@(processing || string.IsNullOrWhiteSpace(response))" Color="Color.Primary" Variant="Variant.Filled">Enviar resposta por e-mail</MudButton>
+                            <MudButton OnClick="CloseAsync" Disabled="@processing" Color="Color.Error" Variant="Variant.Outlined">Fechar chamado</MudButton>
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info" Class="mt-4">Este chamado foi fechado e não aceita novas respostas.</MudAlert>
+                    }
+                </MudPaper>
+            }
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private IReadOnlyList<PlatformSupportTicketListItem> tickets = [];
+    private PlatformSupportTicketDetails? selectedTicket;
+    private bool loading = true;
+    private bool processing;
+    private string response = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        tickets = await GetTickets.ExecuteAsync();
+        loading = false;
+    }
+
+    private async Task SelectAsync(Guid ticketId)
+    {
+        var result = await GetTicketDetails.ExecuteAsync(ticketId);
+        if (!result.IsSuccess) { Snackbar.Add("Não foi possível carregar o chamado.", Severity.Error); return; }
+        selectedTicket = result.Value;
+        response = string.Empty;
+    }
+
+    private async Task ReplyAsync()
+    {
+        if (selectedTicket is null) return;
+        processing = true;
+        try
+        {
+            var result = await ReplyToTicket.ExecuteAsync(selectedTicket.Id, response);
+            if (!result.IsSuccess) { Snackbar.Add("Não foi possível enviar a resposta. Confira a configuração SMTP.", Severity.Error); return; }
+            Snackbar.Add("Resposta enviada por e-mail.", Severity.Success);
+            await SelectAsync(selectedTicket.Id);
+            tickets = await GetTickets.ExecuteAsync();
+        }
+        finally { processing = false; }
+    }
+
+    private async Task CloseAsync()
+    {
+        if (selectedTicket is null) return;
+        processing = true;
+        try
+        {
+            var result = await CloseTicket.ExecuteAsync(selectedTicket.Id);
+            if (!result.IsSuccess) { Snackbar.Add("Não foi possível fechar o chamado.", Severity.Error); return; }
+            Snackbar.Add("Chamado fechado.", Severity.Success);
+            await SelectAsync(selectedTicket.Id);
+            tickets = await GetTickets.ExecuteAsync();
+        }
+        finally { processing = false; }
+    }
+
+    private static string StatusText(SupportTicketStatus status) => status == SupportTicketStatus.Open ? "Aberto" : "Fechado";
+    private static Color StatusColor(SupportTicketStatus status) => status == SupportTicketStatus.Open ? Color.Warning : Color.Default;
+}

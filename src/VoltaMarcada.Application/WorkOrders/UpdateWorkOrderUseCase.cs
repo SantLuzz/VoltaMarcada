@@ -1,4 +1,4 @@
-using VoltaMarcada.Application.Abstractions.Identity;
+﻿using VoltaMarcada.Application.Abstractions.Identity;
 using VoltaMarcada.Application.Abstractions.Operations;
 using FluentValidation;
 using VoltaMarcada.Application.Abstractions.Persistence;
@@ -16,6 +16,7 @@ public sealed class UpdateWorkOrderUseCase(
     WorkOrderAuthorization authorization,
     ICurrentUser currentUser,
     IValidator<UpdateWorkOrderCommand> validator,
+    WorkOrderChecklistFactory checklistFactory,
     TimeProvider timeProvider)
 {
     public async Task<OperationResult<WorkOrderOperationValue>> ExecuteAsync(
@@ -45,6 +46,9 @@ public sealed class UpdateWorkOrderUseCase(
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidStatus);
         }
 
+        var firstLinkedItem = command.Items?.FirstOrDefault(item => item.EquipmentId is { } equipmentId && equipmentId != Guid.Empty && item.ServiceId is { } serviceId && serviceId != Guid.Empty);
+        if (command.Items is not null && firstLinkedItem is null) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
+        if (firstLinkedItem is not null) command = command with { EquipmentId = firstLinkedItem.EquipmentId!.Value, ServiceId = firstLinkedItem.ServiceId!.Value };
         var customer = await customerRepository.GetForCompanyAsync(command.CustomerId, scope.CompanyId, cancellationToken);
         if (customer is null)
         {
@@ -68,6 +72,29 @@ public sealed class UpdateWorkOrderUseCase(
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.ServiceNotFound);
         }
 
+        if (command.Items is not null)
+        {
+            foreach (var item in command.Items)
+            {
+                if (item.Type == WorkOrderItemType.Service && (item.ServiceId is null || item.ServiceId == Guid.Empty))
+                {
+                    return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
+                }
+
+                if (item.EquipmentId is { } equipmentId)
+                {
+                    var itemEquipment = await equipmentRepository.GetForCompanyAsync(equipmentId, scope.CompanyId, cancellationToken);
+                    if (itemEquipment is null || itemEquipment.CustomerId != customer.Id) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidEquipmentCustomer);
+                }
+
+                if (item.ServiceId is { } serviceId)
+                {
+                    var itemService = await serviceRepository.GetForCompanyAsync(serviceId, scope.CompanyId, cancellationToken);
+                    if (itemService is null || !itemService.IsActive) return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.ServiceNotFound);
+                }
+            }
+        }
+
         var professionalId = scope.IsOwner ? command.ProfessionalId : workOrder.ProfessionalId;
         if (!scope.IsOwner && professionalId != scope.ProfessionalId)
         {
@@ -88,14 +115,20 @@ public sealed class UpdateWorkOrderUseCase(
             }
         }
 
-        var checklistItems = service.ChecklistItems
-            .OrderBy(x => x.DisplayOrder)
-            .Select(x => new WorkOrderChecklistItemDefinition(x.Description, x.IsRequired, x.DisplayOrder))
-            .ToArray();
-        if (!WorkOrderFinancialItems.TryCreate(service, command.ServiceUnitPrice, command.AdditionalItems, out var items))
+        IReadOnlyCollection<WorkOrderItemDefinition> items;
+        if (command.Items is not null)
+        {
+            if (!WorkOrderFinancialItems.TryCreate(command.Items, out items))
+            {
+                return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
+            }
+        }
+        else if (!WorkOrderFinancialItems.TryCreate(service, command.ServiceUnitPrice, command.AdditionalItems, out items))
         {
             return OperationResult<WorkOrderOperationValue>.Failure(WorkOrderErrors.InvalidInput);
         }
+
+        var checklistItems = await checklistFactory.CreateAsync(scope.CompanyId, items, cancellationToken);
 
         var now = timeProvider.GetUtcNow();
         var professionalChanged = workOrder.ProfessionalId != professionalId;
@@ -122,3 +155,5 @@ public sealed class UpdateWorkOrderUseCase(
         return OperationResult<WorkOrderOperationValue>.Success(new WorkOrderOperationValue(workOrder.Id));
     }
 }
+
+

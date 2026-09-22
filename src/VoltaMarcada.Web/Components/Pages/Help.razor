@@ -1,0 +1,130 @@
+@page "/ajuda"
+@attribute [Authorize(Policy = AuthorizationPolicies.CompanyMember)]
+@using VoltaMarcada.Application.Abstractions.Operations
+@using VoltaMarcada.Application.Support
+@using VoltaMarcada.Web.Configuration
+@using VoltaMarcada.Web.Help
+@inject ISupportConfiguration SupportConfiguration
+@inject IHelpGuideProvider HelpGuideProvider
+@inject IComponentOperationExecutor OperationExecutor
+
+<PageTitle>Ajuda e suporte | VoltaMarcada</PageTitle>
+
+<PageHeader Title="Ajuda e suporte" Description="Encontre orientações rápidas ou fale com o suporte da VoltaMarcada." />
+
+<MudGrid Class="mt-4">
+    <MudItem xs="12" md="7">
+        <MudPaper Outlined="true" Class="pa-5 help-guides-panel">
+            <MudText Typo="Typo.h6">Guias rápidos</MudText>
+            <div class="help-guide-actions">
+                @foreach (var guide in HelpGuideProvider.GetGuides())
+                {
+                    <MudButton OnClick='@(() => SelectGuideAsync(guide.Id))' Variant="Variant.Text" FullWidth="true" Class="help-guide-topic" Color="@(selectedGuideId == guide.Id ? Color.Primary : Color.Default)">@guide.Title.ToUpperInvariant()</MudButton>
+                }
+            </div>
+            @*
+            <style>
+                .help-guide-actions + .mud-list { display: none; }
+            </style>
+            <MudList T="string" Dense="true">
+                <MudListItem Text="Cadastros: clientes, equipamentos, profissionais e serviços." />
+                <MudListItem Text="Clientes e equipamentos: mantenha os dados de atendimento atualizados." />
+                <MudListItem Text="Ordens de serviço: crie, inicie e conclua os atendimentos." />
+                <MudListItem Text="Agenda: acompanhe agendamentos e solicitações." />
+                <MudListItem Text="Manutenção recorrente: registre e acompanhe retornos." />
+                <MudListItem Text="Orçamentos: envie propostas e acompanhe a resposta." />
+                <MudListItem Text="Solicitações públicas: confirme a preferência enviada pelo cliente." />
+            </MudList>
+            *@
+            <MudDivider Class="my-4" />
+            <div class="help-guide-content">@guideContent</div>
+            @if (SupportConfiguration.WhatsAppUrl is { } whatsappUrl)
+            {
+                <MudButton Href="@whatsappUrl" Target="_blank" Color="Color.Success" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Chat" Class="mt-4">Falar pelo WhatsApp</MudButton>
+            }
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="5">
+        <MudPaper Outlined="true" Class="pa-5">
+            <MudText Typo="Typo.h6">Enviar uma solicitação</MudText>
+            @if (successMessage is not null) { <MudAlert Severity="Severity.Success" Class="my-3">@successMessage</MudAlert> }
+            @if (errorMessage is not null) { <MudAlert Severity="Severity.Error" Class="my-3">@errorMessage</MudAlert> }
+            <MudForm @ref="supportForm">
+                <MudTextField @bind-Value="subject" Label="Assunto" Required="true" RequiredError="Informe o assunto." Variant="Variant.Outlined" Class="mt-3" />
+                <MudTextField @bind-Value="message" Label="Mensagem" Required="true" RequiredError="Informe a mensagem." Lines="6" Variant="Variant.Outlined" Class="mt-3" />
+                <InputFile OnChange="SelectFiles" accept="image/png,image/jpeg,image/webp" multiple class="mt-4" />
+                <MudText Typo="Typo.caption" Class="d-block mt-2">Até 5 imagens PNG, JPEG ou WEBP, com até 5 MB cada e 20 MB no total.</MudText>
+                <MudButton OnClick="SendAsync" Disabled="@isSending" Color="Color.Primary" Variant="Variant.Filled" Class="mt-4">@(isSending ? "Enviando..." : "Enviar solicitação")</MudButton>
+            </MudForm>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private readonly List<IBrowserFile> attachments = [];
+    private MudForm supportForm = default!;
+    private string subject = string.Empty;
+    private string message = string.Empty;
+    private string? successMessage;
+    private string? errorMessage;
+    private bool isSending;
+    private string selectedGuideId = "cadastros-clientes";
+    private MarkupString guideContent;
+
+    private sealed record SupportTicketResponse(long TicketNumber);
+
+    protected override async Task OnInitializedAsync()
+    {
+        guideContent = await HelpGuideProvider.GetContentAsync(selectedGuideId);
+    }
+
+    private async Task SelectGuideAsync(string guideId)
+    {
+        selectedGuideId = guideId;
+        guideContent = await HelpGuideProvider.GetContentAsync(guideId);
+    }
+
+    private void SelectFiles(InputFileChangeEventArgs args)
+    {
+        attachments.Clear();
+        attachments.AddRange(args.GetMultipleFiles(6).Where(file => file.Size <= 5L * 1024 * 1024));
+        errorMessage = attachments.Count > 5 ? "Selecione no máximo cinco imagens válidas." : null;
+    }
+
+    private async Task SendAsync()
+    {
+        successMessage = null;
+        errorMessage = null;
+        if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(message)) { errorMessage = "Informe o assunto e a mensagem."; return; }
+        isSending = true;
+        try
+        {
+            var supportAttachments = new List<SupportAttachmentInput>(attachments.Count);
+            foreach (var file in attachments)
+            {
+                await using var input = file.OpenReadStream(5L * 1024 * 1024 + 1);
+                using var content = new MemoryStream();
+                await input.CopyToAsync(content);
+                supportAttachments.Add(new SupportAttachmentInput(file.Name, file.ContentType, content.ToArray()));
+            }
+
+            var result = await OperationExecutor.ExecuteAsync(
+                (CreateSupportTicketUseCase useCase, CancellationToken cancellationToken) => useCase.ExecuteAsync(
+                    new SendSupportRequestCommand(subject, message, supportAttachments),
+                    cancellationToken));
+
+            if (!result.IsSuccess || result.Value is null)
+            {
+                errorMessage = OperationErrorMessages.GetMessage(result.Error?.Code);
+                return;
+            }
+            subject = string.Empty;
+            message = string.Empty;
+            attachments.Clear();
+            await supportForm.ResetValidationAsync();
+            successMessage = $"Chamado nº {result.Value.Number} aberto.";
+        }
+        catch { errorMessage = "Não foi possível abrir seu chamado. Tente novamente."; }
+        finally { isSending = false; }
+    }
+}

@@ -5,7 +5,8 @@ namespace VoltaMarcada.Application.Quotes;
 public sealed class GetPublicQuotePdfUseCase(
     PublicQuoteAccessService publicQuoteAccess,
     QuotePdfDocumentFactory documentFactory,
-    IQuotePdfGenerator generator)
+    IQuotePdfGenerator generator,
+    TimeProvider timeProvider)
 {
     public async Task<QuotePdfFile?> ExecuteAsync(string? token, CancellationToken cancellationToken = default)
     {
@@ -23,6 +24,6 @@ public sealed class GetPublicQuotePdfUseCase(
 
         return new QuotePdfFile(
             await generator.GenerateAsync(document, cancellationToken),
-            "orcamento.pdf");
+            $"Orçamento - {quote.Id.ToString("N")[..8].ToUpperInvariant()} - {DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime):ddMMyyyy}.pdf");
     }
 }

@@ -1,4 +1,7 @@
 @using VoltaMarcada.Application.WorkOrders
+@using VoltaMarcada.Application.Equipment
+@using VoltaMarcada.Application.Services
+@using VoltaMarcada.Domain.Enums
 @using VoltaMarcada.Web.Formatting
 @inject IBrazilianDisplayFormatter DisplayFormatter
 
@@ -7,15 +10,29 @@
         <MudText Typo="Typo.h6">Itens e valores</MudText>
         @if (!ReadOnly)
         {
-            <MudButton Variant="Variant.Outlined" OnClick="AddItem">Adicionar item</MudButton>
+            <MudStack Row="true">
+                @if (AddEquipmentRequested.HasDelegate)
+                {
+                    <MudButton Variant="Variant.Text" OnClick="AddEquipmentRequested">Novo equipamento</MudButton>
+                }
+                <MudButton Variant="Variant.Outlined" OnClick="AddItem">Adicionar item</MudButton>
+            </MudStack>
         }
     </MudStack>
 
-    @if (!string.IsNullOrWhiteSpace(ServiceName))
+    @if (ShowPrimaryService && !string.IsNullOrWhiteSpace(ServiceName))
     {
         <MudGrid Class="work-order-item-row" AlignItems="AlignItems.Center">
-            <MudItem xs="12" sm="5">
+            <MudItem xs="12" sm="3">
                 <MudTextField T="string" Value="@ServiceName" Label="Serviço" ReadOnly="true" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudSelect T="Guid?" Value="@PrimaryEquipmentId" ValueChanged="PrimaryEquipmentIdChanged" Label="Equipamento" Required="true" RequiredError="Selecione o equipamento." Disabled="ReadOnly">
+                    @foreach (var equipment in EquipmentOptions)
+                    {
+                        <MudSelectItem Value="@((Guid?)equipment.Id)">@equipment.Type @equipment.Manufacturer @equipment.Model</MudSelectItem>
+                    }
+                </MudSelect>
             </MudItem>
             <MudItem xs="6" sm="2">
                 <MudNumericField T="decimal" Value="@(1m)" Label="Quantidade" ReadOnly="true" />
@@ -46,7 +63,34 @@
         @foreach (var item in Items.Select((value, index) => new { value, index }))
         {
             <MudGrid Class="work-order-item-row" AlignItems="AlignItems.Center">
-                <MudItem xs="12" sm="5">
+                <MudItem xs="12" sm="3">
+                    <MudSelect T="WorkOrderItemType" Value="@item.value.Type" ValueChanged="@(value => UpdateItem(item.index, item.value with { Type = value, ServiceId = value == WorkOrderItemType.Service ? item.value.ServiceId : null }))" Label="Tipo" Disabled="@(ReadOnly || !CanEditItemTypes)">
+                        @foreach (var type in Enum.GetValues<WorkOrderItemType>())
+                        {
+                            <MudSelectItem Value="@type">@GetItemTypeName(type)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudSelect T="Guid?" Value="@item.value.EquipmentId" ValueChanged="@(value => UpdateItem(item.index, item.value with { EquipmentId = value }))" Label="Equipamento" Required="@(item.value.Type == WorkOrderItemType.Service)" RequiredError="Selecione o equipamento." Clearable="@(item.value.Type != WorkOrderItemType.Service)" Disabled="ReadOnly">
+                        @foreach (var equipment in EquipmentOptions)
+                        {
+                            <MudSelectItem Value="@((Guid?)equipment.Id)">@equipment.Type @equipment.Manufacturer @equipment.Model</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                @if (item.value.Type == WorkOrderItemType.Service)
+                {
+                    <MudItem xs="12" sm="3">
+                        <MudSelect T="Guid?" Value="@item.value.ServiceId" ValueChanged="@(value => UpdateServiceItem(item.index, item.value, value))" Label="Serviço" Required="true" RequiredError="Selecione o serviço." Disabled="ReadOnly">
+                            @foreach (var service in ServiceOptions)
+                            {
+                                <MudSelectItem Value="@((Guid?)service.Id)">@service.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
+                <MudItem xs="12" sm="@(item.value.Type == WorkOrderItemType.Service ? 3 : 6)">
                     <MudTextField T="string" Value="@item.value.Description" ValueChanged="@(value => UpdateItem(item.index, item.value with { Description = value ?? string.Empty }))" Label="Descrição" ReadOnly="ReadOnly" />
                 </MudItem>
                 <MudItem xs="6" sm="2">
@@ -90,10 +134,31 @@
     public EventCallback<List<WorkOrderItemInput>> ItemsChanged { get; set; }
 
     [Parameter]
+    public IReadOnlyList<EquipmentDto> EquipmentOptions { get; set; } = [];
+
+    [Parameter]
+    public Guid? PrimaryEquipmentId { get; set; }
+
+    [Parameter]
+    public EventCallback<Guid?> PrimaryEquipmentIdChanged { get; set; }
+
+    [Parameter]
+    public EventCallback AddEquipmentRequested { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ServiceDto> ServiceOptions { get; set; } = [];
+
+    [Parameter]
+    public bool CanEditItemTypes { get; set; } = true;
+
+    [Parameter]
     public bool ReadOnly { get; set; }
 
     [Parameter]
     public string ServiceName { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool ShowPrimaryService { get; set; } = true;
 
     [Parameter]
     public decimal? ServiceUnitPrice { get; set; }
@@ -113,7 +178,7 @@
     public EventCallback<decimal> DiscountAmountChanged { get; set; }
 
 
-    private decimal ServiceSubtotal => ServiceUnitPrice ?? 0m;
+    private decimal ServiceSubtotal => ShowPrimaryService ? ServiceUnitPrice ?? 0m : 0m;
 
     private async Task AddItem()
     {
@@ -133,5 +198,25 @@
         await ItemsChanged.InvokeAsync(updated);
     }
 
+    private Task UpdateServiceItem(int index, WorkOrderItemInput item, Guid? serviceId)
+    {
+        var service = ServiceOptions.SingleOrDefault(option => option.Id == serviceId);
+        var unitPrice = service?.PriceType is ServicePriceType.Fixed or ServicePriceType.StartingAt ? service.BasePrice ?? item.UnitPrice : item.UnitPrice;
+        return UpdateItem(index, item with
+        {
+            ServiceId = serviceId,
+            Description = service?.Name ?? item.Description,
+            UnitPrice = unitPrice
+        });
+    }
+
     private Task OnDiscountAmountChanged(decimal? value) => DiscountAmountChanged.InvokeAsync(value ?? 0m);
+    private static string GetItemTypeName(WorkOrderItemType type) => type switch
+    {
+        WorkOrderItemType.Service => "Serviço",
+        WorkOrderItemType.Part => "Peça",
+        WorkOrderItemType.Material => "Material",
+        WorkOrderItemType.Travel => "Deslocamento",
+        _ => "Outro"
+    };
 }
