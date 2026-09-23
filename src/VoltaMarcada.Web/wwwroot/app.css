@@ -228,6 +228,24 @@ button[aria-busy="true"] [data-loading-spinner] { display: inline-flex; }
     white-space: nowrap;
 }
 
+@media (max-width: 959.95px) {
+    .platform-license-data-grid .grid-text-cell,
+    .platform-license-data-grid .platform-license-contact {
+        flex: 1 1 0;
+        min-width: 0;
+        text-align: right;
+    }
+
+    .platform-license-data-grid .platform-license-contact .grid-text-cell-value {
+        text-align: right;
+    }
+
+    .platform-license-data-grid .platform-license-actions {
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+}
+
 .work-order-tab-content { padding: 24px; }
 .work-order-appointments-panel { padding-top: 16px; }
 .work-order-list-toolbar { margin-bottom: 20px; }
