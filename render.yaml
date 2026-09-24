@@ -1,8 +1,24 @@
 services:
   - type: web
-    name: voltamarcada-landing
+    name: voltamarcada-app
     runtime: docker
-    dockerfilePath: deploy/Dockerfile.landing
+    branch: develop
+    dockerfilePath: Dockerfile
     dockerContext: .
-    healthCheckPath: /
+    healthCheckPath: /health
     autoDeployTrigger: commit
+    envVars:
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: ApplicationUrls__ApplicationBaseUrl
+        sync: false
+      - key: ApplicationUrls__LandingPageUrl
+        sync: false
+      - key: Cloudinary__CloudName
+        sync: false
+      - key: Cloudinary__ApiKey
+        sync: false
+      - key: Cloudinary__ApiSecret
+        sync: false
+      - key: LicenseBilling__PixKey
+        sync: false
