@@ -25,8 +25,7 @@ jobs:
             cd /opt/voltamarcada
 
             git fetch origin "${{ github.ref_name }}"
-            git checkout --force "${{ github.ref_name }}"
-            git reset --hard "${{ github.sha }}"
+            git checkout --force -B "${{ github.ref_name }}" "${{ github.sha }}"
 
             docker compose \
               --env-file deploy/.env.production \
