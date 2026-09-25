@@ -182,14 +182,18 @@ var app = builder.Build();
 
 try
 {
+    app.Logger.LogInformation("Applying database migrations before starting the web host");
     await app.Services.ApplyDatabaseMigrationsAsync();
+    app.Logger.LogInformation("Database migrations completed");
 }
 catch (Exception exception)
 {
     app.Logger.LogCritical(exception, "Unable to apply database migrations during application startup");
     throw;
 }
+app.Logger.LogInformation("Initializing platform administrator");
 await PlatformAdministratorInitializer.InitializeAsync(app.Services, builder.Configuration);
+app.Logger.LogInformation("Platform administrator initialization completed");
 
 app.UseRequestLocalization();
 app.UseExceptionHandler();
@@ -264,6 +268,8 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .RequireRateLimiting("public-booking");
 
+app.Logger.LogInformation("Starting web host on configured URLs: {Urls}",
+    builder.Configuration["ASPNETCORE_URLS"] ?? builder.Configuration["urls"] ?? "default");
 app.Run();
 
 static bool IsValidApplicationUrl(string? value) =>
