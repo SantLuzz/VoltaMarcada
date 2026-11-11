@@ -33,3 +33,8 @@ user-secrets.txt
 Thumbs.db
 env.txt
 deploy/.env.production.example
+
+# Build artifacts
+.artifacts/
+.codex-build/
+.codex-obj/
